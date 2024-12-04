@@ -1,0 +1,9 @@
+line-length = 120
+exclude = ["tests"]
+
+[lint]
+select = ["F", "E", "W", "TID", "I", "N", "ANN001", "ANN201", "D"]
+ignore = ["D105"]
+
+[lint.pydocstyle]
+convention = "google"

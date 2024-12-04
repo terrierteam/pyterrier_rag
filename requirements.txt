@@ -1,0 +1,4 @@
+python-terrier
+ir_measures
+regex
+transformers
