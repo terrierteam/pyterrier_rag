@@ -14,8 +14,10 @@ def normalize_answer(s):
     def lower(text):
         return text.lower()
     return white_space_fix(remove_articles(remove_punc(lower(s))))
+
 def exact_match_score(prediction, ground_truth):
     return float(normalize_answer(prediction) == normalize_answer(ground_truth))
+
 def ems(prediction, ground_truths):
     return max([exact_match_score(prediction, gt) for gt in ground_truths])
 
@@ -42,4 +44,6 @@ def f1_score(prediction, ground_truth):
 
 import ir_measures
 # we aggregate across multiple gold_answer values using max().
-f1_measure = ir_measures.define_byquery(lambda qrels, res: max([f1_score(res.iloc[0]['qanswer'], gold) for gold in qrels['gold_answer']]), support_cutoff=False, name="F1")
+F1 = ir_measures.define_byquery(lambda qrels, res: max([f1_score(res.iloc[0]['qanswer'], gold) for gold in qrels['gold_answer']]), support_cutoff=False, name="F1")
+# ems function handles the max()
+EM = ir_measures.define_byquery(lambda qrels, res: ems(res.iloc[0]['qanswer'], qrels['gold_answer']), support_cutoff=False, name="EM%")
