@@ -19,7 +19,7 @@ class FlashRAGDataset(RAGDataset):
 
     def get_answers(self, variant=None) -> pd.DataFrame:
         df = pd.read_json("hf://datasets/RUC-NLPIR/FlashRAG_datasets/" + self.splits[variant], lines=True)
-        return df[['id', 'golden_answers']].rename(columns={'id' : 'qid', 'golden_answers' : 'answers'}) # TODO how to deal with multiple answers
+        return df[['id', 'golden_answers']].rename(columns={'id' : 'qid', 'golden_answers' : 'gold_answer'}).explode('gold_answer') # explode deals with multiple answers
 
 # TODO perhaps this should be done with entrypoints?
 pt.datasets.DATASET_MAP['rag:nq'] = FlashRAGDataset({'train': 'nq/train.jsonl', 'dev': 'nq/dev.jsonl', 'test': 'nq/test.jsonl'})

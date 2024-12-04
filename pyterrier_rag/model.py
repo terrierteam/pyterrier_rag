@@ -1,2 +1,2 @@
-GOLD_COLUMNS = ['qid', 'golden_answers']
+GOLD_COLUMNS = ['qid', 'gold_answer']
 ANSWER_COLUMNS = ['qid', 'qanswer']

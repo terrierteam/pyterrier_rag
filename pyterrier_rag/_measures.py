@@ -2,7 +2,7 @@ import regex
 import string
 from collections import Counter
 
-#Normalization from SQuAD evaluation script https://worksheets.codalab.org/rest/bundles/0x6b567e1cf2e041ec80d7098f031c5c9e/contents/blob/
+# Normalization from SQuAD evaluation script https://worksheets.codalab.org/rest/bundles/0x6b567e1cf2e041ec80d7098f031c5c9e/contents/blob/
 def normalize_answer(s):
     def remove_articles(text):
         return regex.sub(r'\b(a|an|the)\b', ' ', text)
@@ -41,4 +41,5 @@ def f1_score(prediction, ground_truth):
     return f1
 
 import ir_measures
-f1_measure = ir_measures.define_byquery(lambda qrels, res: f1_score(res.iloc[0]['qanswer'], qrels.iloc[0]['gold_answer']), support_cutoff=False, name="F1")
+# we aggregate across multiple gold_answer values using max().
+f1_measure = ir_measures.define_byquery(lambda qrels, res: max([f1_score(res.iloc[0]['qanswer'], gold) for gold in qrels['gold_answer']]), support_cutoff=False, name="F1")
