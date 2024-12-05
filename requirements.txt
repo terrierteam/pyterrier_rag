@@ -1,4 +1,5 @@
 python-terrier
+pyterrier_alpha
 ir_measures
 regex
 transformers
