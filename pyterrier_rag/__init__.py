@@ -9,5 +9,5 @@ import pyterrier_rag.readers
 from pyterrier_rag._frameworks import Iterative
 
 __all__ = [
-    'Iterative',
+    'Iterative', 'readers'
 ]
