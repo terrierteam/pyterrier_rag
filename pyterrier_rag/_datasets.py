@@ -6,7 +6,7 @@ from pyterrier.datasets import Dataset
 # TODO requires transformers to be installed
 
 class RAGDataset(Dataset):
-    def get_answers(self, variant=None) -> pd.DataFrame:
+    def get_answers(self, variant: Optional[str] = None) -> pd.DataFrame:
         pass
 
 class FlashRAGDataset(RAGDataset):
