@@ -11,13 +11,13 @@ from transformers import GenerationConfig
 class Reader(pt.Transformer, ABC):
 
     def __init__(
-        self, 
-        *, 
+        self,
+        *,
         batch_size: int = 4,
         text_field: str = 'text',
-        text_max_length: int = 512, 
+        text_max_length: int = 512,
         num_context: int = 5,
-        max_new_tokens: int = 32, 
+        max_new_tokens: int = 32,
         generation_config: GenerationConfig = None,
         verbose: bool = False,
         device: Union[str, torch.device] = None,
@@ -29,7 +29,7 @@ class Reader(pt.Transformer, ABC):
             device = "cuda" if torch.cuda.is_available() else "cpu"
         if isinstance(device, str):
             device = torch.device(device)
-        self.device = device 
+        self.device = device
 
         self.text_field = text_field
         self.text_max_length = text_max_length
@@ -39,19 +39,19 @@ class Reader(pt.Transformer, ABC):
         self.kwargs = kwargs
 
         if generation_config is None:
-            # use greedy decoding by default 
+            # use greedy decoding by default
             self.generation_config = GenerationConfig(
-                max_new_tokens = self.max_new_tokens, 
+                max_new_tokens = self.max_new_tokens,
                 temperature=1.0,
-                do_sample = False, 
-                num_beams = 1, 
+                do_sample = False,
+                num_beams = 1,
                 early_stoppint = True
             )
         else:
             self.generation_config = generation_config
 
     # TODO: couldn't pass self.verbose to pta.transform.by_query
-    #@pta.transform.by_query()
+    @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
         print(type(inp))
         return self.transform_by_query(inp)
