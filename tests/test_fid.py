@@ -8,8 +8,13 @@ class TestPyterrier_rag(unittest.TestCase):
         model = T5FiD(model_name_or_path="t5-base", tokenizer_name_or_path="t5-base")
         self._test_fid(model)
 
+    def test_BART(self):
+        from pyterrier_rag.readers import BARTFiD
+        model = BARTFiD(model_name_or_path="facebook/bart-base", tokenizer_name_or_path="facebook/bart-base")
+        self._test_fid(model)
+
     def _test_fid(self, model):
-        result = model(
+        result = model.transform_by_query(
             [
                 {
                     "qid": "0", 
@@ -30,4 +35,4 @@ class TestPyterrier_rag(unittest.TestCase):
                 },  
             ]
         )
-        print(result)
+        self.assertTrue("China" in result[0]['qanswer'])
