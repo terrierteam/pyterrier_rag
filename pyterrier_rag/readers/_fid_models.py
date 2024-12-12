@@ -1,13 +1,14 @@
 import inspect
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union, Iterable, Tuple
 
 import torch
 import torch.nn as nn 
 from torch.nn import CrossEntropyLoss
-from transformers import T5ForConditionalGeneration, BartModel, BartForConditionalGeneration
+from transformers import AutoTokenizer, T5ForConditionalGeneration, BartModel, BartForConditionalGeneration, GenerationConfig
 from transformers.modeling_outputs import BaseModelOutput, Seq2SeqLMOutput, Seq2SeqModelOutput
 from transformers.models.t5.configuration_t5 import T5Config
 from transformers.models.bart.configuration_bart import BartConfig
+from ._base import Reader
 
 
 class T5FiDReader(T5ForConditionalGeneration):
@@ -353,4 +354,103 @@ class BARTFiDReader(BartForConditionalGeneration):
 
         # dict_keys(['attention_mask', 'ent_indices', 'ent_mask', 'output_attentions', 'output_hidden_states', 'use_cache', 'encoder_outputs'])
         return model_kwargs
+
+
+
+class FiD(Reader):
+
+    def __init__(
+        self, 
+        model: Union[T5FiDReader, BARTFiDReader],
+        tokenizer: AutoTokenizer, 
+        batch_size: int = 4, 
+        text_field: str = 'text', 
+        text_max_length: int = 256, 
+        num_context: int = 5, 
+        max_new_tokens: int = 32, 
+        generation_config: GenerationConfig = None,
+        verbose: bool = False, 
+        device: Union[str, torch.device] = None, 
+        **kwargs
+    ):
+        super().__init__(
+            batch_size=batch_size, 
+            text_field=text_field, 
+            text_max_length=text_max_length, 
+            num_context=num_context,
+            max_new_tokens=max_new_tokens, 
+            generation_config=generation_config,
+            verbose=verbose, 
+            device=device, 
+            **kwargs
+        )
+        self.model = model.to(self.device)
+        self.tokenizer = tokenizer
+        self.query_prefix = "question:"
+        self.title_prefix = "title:"
+        self.context_prefix = "context:"
+
+    def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
+        qid = inp[0]["qid"]
+        query = inp[0]["query"]
+        for row in inp:
+            assert row["query"] == query, "All rows must have the same query for `transform_by_query`"
+        
+        context = self.get_context_by_query(inp)
+        input_texts = self.format_input_texts(query, context)
+        inputs = self.tokenizer_encode(input_texts)
+        inputs = {k: v.to(self.device) if torch.is_tensor(v) else v for k, v in inputs.items()}
+        generated_token_ids = self.model.generate(**inputs, generation_config=self.generation_config)
+        qanswer = self.tokenizer.batch_decode(generated_token_ids, skip_special_tokens=True)[0]
+        
+        return [ {"qid": qid, "query": query, "qanswer": qanswer} ]
+
+    def format_input_texts(self, question: str, context: Iterable[Union[str, Tuple[str]]]) -> List[str]:
+
+        if not context:
+            return [question]
+        
+        input_texts = []
+        for item in context:
+            # append title and context prefix
+            if isinstance(item, tuple):
+                title, text = item 
+                doc_text = self.title_prefix + " " + title + " " + self.context_prefix + " " + text
+            else:
+                text = item
+                doc_text = self.context_prefix + " " + text 
+            # prepend question 
+            input_text = self.query_prefix + " " + question + " " + doc_text.strip()
+            input_texts.append(input_text.strip())
+
+        return input_texts
     
+    def tokenizer_encode(self, texts: List[str]) -> Dict[str, torch.Tensor]:
+
+        tokenizer_outputs = self.tokenizer.batch_encode_plus(
+            texts, 
+            max_length = self.text_max_length, 
+            padding = "max_length", 
+            truncation = True, 
+            return_tensors = 'pt'
+        )
+        input_ids = tokenizer_outputs["input_ids"][None, :, :] # for only one query 
+        attention_mask = tokenizer_outputs["attention_mask"][None, :, :]
+
+        return {"input_ids": input_ids, "attention_mask": attention_mask}
+    
+
+class T5FiD(FiD):
+
+    def __init__(self, model_name_or_path: str, tokenizer_name_or_path: str, batch_size: int = 4, text_field: str = 'text', text_max_length: int = 256, num_context: int = 5, max_new_tokens: int = 32, generation_config: GenerationConfig = None, verbose: bool = False, device: Union[str, torch.device] = None, **kwargs):
+        model = T5FiDReader.from_pretrained(model_name_or_path)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path)
+        super().__init__(model, tokenizer, batch_size, text_field, text_max_length, num_context, max_new_tokens, generation_config, verbose, device, **kwargs)
+
+
+class BARTFiD(FiD):
+
+    def __init__(self, model_name_or_path: str, tokenizer_name_or_path: str, batch_size: int = 4, text_field: str = 'text', text_max_length: int = 256, num_context: int = 5, max_new_tokens: int = 32, generation_config: GenerationConfig = None, verbose: bool = False, device: Union[str, torch.device] = None, **kwargs):
+        model = BARTFiDReader.from_pretrained(model_name_or_path)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path)
+        super().__init__(model, tokenizer, batch_size, text_field, text_max_length, num_context, max_new_tokens, generation_config, verbose, device, **kwargs)
