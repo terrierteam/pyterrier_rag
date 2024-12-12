@@ -1,7 +1,7 @@
 import pandas as pd
 import pyterrier as pt
-from typing import Optional, Dict
 from pyterrier.datasets import Dataset
+from typing import Optional, Dict
 
 # TODO requires transformers to be installed
 

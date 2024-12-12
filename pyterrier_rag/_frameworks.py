@@ -1,5 +1,8 @@
-import pyterrier as pt, pyterrier_alpha as pta, pandas as pd
+import pandas as pd
+import pyterrier as pt
+import pyterrier_alpha as pta
 from typing import Optional
+
 class Iterative(pt.Transformer):
 
     def __init__(self, retriever : pt.Transformer, reader : pt.Transformer, max_iter : Optional[int] =None):
