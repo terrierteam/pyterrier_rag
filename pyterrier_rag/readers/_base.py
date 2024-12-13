@@ -7,6 +7,8 @@ from typing import Iterable, Union
 from transformers import GenerationConfig
 
 
+GENERIC_PROMPT = "Use the context information to answer the Question: \n Context: {context} \n Question: {query} \n Answer:"
+
 
 class Reader(pt.Transformer, ABC):
 
@@ -45,7 +47,7 @@ class Reader(pt.Transformer, ABC):
                 temperature=1.0,
                 do_sample = False,
                 num_beams = 1,
-                early_stoppint = True
+                early_stopping = True
             )
         else:
             self.generation_config = generation_config

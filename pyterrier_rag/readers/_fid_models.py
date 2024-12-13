@@ -414,11 +414,11 @@ class FiD(Reader):
         for item in context:
             # append title and context prefix
             if isinstance(item, tuple):
-                title, text = item 
+                title, text = item
                 doc_text = self.title_prefix + " " + title + " " + self.context_prefix + " " + text
             else:
                 text = item
-                doc_text = self.context_prefix + " " + text 
+                doc_text = self.context_prefix + " " + text
             # prepend question 
             input_text = self.query_prefix + " " + question + " " + doc_text.strip()
             input_texts.append(input_text.strip())
