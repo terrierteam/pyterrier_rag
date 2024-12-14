@@ -1,0 +1,5 @@
+python==3.8
+PyTorch==1.13.1 
+transformers==4.31.0 
+scipy==1.10.1 
+Spacy==3.4.0
