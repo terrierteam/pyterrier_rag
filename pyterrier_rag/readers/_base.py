@@ -46,8 +46,7 @@ class Reader(pt.Transformer, ABC):
                 max_new_tokens = self.max_new_tokens,
                 temperature=1.0,
                 do_sample = False,
-                num_beams = 1,
-                early_stopping = True
+                num_beams = 1
             )
         else:
             self.generation_config = generation_config

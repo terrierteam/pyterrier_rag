@@ -50,7 +50,6 @@ class VLLMReader(Reader):
                 'temperature' : 1.0,
                 'do_sample' : False,
                 'num_beams' : 1,
-                'early_stopping' : True
             }
         self._generation_args = SamplingParams(**generation_args)
         self.model = LLM(self._model, self._generation_args)
