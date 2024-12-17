@@ -1,7 +1,7 @@
 from ._base import Reader, GENERIC_PROMPT
 from . import _content_aggregation as content_aggregation
 from typing import Any, List
-from transformers import AutoTokenizer, PreTrainedModel, AutoModelForSeq2SeqLM, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, AutoModelForCausalLM
 
 
 class HuggingFaceReader(Reader):
