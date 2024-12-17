@@ -31,7 +31,7 @@ class HuggingFaceReader(Reader):
                             **kwargs)
             self._model_name_or_path = model_name_or_path
             self._model = None if self._model_class is None else self._model_class.from_pretrained(model_name_or_path).to(self.device).eval()
-            self._tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
     
             if context_aggregation not in content_aggregation.__all__:
                 raise ValueError(f"context_aggregation must be one of {content_aggregation.__all__}")
@@ -53,7 +53,7 @@ class HuggingFaceReader(Reader):
 
     def generate(self, inps : List[str]) -> List[str]:
         assert self.model is not None, "Model is not loaded, you should instantiate a subclass of HFModel"
-        inputs = self.tokenizer(inps, return_tensors='pt', padding=True, truncation=True, max_length=self.max_input_length)
+        inputs = self.tokenizer(inps, return_tensors='pt', padding=True, truncation=True, max_length=2048) # TODO - please fix AP: self.max_input_length)
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         outputs = self.model.generate(**inputs, **self._generation_args)
 
