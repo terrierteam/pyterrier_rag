@@ -27,7 +27,6 @@ class VLLMReader(Reader):
                          max_new_tokens=max_new_tokens,
                          generation_config=None,
                          verbose=verbose,
-                         device=None,
                          **kwargs)
         if not is_vllm_availible():
             raise ImportError("Please install vllm to use VLLMReader")
@@ -55,11 +54,10 @@ class VLLMReader(Reader):
         self.model = LLM(self._model, self._generation_args)
 
     def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
+        inp = list(inp)
         qid = inp[0]["qid"]
         query = inp[0]["query"]
-        for row in inp:
-            assert row["query"] == query, "All rows must have the same query for `transform_by_query`"
-
+       
         context = self.get_context_by_query(inp)
         aggregate_context = self._context_aggregation(context)
         input_texts = self._prompt(query=query, context=aggregate_context)

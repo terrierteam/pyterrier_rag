@@ -30,7 +30,6 @@ class OpenAIReader(Reader):
                          max_new_tokens=max_new_tokens,
                          generation_config=None,
                          verbose=verbose,
-                         device=None,
                          **kwargs)
         if not is_openai_availible():
             raise ImportError("Please install openai to use OpenAIReader")
@@ -109,11 +108,10 @@ class OpenAIReader(Reader):
         return response
 
     def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
+        inp = list(inp)
         qid = inp[0]["qid"]
         query = inp[0]["query"]
-        for row in inp:
-            assert row["query"] == query, "All rows must have the same query for `transform_by_query`"
-
+       
         context = self.get_context_by_query(inp)
         if self._tokenizer is None:
             aggregate_context = self._context_aggregation(context)

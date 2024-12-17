@@ -28,7 +28,6 @@ class HuggingFaceReader(Reader):
                             max_new_tokens=max_new_tokens,
                             generation_config=None,
                             verbose=verbose,
-                            device=None,
                             **kwargs)
             self._model_name_or_path = model_name_or_path
             self._model = None if self._model_class is None else self._model_class.from_pretrained(model_name_or_path).to(self.device).eval()
@@ -62,10 +61,9 @@ class HuggingFaceReader(Reader):
 
 
     def transform_by_query(self, inp: List[dict]) -> List[dict]:
+        inp = list(inp)
         qid = inp[0]["qid"]
         query = inp[0]["query"]
-        for row in inp:
-            assert row["query"] == query, "All rows must have the same query for `transform_by_query`"
 
         context = self.get_context_by_query(inp)
         aggregate_context = self._context_aggregation(context)
