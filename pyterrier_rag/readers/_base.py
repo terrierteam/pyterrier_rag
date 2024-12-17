@@ -54,7 +54,6 @@ class Reader(pt.Transformer, ABC):
     # TODO: couldn't pass self.verbose to pta.transform.by_query
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
-        print(type(inp))
         return self.transform_by_query(inp)
     
     @abstractmethod
