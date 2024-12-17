@@ -69,7 +69,7 @@ class HuggingFaceReader(Reader):
         aggregate_context = self._context_aggregation(context)
         input_texts = self._prompt(query=query, context=aggregate_context)
         outputs = self.generate([input_texts])
-        return [{"qid": qid, "query": query, "answer": outputs[0]}]
+        return [{"qid": qid, "query": query, "qanswer": outputs[0]}]
 
 
 class CausalLMReader(HuggingFaceReader):
