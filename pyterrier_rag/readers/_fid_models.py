@@ -391,6 +391,7 @@ class FiD(Reader):
         self.context_prefix = "context:"
 
     def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
+        inp = list(inp)
         qid = inp[0]["qid"]
         query = inp[0]["query"]
         for row in inp:

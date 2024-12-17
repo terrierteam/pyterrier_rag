@@ -1,6 +1,6 @@
 import pandas as pd
 import pyterrier as pt
-from pyterrier.datasets import Dataset
+from pyterrier.datasets import Dataset, RemoteDataset
 from typing import Optional, Dict
 
 # TODO requires transformers to be installed
@@ -29,3 +29,73 @@ pt.datasets.DATASET_MAP['rag:nq'] = FlashRAGDataset(
     {'train': 'nq/train.jsonl', 'dev': 'nq/dev.jsonl', 'test': 'nq/test.jsonl'})
 pt.datasets.DATASET_MAP['rag:hotpotqa'] = FlashRAGDataset(
     {'train': 'hotpotqa/train.jsonl', 'dev': 'hotpotqa/dev.jsonl'})
+
+def _hotspot_files(dataset, components, variant, **kwargs):
+    TAR_NAME = 'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2'
+    
+    # This is equivalent code to extract 
+    # localtarfile, _ = dataset._get_one_file("tars", TAR_NAME)
+    # import tarfile
+    # tarf = tarfile.open(localtarfile, 'r:bz2')
+    # all_members = tarf.getmembers()
+    # # we replace / in the local name, as pyterrier doesnt support /
+    # all_files = [(info.name.replace("/", "_"), TAR_NAME + '#' + info.name) for info in all_members if '.bz2' in info.name and info.isfile()]
+    
+    import os
+    file = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "etc",
+        "rag:hotpotqa_wiki.files.txt")
+    with open(file, "rt") as f:
+        all_files = [ (name.strip().replace("/", "_"), TAR_NAME + '#' + name.strip()) for name in f ]
+    return all_files
+
+def _hotpotread_iterator(dataset):
+
+    DEL_KEYS = ['charoffset_with_links', 'text_with_links', 'charoffset']
+    import bz2, json
+    for filename in dataset.get_corpus():
+
+        with bz2.open(filename, 'rt') as f:
+            for line in f:
+                line_dict = json.loads(line)
+                line_dict["docno"] = line_dict.pop("id")
+                line_dict['text'] = ' '.join(line_dict['text'])
+                for k in DEL_KEYS:
+                    del line_dict[k]
+                yield line_dict
+
+HOTPOTQA_WIKI = {
+    "tars" : {
+        'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2' : ( 'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2', 'http://www.dcs.gla.ac.uk/~craigm/enwiki-20171001-pages-meta-current-withlinks-abstracts.SMALL.tar.bz2' )
+        # 'https://nlp.stanford.edu/projects/hotpotqa/enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2'
+    },
+    "corpus" :_hotspot_files,
+    "corpus_iter" : _hotpotread_iterator
+}
+
+pt.datasets.DATASET_MAP['rag:hotpotqa_wiki'] = RemoteDataset('rag:hotpotqa_wiki', HOTPOTQA_WIKI)
+
+def _nq_read_iterator(dataset):
+    import json
+    for filename in dataset.get_corpus():
+        with open(filename, "r", encoding="utf-8", errors='replace') as f: 
+            # error='replace' avoids a UTF encoding error
+            for i, line in enumerate(f):
+                try:
+                    line_dict = json.loads(line)
+                    line_dict["docno"] = line_dict.pop("id")
+                    line_dict['text'] = line_dict.pop("contents")
+                    yield line_dict
+                except json.decoder.JSONDecodeError as jse:
+                    print("Ignoring JSON decoding error on line number %d, line %sm error %s" % (i, line, str(jse)))
+
+FLASHRAG_WIKI = {
+    "tars" : {
+        'wiki18_100w.zip' : ('wiki18_100w.zip', 'https://huggingface.co/datasets/RUC-NLPIR/FlashRAG_datasets/resolve/main/retrieval-corpus/wiki18_100w.zip')
+    },
+    "corpus" : [("wiki18_100w.jsonl", "wiki18_100w.zip#wiki18_100w.jsonl")],
+    "corpus_iter" : _nq_read_iterator
+}
+
+pt.datasets.DATASET_MAP['rag:nq_wiki'] = RemoteDataset('rag:nq_wiki', FLASHRAG_WIKI)

@@ -48,7 +48,6 @@ class HuggingFaceReader(Reader):
                     'temperature': 1.0,
                     'do_sample': False,
                     'num_beams': 1,
-                    'early_stopping': True
                 }
             self._generation_args = generation_args
             self.model = self._model
