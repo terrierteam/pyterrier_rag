@@ -13,14 +13,17 @@ class TestPyterrier_rag(unittest.TestCase):
         model = BARTFiD(model_name_or_path="facebook/bart-base", tokenizer_name_or_path="facebook/bart-base")
         self._test_fid(model)
 
+    def test_FlanT5(self):
+        from pyterrier_rag.readers import Seq2SeqLMReader
+        model = Seq2SeqLMReader(model_name_or_path='google/flan-t5-base', model=None)
+        self._test_fid(model)
+
     def _test_fid(self, model):
-        result = model.transform_by_query(
-            [
+        data = [
                 {
                     "qid": "0", 
                     "query": "where is Beijing?", 
                     "docno": "d1", 
-                    "title": "China", 
                     "text": "New York is the capital city of USA.", 
                     "score": 0.001
                 },
@@ -29,10 +32,17 @@ class TestPyterrier_rag(unittest.TestCase):
                     "query": 
                     "where is Beijing?", 
                     "docno": "d2", 
-                    "title": "USA", 
                     "text": "Beijing is the capital city of China.", 
                     "score": 0.98
                 },  
             ]
-        )
+
+        # now check without titles
+        result = model(data)
+        self.assertTrue("China" in result[0]['qanswer'])
+
+        # test with titles
+        data[0]['title'] = "USA"
+        data[1]['title'] = "China"
+        result = model(data)
         self.assertTrue("China" in result[0]['qanswer'])

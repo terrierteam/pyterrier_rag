@@ -1,7 +1,7 @@
-from typing import List
+from typing import List, Union, Tuple
+from itertools import chain
 
-
-def concat(context : List[str],
+def concat(context : Union[ List[str], List[Tuple[str]]],
            tokenizer : str = None,
            max_length : str = -1,
            max_per_context : str = 512,
@@ -27,7 +27,7 @@ def concat(context : List[str],
             else:
                 max_per_context -= truncation_rate
     else:
-        total_context = "\n".join(context)
+        total_context = "\n".join(chain(*context))
     return total_context
 
 
