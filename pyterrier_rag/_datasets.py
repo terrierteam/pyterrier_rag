@@ -58,18 +58,21 @@ def _hotpotread_iterator(dataset):
     for filename in dataset.get_corpus():
 
         with bz2.open(filename, 'rt') as f:
-            for line in f:
+            for lineno, line in enumerate(f):
                 try:
                     line_dict = json.loads(line)
                     if not isinstance(line_dict, dict):
-                        raise json.decoder.JSONDecodeError("Not a dict")
+                        raise json.decoder.JSONDecodeError("Not a dict", line, lineno)
                     line_dict["docno"] = line_dict.pop("id")
                     line_dict['text'] = ' '.join(line_dict['text'])
                     for k in DEL_KEYS:
                         del line_dict[k]
                     yield line_dict
                 except json.decoder.JSONDecodeError as jse:
-                    warn("Ignoring JSON decoding error on line number %d, line %sm error %s" % (i, line, str(jse)))
+                    if lineno > 10:
+                        warn("Ignoring JSON decoding error on line number %d, line %sm error %s" % (lineno, line, str(jse)))
+                    else: 
+                        raise jse
 
 HOTPOTQA_WIKI = {
     "tars" : {
@@ -82,38 +85,28 @@ HOTPOTQA_WIKI = {
 
 pt.datasets.DATASET_MAP['rag:hotpotqa_wiki'] = RemoteDataset('rag:hotpotqa_wiki', HOTPOTQA_WIKI)
 
-# TODO remove this one pyterrier 0.12.1 is released. 
-def autoopen(filename, mode='rb', **kwargs):
-    """
-    A drop-in for open() that applies automatic compression for .gz, .bz2 and .lz4 file extensions
-    """
-
-    if filename.endswith(".gz"):
-        import gzip
-        return gzip.open(filename, mode, **kwargs)
-    elif filename.endswith(".bz2"):
-        import bz2
-        return bz2.open(filename, mode, **kwargs)
-    elif filename.endswith(".lz4"):
-        import lz4.frame
-        return lz4.frame.open(filename, mode, **kwargs)
-    return open(filename, mode, **kwargs)
-
 def _nq_read_iterator(dataset):
     import json
     for filename in dataset.get_corpus():
-        with autoopen(filename, "r", encoding="utf-8", errors='replace') as f: 
+        with pt.io.autoopen(filename, "r", encoding="utf-8", errors='replace') as f: 
             # error='replace' avoids a UTF encoding error
-            for i, line in enumerate(f):
+            for lineno, line in enumerate(f):
                 try:
                     line_dict = json.loads(line)
                     if not isinstance(line_dict, dict):
-                        raise json.decoder.JSONDecodeError("Not a dict")
+                        raise json.decoder.JSONDecodeError("Not a dict", line, lineno)
                     line_dict["docno"] = line_dict.pop("id")
-                    line_dict['text'] = line_dict.pop("contents")
+                    # flashrag has {title}\n{text}
+                    # we split this out, but keep contents too for anyone that wants it 
+                    title, text = line_dict["contents"].split("\n", 1) 
+                    line_dict['title'] = title
+                    line_dict['text'] = text
                     yield line_dict
                 except json.decoder.JSONDecodeError as jse:
-                    warn("Ignoring JSON decoding error on line number %d, line %sm error %s" % (i, line, str(jse)))
+                    if lineno > 10:
+                        warn("Ignoring JSON decoding error in file %s on line number %d, line %s error %s" % (filename, lineno, line, str(jse)))
+                    else: 
+                        raise RuntimeError("Early JSON decoding error in file %s on line number %d, line %s" % (filename, lineno, line)) from jse
 
 FLASHRAG_WIKI = {
     "tars" : {
