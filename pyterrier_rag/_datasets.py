@@ -2,6 +2,7 @@ import pandas as pd
 import pyterrier as pt
 from pyterrier.datasets import Dataset, RemoteDataset
 from typing import Optional, Dict
+from warnings import warn
 
 # TODO requires transformers to be installed
 
@@ -58,12 +59,17 @@ def _hotpotread_iterator(dataset):
 
         with bz2.open(filename, 'rt') as f:
             for line in f:
-                line_dict = json.loads(line)
-                line_dict["docno"] = line_dict.pop("id")
-                line_dict['text'] = ' '.join(line_dict['text'])
-                for k in DEL_KEYS:
-                    del line_dict[k]
-                yield line_dict
+                try:
+                    line_dict = json.loads(line)
+                    if not isinstance(line_dict, dict):
+                        raise json.decoder.JSONDecodeError("Not a dict")
+                    line_dict["docno"] = line_dict.pop("id")
+                    line_dict['text'] = ' '.join(line_dict['text'])
+                    for k in DEL_KEYS:
+                        del line_dict[k]
+                    yield line_dict
+                except json.decoder.JSONDecodeError as jse:
+                    warn("Ignoring JSON decoding error on line number %d, line %sm error %s" % (i, line, str(jse)))
 
 HOTPOTQA_WIKI = {
     "tars" : {
@@ -76,19 +82,38 @@ HOTPOTQA_WIKI = {
 
 pt.datasets.DATASET_MAP['rag:hotpotqa_wiki'] = RemoteDataset('rag:hotpotqa_wiki', HOTPOTQA_WIKI)
 
+# TODO remove this one pyterrier 0.12.1 is released. 
+def autoopen(filename, mode='rb', **kwargs):
+    """
+    A drop-in for open() that applies automatic compression for .gz, .bz2 and .lz4 file extensions
+    """
+
+    if filename.endswith(".gz"):
+        import gzip
+        return gzip.open(filename, mode, **kwargs)
+    elif filename.endswith(".bz2"):
+        import bz2
+        return bz2.open(filename, mode, **kwargs)
+    elif filename.endswith(".lz4"):
+        import lz4.frame
+        return lz4.frame.open(filename, mode, **kwargs)
+    return open(filename, mode, **kwargs)
+
 def _nq_read_iterator(dataset):
     import json
     for filename in dataset.get_corpus():
-        with open(filename, "r", encoding="utf-8", errors='replace') as f: 
+        with autoopen(filename, "r", encoding="utf-8", errors='replace') as f: 
             # error='replace' avoids a UTF encoding error
             for i, line in enumerate(f):
                 try:
                     line_dict = json.loads(line)
+                    if not isinstance(line_dict, dict):
+                        raise json.decoder.JSONDecodeError("Not a dict")
                     line_dict["docno"] = line_dict.pop("id")
                     line_dict['text'] = line_dict.pop("contents")
                     yield line_dict
                 except json.decoder.JSONDecodeError as jse:
-                    print("Ignoring JSON decoding error on line number %d, line %sm error %s" % (i, line, str(jse)))
+                    warn("Ignoring JSON decoding error on line number %d, line %sm error %s" % (i, line, str(jse)))
 
 FLASHRAG_WIKI = {
     "tars" : {
