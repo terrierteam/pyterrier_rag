@@ -30,6 +30,10 @@ pt.datasets.DATASET_MAP['rag:nq'] = FlashRAGDataset(
     {'train': 'nq/train.jsonl', 'dev': 'nq/dev.jsonl', 'test': 'nq/test.jsonl'})
 pt.datasets.DATASET_MAP['rag:hotpotqa'] = FlashRAGDataset(
     {'train': 'hotpotqa/train.jsonl', 'dev': 'hotpotqa/dev.jsonl'})
+pt.datasets.DATASET_MAP['rag:2wikimultihopqa'] = FlashRAGDataset(
+    {'train': '2wikimultihopqa/train.jsonl', 'dev': '2wikimultihopqa/dev.jsonl'})
+pt.datasets.DATASET_MAP['rag:triviaqa'] = FlashRAGDataset(
+    {'train': 'triviaqa/train.jsonl', 'dev': 'triviaqa/dev.jsonl', 'test': 'triviaqa/test.jsonl'})
 
 def _hotspot_files(dataset, components, variant, **kwargs):
     TAR_NAME = 'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2'
