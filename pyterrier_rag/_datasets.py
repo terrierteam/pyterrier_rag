@@ -135,9 +135,9 @@ def _2WikiMultihopQA_topics(self, component, variant):
     all_data = pd.read_json(json_file)
     if component == 'answers':
         answers = all_data.rename(columns={'_id': 'qid', 'answer' : 'gold_answer'})[['qid', 'type', 'gold_answer']]
-        return answers
+        return answers, "direct"
     rtr = []
-    for id, idgroup in pt.tqdm(all_data.explode('context').groupby('_id')):
+    for id, idgroup in pt.tqdm(all_data.explode('context').groupby('_id'), desc="Reading 2WikiMultihopQA %s.json" % variant):
         for docpos, doc in enumerate(idgroup.itertuples()):
             for psgpos, passage in enumerate(doc.context[1]):
                 rtr.append({
