@@ -139,14 +139,14 @@ def _2WikiMultihopQA_topics(self, component, variant):
     rtr = []
     for id, idgroup in pt.tqdm(all_data.explode('context').groupby('_id'), desc="Reading 2WikiMultihopQA %s.json" % variant):
         for docpos, doc in enumerate(idgroup.itertuples()):
-            for psgpos, passage in enumerate(doc.context[1]):
-                rtr.append({
-                    'qid' : id, 
-                    'query' : doc.question, 
-                    'docno' : "%s_%02d_%02d" % (id, docpos, psgpos),
-                    'title' : doc.context[0],
-                    'text' : passage
-                    })
+            rtr.append({
+                'qid' : id, 
+                'query' : doc.question, 
+                'docno' : "%s_%02d" % (id, docpos),
+                'title' : doc.context[0],
+                'text' : " ".join(doc.context[1]) # join the sentences into a single passage
+                })
+                
     return pd.DataFrame(rtr), "direct"
 
 DROPBOX_2WikiMultihopQA = {
@@ -155,8 +155,8 @@ DROPBOX_2WikiMultihopQA = {
     },
     "raw_files" : {
         'test' : ('test.json', '2WikiMultihopQA.zip#test.json'),
-        'train' : ('test.json', '2WikiMultihopQA.zip#train.json'),
-        'dev' : ('test.json', '2WikiMultihopQA.zip#dev.json')
+        'train' : ('train.json', '2WikiMultihopQA.zip#train.json'),
+        'dev' : ('dev.json', '2WikiMultihopQA.zip#dev.json')
     },
     "topics" : {
         'train' : _2WikiMultihopQA_topics,
