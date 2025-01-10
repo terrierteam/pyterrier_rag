@@ -166,7 +166,7 @@ DROPBOX_2WikiMultihopQA = {
     "answers" : {
         'train' : _2WikiMultihopQA_topics,
         'dev' : _2WikiMultihopQA_topics,
-        'test' : _2WikiMultihopQA_topics,
+        # no answers in the test set      
     }
 }
 pt.datasets.DATASET_MAP['rag:2wikimultihopqa'] = RemoteRAGDataset('rag:2wikimultihopqa', DROPBOX_2WikiMultihopQA)
