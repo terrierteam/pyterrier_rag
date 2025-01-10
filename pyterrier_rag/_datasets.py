@@ -10,6 +10,13 @@ class RAGDataset(Dataset):
     def get_answers(self, variant: Optional[str] = None) -> pd.DataFrame:
         pass
 
+class RemoteRAGDataset(RemoteDataset, RAGDataset):
+    def get_answers(self, variant=None):
+        filename, type = self._get_one_file("answers", variant)
+        if type == "direct":
+            return filename 
+        return pt.io.read_qrels(filename)
+
 class FlashRAGDataset(RAGDataset):
     def __init__(self, flashsplits : Dict[str,str]):
         self.splits = flashsplits
@@ -30,8 +37,6 @@ pt.datasets.DATASET_MAP['rag:nq'] = FlashRAGDataset(
     {'train': 'nq/train.jsonl', 'dev': 'nq/dev.jsonl', 'test': 'nq/test.jsonl'})
 pt.datasets.DATASET_MAP['rag:hotpotqa'] = FlashRAGDataset(
     {'train': 'hotpotqa/train.jsonl', 'dev': 'hotpotqa/dev.jsonl'})
-pt.datasets.DATASET_MAP['rag:2wikimultihopqa'] = FlashRAGDataset(
-    {'train': '2wikimultihopqa/train.jsonl', 'dev': '2wikimultihopqa/dev.jsonl'})
 pt.datasets.DATASET_MAP['rag:triviaqa'] = FlashRAGDataset(
     {'train': 'triviaqa/train.jsonl', 'dev': 'triviaqa/dev.jsonl', 'test': 'triviaqa/test.jsonl'})
 pt.datasets.DATASET_MAP['rag:musique'] = FlashRAGDataset(
@@ -123,3 +128,45 @@ FLASHRAG_WIKI = {
 }
 
 pt.datasets.DATASET_MAP['rag:nq_wiki'] = RemoteDataset('rag:nq_wiki', FLASHRAG_WIKI)
+
+def _2WikiMultihopQA_topics(self, component, variant):
+    assert component in ['topics', 'answers']
+    json_file, _ = self._get_one_file('raw_files', variant)
+    all_data = pd.read_json(json_file)
+    if component == 'answers':
+        answers = all_data.rename(columns={'_id': 'qid', 'answer' : 'gold_answer'})[['qid', 'type', 'gold_answer']]
+        return answers
+    rtr = []
+    for id, idgroup in pt.tqdm(all_data.explode('context').groupby('_id')):
+        for docpos, doc in enumerate(idgroup.itertuples()):
+            for psgpos, passage in enumerate(doc.context[1]):
+                rtr.append({
+                    'qid' : id, 
+                    'query' : doc.question, 
+                    'docno' : "%s_%02d_%02d" % (id, docpos, psgpos),
+                    'title' : doc.context[0],
+                    'text' : passage
+                    })
+    return pd.DataFrame(rtr), "direct"
+
+DROPBOX_2WikiMultihopQA = {
+    "tars" : {
+        '2WikiMultihopQA.zip' : ('2WikiMultihopQA.zip', "https://www.dropbox.com/s/ms2m13252h6xubs/data_ids_april7.zip?dl=1")
+    },
+    "raw_files" : {
+        'test' : ('test.json', '2WikiMultihopQA.zip#test.json'),
+        'train' : ('test.json', '2WikiMultihopQA.zip#train.json'),
+        'dev' : ('test.json', '2WikiMultihopQA.zip#dev.json')
+    },
+    "topics" : {
+        'train' : _2WikiMultihopQA_topics,
+        'dev' : _2WikiMultihopQA_topics,
+        'test' : _2WikiMultihopQA_topics,
+    },
+    "answers" : {
+        'train' : _2WikiMultihopQA_topics,
+        'dev' : _2WikiMultihopQA_topics,
+        'test' : _2WikiMultihopQA_topics,
+    }
+}
+pt.datasets.DATASET_MAP['rag:2wikimultihopqa'] = RemoteRAGDataset('rag:2wikimultihopqa', DROPBOX_2WikiMultihopQA)
