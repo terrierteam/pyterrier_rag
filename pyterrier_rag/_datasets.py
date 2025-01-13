@@ -51,7 +51,8 @@ def _hotspot_files(dataset, components, variant, **kwargs):
     # tarf = tarfile.open(localtarfile, 'r:bz2')
     # all_members = tarf.getmembers()
     # # we replace / in the local name, as pyterrier doesnt support /
-    # all_files = [(info.name.replace("/", "_"), TAR_NAME + '#' + info.name) for info in all_members if '.bz2' in info.name and info.isfile()]
+    # all_files = [(info.name.replace("/", "_"), TAR_NAME + '#' + info.name) 
+    #   for info in all_members if '.bz2' in info.name and info.isfile()]
     
     import os
     file = os.path.join(
@@ -87,8 +88,7 @@ def _hotpotread_iterator(dataset):
 
 HOTPOTQA_WIKI = {
     "tars" : {
-        'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2' : ( 'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2', 'http://www.dcs.gla.ac.uk/~craigm/enwiki-20171001-pages-meta-current-withlinks-abstracts.SMALL.tar.bz2' )
-        # 'https://nlp.stanford.edu/projects/hotpotqa/enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2'
+        'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2' : ( 'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2', 'https://nlp.stanford.edu/projects/hotpotqa/enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2' )
     },
     "corpus" :_hotspot_files,
     "corpus_iter" : _hotpotread_iterator
