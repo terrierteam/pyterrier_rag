@@ -52,8 +52,8 @@ class HuggingFaceReader(Reader):
             self.model = self._model
 
     def generate(self, inps : List[str]) -> List[str]:
-        assert self.model is not None, "Model is not loaded, you should instantiate a subclass of HFModel"
-        inputs = self.tokenizer(inps, return_tensors='pt', padding=True, truncation=True, max_length=2048) # TODO - please fix AP: self.max_input_length)
+        assert self.model is not None, "Model is not loaded, you should instantiate a subclass of HuggingFaceReader: CausalLMReader or Seq2SeqLMReader"
+        inputs = self.tokenizer(inps, return_tensors='pt', truncation=True, max_length=2048) # TODO - please fix AP: self.max_input_length)
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         outputs = self.model.generate(**inputs, **self._generation_args)
 
