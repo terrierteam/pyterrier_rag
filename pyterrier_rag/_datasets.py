@@ -42,16 +42,15 @@ pt.datasets.DATASET_MAP['rag:triviaqa'] = FlashRAGDataset(
 pt.datasets.DATASET_MAP['rag:musique'] = FlashRAGDataset(
     {'train': 'musique/train.jsonl', 'dev': 'musique/dev.jsonl'})
 
-def _hotspot_files(dataset, components, variant, **kwargs):
-    TAR_NAME = 'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2'
-    
+def _hotspot_files(dataset: Dataset, components: str, variant: str, **kwargs):
+    tar_name = 'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2'
+
     # This is equivalent code to extract 
-    # localtarfile, _ = dataset._get_one_file("tars", TAR_NAME)
+    # localtarfile, _ = dataset._get_one_file("tars", tar_name)
     # import tarfile
     # tarf = tarfile.open(localtarfile, 'r:bz2')
     # all_members = tarf.getmembers()
-    # # we replace / in the local name, as pyterrier doesnt support /
-    # all_files = [(info.name.replace("/", "_"), TAR_NAME + '#' + info.name) for info in all_members if '.bz2' in info.name and info.isfile()]
+    # all_files = [(info.name.replace("/", "_"), tar_name + '#' + info.name) for info in all_members if '.bz2' in info.name and info.isfile()]
     
     import os
     file = os.path.join(
@@ -59,7 +58,7 @@ def _hotspot_files(dataset, components, variant, **kwargs):
         "etc",
         "rag:hotpotqa_wiki.files.txt")
     with open(file, "rt") as f:
-        all_files = [ (name.strip().replace("/", "_"), TAR_NAME + '#' + name.strip()) for name in f ]
+        all_files = [ (name.strip().replace("/", "_"), tar_name + '#' + name.strip()) for name in f ]
     return all_files
 
 def _hotpotread_iterator(dataset):
