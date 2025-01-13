@@ -75,6 +75,10 @@ class HuggingFaceReader(Reader):
 class CausalLMReader(HuggingFaceReader):
     _model_class = AutoModelForCausalLM
 
+    def generate(self, inps):
+        full_text = super().generate(inps)
+        return [text[len(inp):] for text, inp in zip(full_text, inps)]
+
 
 class Seq2SeqLMReader(HuggingFaceReader):
     _model_class = AutoModelForSeq2SeqLM
