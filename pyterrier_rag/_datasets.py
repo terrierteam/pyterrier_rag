@@ -11,10 +11,10 @@ class RAGDataset(Dataset):
         pass
 
 class RemoteRAGDataset(RemoteDataset, RAGDataset):
-    def get_answers(self, variant=None):
+    def get_answers(self, variant : Optional[str] = None):
         filename, type = self._get_one_file("answers", variant)
         if type == "direct":
-            return filename 
+            return filename
         return pt.io.read_qrels(filename)
 
 class FlashRAGDataset(RAGDataset):
@@ -42,16 +42,15 @@ pt.datasets.DATASET_MAP['rag:triviaqa'] = FlashRAGDataset(
 pt.datasets.DATASET_MAP['rag:musique'] = FlashRAGDataset(
     {'train': 'musique/train.jsonl', 'dev': 'musique/dev.jsonl'})
 
-def _hotspot_files(dataset, components, variant, **kwargs):
-    TAR_NAME = 'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2'
-    
-    # This is equivalent code to extract 
-    # localtarfile, _ = dataset._get_one_file("tars", TAR_NAME)
+def _hotspot_files(dataset: Dataset, components: str, variant: str, **kwargs):
+    tar_name = 'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2'
+
+    # This is equivalent code to extract
+    # localtarfile, _ = dataset._get_one_file("tars", tar_name)
     # import tarfile
     # tarf = tarfile.open(localtarfile, 'r:bz2')
     # all_members = tarf.getmembers()
-    # # we replace / in the local name, as pyterrier doesnt support /
-    # all_files = [(info.name.replace("/", "_"), TAR_NAME + '#' + info.name) 
+    # all_files = [(info.name.replace("/", "_"), tar_name + '#' + info.name) 
     #   for info in all_members if '.bz2' in info.name and info.isfile()]
     
     import os
@@ -60,12 +59,12 @@ def _hotspot_files(dataset, components, variant, **kwargs):
         "etc",
         "rag:hotpotqa_wiki.files.txt")
     with open(file, "rt") as f:
-        all_files = [ (name.strip().replace("/", "_"), TAR_NAME + '#' + name.strip()) for name in f ]
+        all_files = [ (name.strip().replace("/", "_"), tar_name + '#' + name.strip()) for name in f ]
     return all_files
 
 def _hotpotread_iterator(dataset):
 
-    DEL_KEYS = ['charoffset_with_links', 'text_with_links', 'charoffset']
+    del_keys = ['charoffset_with_links', 'text_with_links', 'charoffset']
     import bz2, json
     for filename in dataset.get_corpus():
 
@@ -77,7 +76,7 @@ def _hotpotread_iterator(dataset):
                         raise json.decoder.JSONDecodeError("Not a dict", line, lineno)
                     line_dict["docno"] = line_dict.pop("id")
                     line_dict['text'] = ' '.join(line_dict['text'])
-                    for k in DEL_KEYS:
+                    for k in del_keys:
                         del line_dict[k]
                     yield line_dict
                 except json.decoder.JSONDecodeError as jse:
