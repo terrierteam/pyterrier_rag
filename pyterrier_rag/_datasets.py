@@ -10,6 +10,13 @@ class RAGDataset(Dataset):
     def get_answers(self, variant: Optional[str] = None) -> pd.DataFrame:
         pass
 
+class RemoteRAGDataset(RemoteDataset, RAGDataset):
+    def get_answers(self, variant : Optional[str] = None):
+        filename, type = self._get_one_file("answers", variant)
+        if type == "direct":
+            return filename
+        return pt.io.read_qrels(filename)
+
 class FlashRAGDataset(RAGDataset):
     def __init__(self, flashsplits : Dict[str,str]):
         self.splits = flashsplits
@@ -30,21 +37,21 @@ pt.datasets.DATASET_MAP['rag:nq'] = FlashRAGDataset(
     {'train': 'nq/train.jsonl', 'dev': 'nq/dev.jsonl', 'test': 'nq/test.jsonl'})
 pt.datasets.DATASET_MAP['rag:hotpotqa'] = FlashRAGDataset(
     {'train': 'hotpotqa/train.jsonl', 'dev': 'hotpotqa/dev.jsonl'})
-pt.datasets.DATASET_MAP['rag:2wikimultihopqa'] = FlashRAGDataset(
-    {'train': '2wikimultihopqa/train.jsonl', 'dev': '2wikimultihopqa/dev.jsonl'})
 pt.datasets.DATASET_MAP['rag:triviaqa'] = FlashRAGDataset(
     {'train': 'triviaqa/train.jsonl', 'dev': 'triviaqa/dev.jsonl', 'test': 'triviaqa/test.jsonl'})
+pt.datasets.DATASET_MAP['rag:musique'] = FlashRAGDataset(
+    {'train': 'musique/train.jsonl', 'dev': 'musique/dev.jsonl'})
 
-def _hotspot_files(dataset, components, variant, **kwargs):
-    TAR_NAME = 'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2'
-    
-    # This is equivalent code to extract 
-    # localtarfile, _ = dataset._get_one_file("tars", TAR_NAME)
+def _hotspot_files(dataset: Dataset, components: str, variant: str, **kwargs):
+    tar_name = 'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2'
+
+    # This is equivalent code to extract
+    # localtarfile, _ = dataset._get_one_file("tars", tar_name)
     # import tarfile
     # tarf = tarfile.open(localtarfile, 'r:bz2')
     # all_members = tarf.getmembers()
-    # # we replace / in the local name, as pyterrier doesnt support /
-    # all_files = [(info.name.replace("/", "_"), TAR_NAME + '#' + info.name) for info in all_members if '.bz2' in info.name and info.isfile()]
+    # all_files = [(info.name.replace("/", "_"), tar_name + '#' + info.name) 
+    #   for info in all_members if '.bz2' in info.name and info.isfile()]
     
     import os
     file = os.path.join(
@@ -52,12 +59,12 @@ def _hotspot_files(dataset, components, variant, **kwargs):
         "etc",
         "rag:hotpotqa_wiki.files.txt")
     with open(file, "rt") as f:
-        all_files = [ (name.strip().replace("/", "_"), TAR_NAME + '#' + name.strip()) for name in f ]
+        all_files = [ (name.strip().replace("/", "_"), tar_name + '#' + name.strip()) for name in f ]
     return all_files
 
 def _hotpotread_iterator(dataset):
 
-    DEL_KEYS = ['charoffset_with_links', 'text_with_links', 'charoffset']
+    del_keys = ['charoffset_with_links', 'text_with_links', 'charoffset']
     import bz2, json
     for filename in dataset.get_corpus():
 
@@ -69,7 +76,7 @@ def _hotpotread_iterator(dataset):
                         raise json.decoder.JSONDecodeError("Not a dict", line, lineno)
                     line_dict["docno"] = line_dict.pop("id")
                     line_dict['text'] = ' '.join(line_dict['text'])
-                    for k in DEL_KEYS:
+                    for k in del_keys:
                         del line_dict[k]
                     yield line_dict
                 except json.decoder.JSONDecodeError as jse:
@@ -80,8 +87,7 @@ def _hotpotread_iterator(dataset):
 
 HOTPOTQA_WIKI = {
     "tars" : {
-        'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2' : ( 'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2', 'http://www.dcs.gla.ac.uk/~craigm/enwiki-20171001-pages-meta-current-withlinks-abstracts.SMALL.tar.bz2' )
-        # 'https://nlp.stanford.edu/projects/hotpotqa/enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2'
+        'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2' : ( 'enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2', 'https://nlp.stanford.edu/projects/hotpotqa/enwiki-20171001-pages-meta-current-withlinks-abstracts.tar.bz2' )
     },
     "corpus" :_hotspot_files,
     "corpus_iter" : _hotpotread_iterator
@@ -121,3 +127,45 @@ FLASHRAG_WIKI = {
 }
 
 pt.datasets.DATASET_MAP['rag:nq_wiki'] = RemoteDataset('rag:nq_wiki', FLASHRAG_WIKI)
+
+def _2WikiMultihopQA_topics(self, component, variant):
+    assert component in ['topics', 'answers']
+    json_file, _ = self._get_one_file('raw_files', variant)
+    all_data = pd.read_json(json_file)
+    if component == 'answers':
+        answers = all_data.rename(columns={'_id': 'qid', 'answer' : 'gold_answer'})[['qid', 'type', 'gold_answer']]
+        return answers, "direct"
+    rtr = []
+    for id, idgroup in pt.tqdm(all_data.explode('context').groupby('_id'), desc="Reading 2WikiMultihopQA %s.json" % variant):
+        for docpos, doc in enumerate(idgroup.itertuples()):
+            rtr.append({
+                'qid' : id, 
+                'query' : doc.question, 
+                'docno' : "%s_%02d" % (id, docpos),
+                'title' : doc.context[0],
+                'text' : " ".join(doc.context[1]) # join the sentences into a single passage
+                })
+                
+    return pd.DataFrame(rtr), "direct"
+
+DROPBOX_2WikiMultihopQA = {
+    "tars" : {
+        '2WikiMultihopQA.zip' : ('2WikiMultihopQA.zip', "https://www.dropbox.com/s/ms2m13252h6xubs/data_ids_april7.zip?dl=1")
+    },
+    "raw_files" : {
+        'test' : ('test.json', '2WikiMultihopQA.zip#test.json'),
+        'train' : ('train.json', '2WikiMultihopQA.zip#train.json'),
+        'dev' : ('dev.json', '2WikiMultihopQA.zip#dev.json')
+    },
+    "topics" : {
+        'train' : _2WikiMultihopQA_topics,
+        'dev' : _2WikiMultihopQA_topics,
+        'test' : _2WikiMultihopQA_topics,
+    },
+    "answers" : {
+        'train' : _2WikiMultihopQA_topics,
+        'dev' : _2WikiMultihopQA_topics,
+        # no answers in the test set      
+    }
+}
+pt.datasets.DATASET_MAP['rag:2wikimultihopqa'] = RemoteRAGDataset('rag:2wikimultihopqa', DROPBOX_2WikiMultihopQA)

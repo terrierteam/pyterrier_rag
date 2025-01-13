@@ -18,7 +18,7 @@ class Reader(pt.Transformer, ABC):
         batch_size: int = 4,
         text_field: str = 'text',
         text_max_length: int = 512,
-        num_context: int = 5,
+        num_context: Union[int, str] = "auto",
         max_new_tokens: int = 32,
         generation_config: GenerationConfig = None,
         verbose: bool = False,
@@ -65,12 +65,14 @@ class Reader(pt.Transformer, ABC):
         return at most self.num_context retrieved context.
         """
         if self.num_context and inp:
+            num = len(inp) if self.num_context == "auto" else self.num_context
             if "score" in inp[0]:
                 inp = sorted(inp, key=lambda x: x["score"], reverse=True)
             if "title" in inp[0]:
                 context = [(item["title"], item[self.text_field]) for item in inp]
             else:
                 context = [item[self.text_field] for item in inp]
+            context = context[:num]
         else:
             context = None
         return context
