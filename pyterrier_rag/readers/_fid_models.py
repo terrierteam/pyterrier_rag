@@ -444,15 +444,17 @@ class FiD(Reader):
 
 class T5FiD(FiD):
 
-    def __init__(self, model_name_or_path: str, tokenizer_name_or_path: str, batch_size: int = 4, text_field: str = 'text', text_max_length: int = 256, num_context: Union[int, str] = "auto", max_new_tokens: int = 32, generation_config: GenerationConfig = None, verbose: bool = False, device: Union[str, torch.device] = None, **kwargs):
+    def __init__(self, model_name_or_path: str, tokenizer_name_or_path: str = None, batch_size: int = 4, text_field: str = 'text', text_max_length: int = 256, num_context: Union[int, str] = "auto", max_new_tokens: int = 32, generation_config: GenerationConfig = None, verbose: bool = False, device: Union[str, torch.device] = None, **kwargs):
         model = T5FiDReader.from_pretrained(model_name_or_path)
+        tokenizer_name_or_path = tokenizer_name_or_path or model_name_or_path
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path)
         super().__init__(model, tokenizer, batch_size, text_field, text_max_length, num_context, max_new_tokens, generation_config, verbose, device, **kwargs)
 
 
 class BARTFiD(FiD):
 
-    def __init__(self, model_name_or_path: str, tokenizer_name_or_path: str, batch_size: int = 4, text_field: str = 'text', text_max_length: int = 256, num_context: Union[int, str] = "auto", max_new_tokens: int = 32, generation_config: GenerationConfig = None, verbose: bool = False, device: Union[str, torch.device] = None, **kwargs):
+    def __init__(self, model_name_or_path: str, tokenizer_name_or_path: str = None, batch_size: int = 4, text_field: str = 'text', text_max_length: int = 256, num_context: Union[int, str] = "auto", max_new_tokens: int = 32, generation_config: GenerationConfig = None, verbose: bool = False, device: Union[str, torch.device] = None, **kwargs):
         model = BARTFiDReader.from_pretrained(model_name_or_path)
+        tokenizer_name_or_path = tokenizer_name_or_path or model_name_or_path
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path)
         super().__init__(model, tokenizer, batch_size, text_field, text_max_length, num_context, max_new_tokens, generation_config, verbose, device, **kwargs)
