@@ -76,6 +76,9 @@ class CausalLMReader(HuggingFaceReader):
     _model_class = AutoModelForCausalLM
 
     def generate(self, inps):
+        self.model.generation_config.pad_token_id = self.tokenizer.pad_token_id
+        self.tokenizer.pad_token = self.tokenizer.eos_token
+        self._generation_args['pad_token_id'] = self.tokenizer.eos_token_id
         full_text = super().generate(inps)
         return [text[len(inp):] for text, inp in zip(full_text, inps)]
 
