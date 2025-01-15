@@ -1,18 +1,18 @@
-from typing import List, Union, Tuple
 from itertools import chain
+from typing import List, Tuple, Union
+
 
 def concat(context : Union[ List[str], List[Tuple[str]]],
            tokenizer : str = None,
            max_length : str = -1,
            max_per_context : str = 512,
            truncation_rate : int = 50) -> str:
-    '''
-    if tokenizer is not None,
-        add all context to total context
-        tokenize,
-        if it exceeds max_length,
-            truncate each context by 50 terms
-    '''
+    """If tokenizer is not None,
+    add all context to total context
+    tokenize,
+    if it exceeds max_length,
+        truncate each context by 50 terms
+    """
     if tokenizer is not None:
         while True:
             total_context = ""

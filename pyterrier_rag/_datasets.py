@@ -1,8 +1,9 @@
+from typing import Dict, Optional
+from warnings import warn
+
 import pandas as pd
 import pyterrier as pt
 from pyterrier.datasets import Dataset, RemoteDataset
-from typing import Optional, Dict
-from warnings import warn
 
 # TODO requires transformers to be installed
 
@@ -50,9 +51,9 @@ def _hotspot_files(dataset: Dataset, components: str, variant: str, **kwargs):
     # import tarfile
     # tarf = tarfile.open(localtarfile, 'r:bz2')
     # all_members = tarf.getmembers()
-    # all_files = [(info.name.replace("/", "_"), tar_name + '#' + info.name) 
+    # all_files = [(info.name.replace("/", "_"), tar_name + '#' + info.name)
     #   for info in all_members if '.bz2' in info.name and info.isfile()]
-    
+
     import os
     file = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
@@ -65,7 +66,8 @@ def _hotspot_files(dataset: Dataset, components: str, variant: str, **kwargs):
 def _hotpotread_iterator(dataset):
 
     del_keys = ['charoffset_with_links', 'text_with_links', 'charoffset']
-    import bz2, json
+    import bz2
+    import json
     for filename in dataset.get_corpus():
 
         with bz2.open(filename, 'rt') as f:
@@ -82,7 +84,7 @@ def _hotpotread_iterator(dataset):
                 except json.decoder.JSONDecodeError as jse:
                     if lineno > 10:
                         warn("Ignoring JSON decoding error on line number %d, line %sm error %s" % (lineno, line, str(jse)))
-                    else: 
+                    else:
                         raise jse
 
 HOTPOTQA_WIKI = {
@@ -98,7 +100,7 @@ pt.datasets.DATASET_MAP['rag:hotpotqa_wiki'] = RemoteDataset('rag:hotpotqa_wiki'
 def _nq_read_iterator(dataset):
     import json
     for filename in dataset.get_corpus():
-        with pt.io.autoopen(filename, "r", encoding="utf-8", errors='replace') as f: 
+        with pt.io.autoopen(filename, "r", encoding="utf-8", errors='replace') as f:
             # error='replace' avoids a UTF encoding error
             for lineno, line in enumerate(f):
                 try:
@@ -107,15 +109,15 @@ def _nq_read_iterator(dataset):
                         raise json.decoder.JSONDecodeError("Not a dict", line, lineno)
                     line_dict["docno"] = line_dict.pop("id")
                     # flashrag has {title}\n{text}
-                    # we split this out, but keep contents too for anyone that wants it 
-                    title, text = line_dict["contents"].split("\n", 1) 
+                    # we split this out, but keep contents too for anyone that wants it
+                    title, text = line_dict["contents"].split("\n", 1)
                     line_dict['title'] = title
                     line_dict['text'] = text
                     yield line_dict
                 except json.decoder.JSONDecodeError as jse:
                     if lineno > 10:
                         warn("Ignoring JSON decoding error in file %s on line number %d, line %s error %s" % (filename, lineno, line, str(jse)))
-                    else: 
+                    else:
                         raise RuntimeError("Early JSON decoding error in file %s on line number %d, line %s" % (filename, lineno, line)) from jse
 
 FLASHRAG_WIKI = {
@@ -139,13 +141,13 @@ def _2WikiMultihopQA_topics(self, component, variant):
     for id, idgroup in pt.tqdm(all_data.explode('context').groupby('_id'), desc="Reading 2WikiMultihopQA %s.json" % variant):
         for docpos, doc in enumerate(idgroup.itertuples()):
             rtr.append({
-                'qid' : id, 
-                'query' : doc.question, 
+                'qid' : id,
+                'query' : doc.question,
                 'docno' : "%s_%02d" % (id, docpos),
                 'title' : doc.context[0],
                 'text' : " ".join(doc.context[1]) # join the sentences into a single passage
                 })
-                
+
     return pd.DataFrame(rtr), "direct"
 
 DROPBOX_2WikiMultihopQA = {
@@ -165,7 +167,7 @@ DROPBOX_2WikiMultihopQA = {
     "answers" : {
         'train' : _2WikiMultihopQA_topics,
         'dev' : _2WikiMultihopQA_topics,
-        # no answers in the test set      
+        # no answers in the test set
     }
 }
 pt.datasets.DATASET_MAP['rag:2wikimultihopqa'] = RemoteRAGDataset('rag:2wikimultihopqa', DROPBOX_2WikiMultihopQA)

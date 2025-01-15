@@ -1,9 +1,10 @@
-from ._base import Reader, GENERIC_PROMPT
+import os
+import time
+from typing import Any, Iterable, List
+
 from .._optional import is_openai_availible, is_tiktoken_availible
 from . import _content_aggregation as content_aggregation
-from typing import Any, Iterable, List
-import time
-import os
+from ._base import GENERIC_PROMPT, Reader
 
 
 class OpenAIReader(Reader):
@@ -111,7 +112,7 @@ class OpenAIReader(Reader):
         inp = list(inp)
         qid = inp[0]["qid"]
         query = inp[0]["query"]
-       
+
         context = self.get_context_by_query(inp)
         if self._tokenizer is None:
             aggregate_context = self._context_aggregation(context)

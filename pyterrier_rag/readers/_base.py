@@ -1,11 +1,10 @@
-from abc import ABC, abstractmethod 
-from typing import Union, Tuple
-import pyterrier as pt 
+from abc import ABC, abstractmethod
+from typing import Iterable, Tuple, Union
+
+import pyterrier as pt
 import pyterrier_alpha as pta
 import torch
-from typing import Iterable, Union
 from transformers import GenerationConfig
-
 
 GENERIC_PROMPT = "Use the context information to answer the Question: \n Context: {context} \n Question: {query} \n Answer:"
 
@@ -55,14 +54,13 @@ class Reader(pt.Transformer, ABC):
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
         return self.transform_by_query(inp)
-    
+
     @abstractmethod
     def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
         pass
 
     def get_context_by_query(self, inp: Iterable[dict]) -> Iterable[Union[str, Tuple[str]]]:
-        """
-        return at most self.num_context retrieved context.
+        """Return at most self.num_context retrieved context.
         """
         if self.num_context and inp:
             num = len(inp) if self.num_context == "auto" else self.num_context

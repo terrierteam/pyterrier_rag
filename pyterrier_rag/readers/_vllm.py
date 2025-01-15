@@ -1,7 +1,8 @@
 from typing import Any, Iterable
-from ._base import Reader, GENERIC_PROMPT
-from . import _content_aggregation as content_aggregation
+
 from .._optional import is_vllm_availible
+from . import _content_aggregation as content_aggregation
+from ._base import GENERIC_PROMPT, Reader
 
 
 class VLLMReader(Reader):
@@ -30,7 +31,7 @@ class VLLMReader(Reader):
                          **kwargs)
         if not is_vllm_availible():
             raise ImportError("Please install vllm to use VLLMReader")
-        from vllm import LLM, SamplingParams, EngineArgs, LLMEngine
+        from vllm import LLM, EngineArgs, LLMEngine, SamplingParams
         self._model_name_or_path = model_name_or_path
         self._args = EngineArgs(model=model_name_or_path, **model_args)
         self._model = LLMEngine.from_engine_args(self._args)
@@ -57,7 +58,7 @@ class VLLMReader(Reader):
         inp = list(inp)
         qid = inp[0]["qid"]
         query = inp[0]["query"]
-       
+
         context = self.get_context_by_query(inp)
         aggregate_context = self._context_aggregation(context)
         input_texts = self._prompt(query=query, context=aggregate_context)

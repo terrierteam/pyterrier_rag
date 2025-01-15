@@ -1,7 +1,9 @@
-from collections import Counter
-import regex
 import string
+from collections import Counter
 from typing import List
+
+import regex
+
 
 # Normalization from SQuAD evaluation script https://worksheets.codalab.org/rest/bundles/0x6b567e1cf2e041ec80d7098f031c5c9e/contents/blob/
 def normalize_answer(s : str) -> str:
@@ -42,6 +44,7 @@ def f1_score(prediction : str, ground_truth : List[str]) -> float:
     return f1
 
 import ir_measures
+
 # we aggregate across multiple gold_answer values using max().
 F1 = ir_measures.define_byquery(
     lambda qrels, res: max([f1_score(res.iloc[0]['qanswer'], gold) for gold in qrels['gold_answer']]), support_cutoff=False, name="F1")

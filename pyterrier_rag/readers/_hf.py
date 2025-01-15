@@ -1,7 +1,9 @@
-from ._base import Reader, GENERIC_PROMPT
-from . import _content_aggregation as content_aggregation
 from typing import Any, List
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, AutoModelForCausalLM
+
+from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer
+
+from . import _content_aggregation as content_aggregation
+from ._base import GENERIC_PROMPT, Reader
 
 
 class HuggingFaceReader(Reader):
@@ -32,15 +34,15 @@ class HuggingFaceReader(Reader):
             self._model_name_or_path = model_name_or_path
             self._model = None if self._model_class is None else self._model_class.from_pretrained(model_name_or_path, **model_args).to(self.device).eval()
             self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
-    
+
             if context_aggregation not in content_aggregation.__all__:
                 raise ValueError(f"context_aggregation must be one of {content_aggregation.__all__}")
             self._context_aggregation = getattr(content_aggregation, context_aggregation)
             self._prompt = prompt or self._prompt
-    
+
             if isinstance(self._prompt, str):
                 self._prompt = self._prompt.format
-    
+
             if generation_args is None:
                 generation_args = {
                     'max_new_tokens': self.max_new_tokens,

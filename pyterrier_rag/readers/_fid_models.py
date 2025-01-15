@@ -1,13 +1,20 @@
 import inspect
-from typing import Optional, Dict, List, Union, Iterable, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import torch
-import torch.nn as nn 
+import torch.nn as nn
 from torch.nn import CrossEntropyLoss
-from transformers import AutoTokenizer, T5ForConditionalGeneration, BartModel, BartForConditionalGeneration, GenerationConfig
+from transformers import (
+    AutoTokenizer,
+    BartForConditionalGeneration,
+    BartModel,
+    GenerationConfig,
+    T5ForConditionalGeneration,
+)
 from transformers.modeling_outputs import BaseModelOutput, Seq2SeqLMOutput, Seq2SeqModelOutput
-from transformers.models.t5.configuration_t5 import T5Config
 from transformers.models.bart.configuration_bart import BartConfig
+from transformers.models.t5.configuration_t5 import T5Config
+
 from ._base import Reader
 
 
@@ -17,76 +24,76 @@ class T5FiDReader(T5ForConditionalGeneration):
         super().__init__(config)
 
     def get_encoder_output(
-        self, 
-        input_ids: Optional[torch.Tensor] = None, 
-        attention_mask: Optional[torch.Tensor] = None, 
-        output_attentions: Optional[bool] = False, 
-        output_hidden_states: Optional[bool] = False, 
+        self,
+        input_ids: Optional[torch.Tensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        output_attentions: Optional[bool] = False,
+        output_hidden_states: Optional[bool] = False,
         **kwargs
     ) -> dict:
-        
+
         need_flatten = True if len(input_ids.shape) > 2 else False
         if need_flatten:
-            batch_size, num_passages, seq_length = input_ids.shape 
+            batch_size, num_passages, seq_length = input_ids.shape
             input_ids = input_ids.reshape(-1, seq_length) # batch_size x num_passages, seq_length
             attention_mask = attention_mask.reshape(-1, seq_length)
-        
+
         encoder_outputs = self.encoder(
-            input_ids = input_ids, 
-            attention_mask = attention_mask, 
-            output_attentions = output_attentions, 
-            output_hidden_states = output_hidden_states, 
-            return_dict = False, 
+            input_ids = input_ids,
+            attention_mask = attention_mask,
+            output_attentions = output_attentions,
+            output_hidden_states = output_hidden_states,
+            return_dict = False,
         )
 
-        hidden_states = encoder_outputs[0] # batch_size x num_passages, seq_length, hidden_size 
+        hidden_states = encoder_outputs[0] # batch_size x num_passages, seq_length, hidden_size
         hidden_size = hidden_states.shape[-1]
         if need_flatten:
             hidden_states = hidden_states.reshape(batch_size, num_passages*seq_length, hidden_size)
             attention_mask = attention_mask.reshape(batch_size, num_passages*seq_length)
 
         return {
-            "hidden_states": hidden_states, 
+            "hidden_states": hidden_states,
             "attention_mask": attention_mask
         }
 
     def forward(
         self,
-        input_ids: Optional[torch.Tensor] = None, 
-        attention_mask: Optional[torch.Tensor] = None, 
-        decoder_input_ids: Optional[torch.Tensor] = None, 
-        decoder_attention_mask: Optional[torch.Tensor] = None, 
-        encoder_outputs: Optional[Dict[str, torch.Tensor]] = None, 
-        labels: Optional[torch.Tensor] = None, 
-        output_attentions: Optional[bool] = False, 
+        input_ids: Optional[torch.Tensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        decoder_input_ids: Optional[torch.Tensor] = None,
+        decoder_attention_mask: Optional[torch.Tensor] = None,
+        encoder_outputs: Optional[Dict[str, torch.Tensor]] = None,
+        labels: Optional[torch.Tensor] = None,
+        output_attentions: Optional[bool] = False,
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = False,
         **kwargs
     ):
-        
+
         if encoder_outputs is None:
             encoder_outputs = self.get_encoder_output(
-                input_ids=input_ids, 
-                attention_mask=attention_mask, 
+                input_ids=input_ids,
+                attention_mask=attention_mask,
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
                 **kwargs
             )
-        
+
         encoder_hidden_states = encoder_outputs["hidden_states"]
         encoder_attention_mask = encoder_outputs["attention_mask"]
 
-        # for decoding 
+        # for decoding
         if labels is not None:
             decoder_input_ids = self._shift_right(labels)
 
         decoder_output = self.decoder(
-            input_ids = decoder_input_ids, 
-            attention_mask = decoder_attention_mask, 
+            input_ids = decoder_input_ids,
+            attention_mask = decoder_attention_mask,
             encoder_hidden_states = encoder_hidden_states,
-            encoder_attention_mask = encoder_attention_mask, 
-            output_attentions = output_attentions, 
-            output_hidden_states = output_hidden_states, 
+            encoder_attention_mask = encoder_attention_mask,
+            output_attentions = output_attentions,
+            output_hidden_states = output_hidden_states,
             return_dict = False,
         )
 
@@ -102,7 +109,7 @@ class T5FiDReader(T5ForConditionalGeneration):
             loss_fct = CrossEntropyLoss(ignore_index=-100)
             labels = labels.to(lm_logits.device)
             loss = loss_fct(lm_logits.reshape(-1, lm_logits.shape[-1]), labels.reshape(-1))
-        
+
         if not return_dict:
             output = (lm_logits, encoder_hidden_states)
             output = ((loss, ) + output) if loss is not None else output
@@ -147,19 +154,18 @@ class T5FiDReader(T5ForConditionalGeneration):
         attention_mask: Optional[torch.Tensor] = None,
         decoder_attention_mask: Optional[torch.Tensor] = None,
         encoder_outputs: Optional[Dict[str, torch.Tensor]] = None,
-        **kwargs, 
+        **kwargs,
     ):
-        
+
         return {
             "encoder_outputs": encoder_outputs,
-            "decoder_input_ids": input_ids, 
+            "decoder_input_ids": input_ids,
             "decoder_attention_mask": decoder_attention_mask,
         }
 
 
 def shift_tokens_right(input_ids: torch.Tensor, pad_token_id: int, decoder_start_token_id: int):
-    """
-    Shift input ids one token to the right.
+    """Shift input ids one token to the right.
     """
     shifted_input_ids = input_ids.new_zeros(input_ids.shape)
     shifted_input_ids[:, 1:] = input_ids[:, :-1].clone()
@@ -176,8 +182,8 @@ def shift_tokens_right(input_ids: torch.Tensor, pad_token_id: int, decoder_start
 class FiDBartTModel(BartModel):
 
     def get_encoder_output(
-        self, 
-        input_ids: torch.LongTensor = None, 
+        self,
+        input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
@@ -187,7 +193,7 @@ class FiDBartTModel(BartModel):
     ):
         need_flatten = True if len(input_ids.shape) > 2 else False
         if need_flatten:
-            batch_size, num_passages, seq_length = input_ids.shape 
+            batch_size, num_passages, seq_length = input_ids.shape
             input_ids = input_ids.reshape(-1, seq_length)
             attention_mask = attention_mask.reshape(-1, seq_length)
 
@@ -204,12 +210,12 @@ class FiDBartTModel(BartModel):
         if return_dict:
             hidden_states = encoder_outputs.last_hidden_state
             all_hidden_states = encoder_outputs.hidden_states
-            all_attentions = encoder_outputs.attentions 
+            all_attentions = encoder_outputs.attentions
         else:
             hidden_states = encoder_outputs[0]
             all_hidden_states = encoder_outputs[1] if len(encoder_outputs) > 1 else None
             all_attentions = encoder_outputs[2] if len(encoder_outputs) > 2 else None
-        
+
         hidden_size = hidden_states.shape[-1]
         if need_flatten:
             hidden_states = hidden_states.reshape(batch_size, num_passages*seq_length, hidden_size)
@@ -217,16 +223,16 @@ class FiDBartTModel(BartModel):
 
         if not return_dict:
             return tuple(v for v in [hidden_states, all_hidden_states, all_attentions] if v is not None)
-        
+
         return BaseModelOutput(
-            last_hidden_state=hidden_states, 
-            hidden_states=all_hidden_states, 
+            last_hidden_state=hidden_states,
+            hidden_states=all_hidden_states,
             attentions=all_attentions
         )
 
     def forward(
-        self, 
-        input_ids: torch.LongTensor = None, 
+        self,
+        input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         decoder_input_ids: Optional[torch.LongTensor] = None,
         decoder_attention_mask: Optional[torch.LongTensor] = None,
@@ -309,7 +315,7 @@ class FiDBartTModel(BartModel):
             encoder_hidden_states=encoder_outputs.hidden_states,
             encoder_attentions=encoder_outputs.attentions,
         )
-        
+
 
 class BARTFiDReader(BartForConditionalGeneration):
 
@@ -322,7 +328,7 @@ class BARTFiDReader(BartForConditionalGeneration):
 
         # Initialize weights and apply final processing
         self.post_init()
-    
+
     def _prepare_encoder_decoder_kwargs_for_generation(self, inputs_tensor: torch.Tensor, model_kwargs, model_input_name, *args, **kwargs):
 
         # 1. get encoder
@@ -360,28 +366,28 @@ class BARTFiDReader(BartForConditionalGeneration):
 class FiD(Reader):
 
     def __init__(
-        self, 
+        self,
         model: Union[T5FiDReader, BARTFiDReader],
-        tokenizer: AutoTokenizer, 
-        batch_size: int = 4, 
-        text_field: str = 'text', 
-        text_max_length: int = 256, 
-        num_context: Union[int, str] = "auto", 
-        max_new_tokens: int = 32, 
+        tokenizer: AutoTokenizer,
+        batch_size: int = 4,
+        text_field: str = 'text',
+        text_max_length: int = 256,
+        num_context: Union[int, str] = "auto",
+        max_new_tokens: int = 32,
         generation_config: GenerationConfig = None,
-        verbose: bool = False, 
-        device: Union[str, torch.device] = None, 
+        verbose: bool = False,
+        device: Union[str, torch.device] = None,
         **kwargs
     ):
         super().__init__(
-            batch_size=batch_size, 
-            text_field=text_field, 
-            text_max_length=text_max_length, 
+            batch_size=batch_size,
+            text_field=text_field,
+            text_max_length=text_max_length,
             num_context=num_context,
-            max_new_tokens=max_new_tokens, 
+            max_new_tokens=max_new_tokens,
             generation_config=generation_config,
-            verbose=verbose, 
-            device=device, 
+            verbose=verbose,
+            device=device,
             **kwargs
         )
         self.model = model.to(self.device)
@@ -397,21 +403,21 @@ class FiD(Reader):
         query = inp[0]["query"]
         for row in inp:
             assert row["query"] == query, "All rows must have the same query for `transform_by_query`"
-        
+
         context = self.get_context_by_query(inp)
         input_texts = self.format_input_texts(query, context)
         inputs = self.tokenizer_encode(input_texts)
         inputs = {k: v.to(self.device) if torch.is_tensor(v) else v for k, v in inputs.items()}
         generated_token_ids = self.model.generate(**inputs, generation_config=self.generation_config)
         qanswer = self.tokenizer.batch_decode(generated_token_ids, skip_special_tokens=True)[0]
-        
+
         return [ {"qid": qid, "query": query, "qanswer": qanswer} ]
 
     def format_input_texts(self, question: str, context: Iterable[Union[str, Tuple[str]]]) -> List[str]:
 
         if not context:
             return [question]
-        
+
         input_texts = []
         for item in context:
             # append title and context prefix
@@ -421,26 +427,26 @@ class FiD(Reader):
             else:
                 text = item
                 doc_text = self.context_prefix + " " + text
-            # prepend question 
+            # prepend question
             input_text = self.query_prefix + " " + question + " " + doc_text.strip()
             input_texts.append(input_text.strip())
 
         return input_texts
-    
+
     def tokenizer_encode(self, texts: List[str]) -> Dict[str, torch.Tensor]:
 
         tokenizer_outputs = self.tokenizer.batch_encode_plus(
-            texts, 
-            max_length = self.text_max_length, 
-            padding = "max_length", 
-            truncation = True, 
+            texts,
+            max_length = self.text_max_length,
+            padding = "max_length",
+            truncation = True,
             return_tensors = 'pt'
         )
-        input_ids = tokenizer_outputs["input_ids"][None, :, :] # for only one query 
+        input_ids = tokenizer_outputs["input_ids"][None, :, :] # for only one query
         attention_mask = tokenizer_outputs["attention_mask"][None, :, :]
 
         return {"input_ids": input_ids, "attention_mask": attention_mask}
-    
+
 
 class T5FiD(FiD):
 

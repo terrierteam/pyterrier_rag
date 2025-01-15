@@ -1,7 +1,9 @@
+from typing import Optional
+
 import pandas as pd
 import pyterrier as pt
 import pyterrier_alpha as pta
-from typing import Optional
+
 
 class Iterative(pt.Transformer):
 
@@ -21,7 +23,7 @@ class Iterative(pt.Transformer):
             if self.max_iter is not None and iter == self.max_iter:
                 stop = True
             # TODO should be more customisable - perhaps a lambda?
-            if "the answer is" in answers.iloc[0].qanswer.lower(): 
+            if "the answer is" in answers.iloc[0].qanswer.lower():
                 stop = True
             inp = answers
         return answers
