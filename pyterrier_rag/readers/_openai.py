@@ -92,7 +92,7 @@ class OpenAIReader(Reader):
             )
         return completion
 
-    def _generate(self, prompt):
+    def _generate(self, prompt : str):
         messages = []
         if self._system_message:
             messages.append(
