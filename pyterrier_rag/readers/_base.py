@@ -51,7 +51,7 @@ class Reader(pt.Transformer, ABC):
         else:
             self.generation_config = generation_config
 
-    # TODO: couldn't pass self.verbose to pta.transform.by_query
+    #  @pta.transform.by_query will pick up self.verbose
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
         return self.transform_by_query(inp)
