@@ -32,8 +32,8 @@ class VLLMReader(Reader):
             raise ImportError("Please install vllm to use VLLMReader")
         from vllm import LLM, SamplingParams, EngineArgs, LLMEngine
         self._model_name_or_path = model_name_or_path
-        self._args = EngineArgs(model=model_name_or_path, **model_args)
-        self._model = LLMEngine.from_engine_args(self._args)
+        self._model_args = model_args
+        self._model_args['max_model_len'] = text_max_length
 
         if context_aggregation not in content_aggregation.__all__:
             raise ValueError(f"context_aggregation must be one of {content_aggregation.__all__}")
@@ -45,13 +45,11 @@ class VLLMReader(Reader):
 
         if generation_args is None:
             generation_args = {
-                'max_new_tokens' : self.max_new_tokens,
+                'max_tokens' : self.max_new_tokens,
                 'temperature' : 1.0,
-                'do_sample' : False,
-                'num_beams' : 1,
             }
         self._generation_args = SamplingParams(**generation_args)
-        self.model = LLM(self._model, self._generation_args)
+        self.model = LLM(self._model_name_or_path, **self._model_args)
 
     def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
         inp = list(inp)
@@ -63,4 +61,4 @@ class VLLMReader(Reader):
         input_texts = self._prompt(query=query, context=aggregate_context)
         outputs = self.model.generate([input_texts], self._generation_args)
 
-        return [{"qid": qid, "query": query, "qanswer": outputs[0][0].text}]
+        return [{"qid": qid, "query": query, "qanswer": outputs[0].outputs[0].text}]
