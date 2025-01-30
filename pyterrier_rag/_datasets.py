@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Iterable, Optional
 from warnings import warn
 
 import pandas as pd
@@ -33,14 +33,15 @@ class FlashRAGDataset(RAGDataset):
             .rename(columns={'id' : 'qid', 'golden_answers' : 'gold_answer'}) \
             .explode('gold_answer') # explode deals with multiple answers
 
-# TODO perhaps this should be done with entrypoints?
-pt.datasets.DATASET_MAP['rag:nq'] = FlashRAGDataset(
+DATASET_MAP = {}
+
+DATASET_MAP['nq'] = FlashRAGDataset(
     {'train': 'nq/train.jsonl', 'dev': 'nq/dev.jsonl', 'test': 'nq/test.jsonl'})
-pt.datasets.DATASET_MAP['rag:hotpotqa'] = FlashRAGDataset(
+DATASET_MAP['hotpotqa'] = FlashRAGDataset(
     {'train': 'hotpotqa/train.jsonl', 'dev': 'hotpotqa/dev.jsonl'})
-pt.datasets.DATASET_MAP['rag:triviaqa'] = FlashRAGDataset(
+DATASET_MAP['triviaqa'] = FlashRAGDataset(
     {'train': 'triviaqa/train.jsonl', 'dev': 'triviaqa/dev.jsonl', 'test': 'triviaqa/test.jsonl'})
-pt.datasets.DATASET_MAP['rag:musique'] = FlashRAGDataset(
+DATASET_MAP['musique'] = FlashRAGDataset(
     {'train': 'musique/train.jsonl', 'dev': 'musique/dev.jsonl'})
 
 def _hotspot_files(dataset: Dataset, components: str, variant: str, **kwargs):
@@ -95,7 +96,7 @@ HOTPOTQA_WIKI = {
     "corpus_iter" : _hotpotread_iterator
 }
 
-pt.datasets.DATASET_MAP['rag:hotpotqa_wiki'] = RemoteDataset('rag:hotpotqa_wiki', HOTPOTQA_WIKI)
+DATASET_MAP['hotpotqa_wiki'] = RemoteDataset('rag:hotpotqa_wiki', HOTPOTQA_WIKI)
 
 def _nq_read_iterator(dataset):
     import json
@@ -128,7 +129,7 @@ FLASHRAG_WIKI = {
     "corpus_iter" : _nq_read_iterator
 }
 
-pt.datasets.DATASET_MAP['rag:nq_wiki'] = RemoteDataset('rag:nq_wiki', FLASHRAG_WIKI)
+DATASET_MAP['nq_wiki'] = RemoteDataset('rag:nq_wiki', FLASHRAG_WIKI)
 
 def _2WikiMultihopQA_topics(self, component, variant):
     assert component in ['topics', 'answers']
@@ -170,4 +171,12 @@ DROPBOX_2WikiMultihopQA = {
         # no answers in the test set
     }
 }
-pt.datasets.DATASET_MAP['rag:2wikimultihopqa'] = RemoteRAGDataset('rag:2wikimultihopqa', DROPBOX_2WikiMultihopQA)
+DATASET_MAP['2wikimultihopqa'] = RemoteRAGDataset('rag:2wikimultihopqa', DROPBOX_2WikiMultihopQA)
+
+
+class RagDatasetProvider(pt.datasets.DatasetProvider):
+    def get_dataset(self, name: str) -> pt.datasets.Dataset:
+        return DATASET_MAP[name]
+
+    def list_datasets(self) -> Iterable[str]:
+        return list(DATASET_MAP.keys())

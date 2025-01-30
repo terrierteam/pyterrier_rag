@@ -29,7 +29,11 @@ setup(
     url='https://github.com/cmacdonald/pyterrier-rag',
     packages=find_packages(),
     include_package_data=True,
-    entry_points={},
+    entry_points={
+        'pyterrier.dataset_provider': [
+            'rag = pyterrier_rag._datasets:RagDatasetProvider',
+        ],
+    },
     install_requires=get_requirements('requirements.txt'),
     python_requires='>=3.10',
 )
