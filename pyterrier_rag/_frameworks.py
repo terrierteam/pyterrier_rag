@@ -33,7 +33,7 @@ class IterativeTransformer(pt.Transformer):
             iter += 1
         return results
 
-class IterativeRAG(IterativeTransformer):
+class Iterative(IterativeTransformer):
 
     def __init__(self, retriever : pt.Transformer, reader : pt.Transformer, max_iter : Optional[int] =None):
         super().__init__(max_iter)
