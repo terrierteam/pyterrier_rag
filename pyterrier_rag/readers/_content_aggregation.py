@@ -1,14 +1,16 @@
 import pandas as pd
-from typing import List, Optional, Any, Union
+from typing import List, Optional, Any, Union, Tuple
 import pyterrier_alpha as pta
 
 
-def concat(input_texts: List[str],
+def concat(input_texts: List[Union[str, Tuple]],
            intermediate_format: Optional[callable] = None,
            tokenizer: Any = None,
            max_length: int = -1,
            max_per_context: int = 512,
            truncation_rate: int = 50) -> str:
+    if isinstance(input_texts[0], tuple):
+        input_texts = ['\n'.join(list(t)) for t in input_texts]
     if tokenizer is not None:
         while True:
             total_context = ""
