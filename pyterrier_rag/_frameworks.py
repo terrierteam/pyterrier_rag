@@ -40,24 +40,29 @@ class IRCOT(pt.Transformer):
     _prompt_template = ircot_prompt
     _example_format = example_format
 
-    def __init__(self,
-                 retriever: pt.Transformer,
-                 reader: pt.Transformer,
-                 system_message: Optional[str] = None,
-                 default_example: Optional[str] = None,
-                 prompt_template: Optional[prompt] = None,
-                 example_format: Optional[prompt] = None,
-                 context_aggregation: Optional[callable] = None,
-                 max_iter: Optional[int] = None,
-                 max_docs: Optional[int] = None,
-                 ):
+    def __init__(
+        self,
+        retriever: pt.Transformer,
+        reader: pt.Transformer,
+        system_message: Optional[str] = None,
+        default_example: Optional[str] = None,
+        prompt_template: Optional[prompt] = None,
+        example_format: Optional[prompt] = None,
+        context_aggregation: Optional[callable] = None,
+        max_iter: Optional[int] = None,
+        max_docs: Optional[int] = None,
+    ):
         self.retriever = retriever
         self.reader = reader
         self.system_message = system_message or self._system_message
         self.default_example = default_example or self._default_example
         self.prompt_template = prompt_template or self._prompt_template
         self.example_format = example_format or self._example_format
-        self.context_aggregation = context_aggregation or partial(dataframe_concat, intermediate_format=self.example_format, relevant_fields=['text', 'title'])
+        self.context_aggregation = context_aggregation or partial(
+            dataframe_concat,
+            intermediate_format=self.example_format,
+            relevant_fields=["text", "title"],
+        )
         self.max_iter = max_iter
         self.max_docs = max_docs
 
@@ -69,25 +74,22 @@ class IRCOT(pt.Transformer):
     def exit_condition(self, results: pd.DataFrame) -> bool:
         return "so the answer is" in results.iloc[0].qanswer.lower()
 
-    def construct_prompt(self, reference: str, question: str, previous_gen: str=None) -> str:
+    def construct_prompt(
+        self, reference: str, question: str, previous_gen: str = None
+    ) -> str:
         if self.is_openai:
             prompt = []
-            prompt.append({
-                'role': 'system',
-                'content': self.system_message
-            }
-            )
-            prompt.append({
-                'role': 'user',
-                'content': self.prompt_template(reference=reference, question=question)
-            }
+            prompt.append({"role": "system", "content": self.system_message})
+            prompt.append(
+                {
+                    "role": "user",
+                    "content": self.prompt_template(
+                        reference=reference, question=question
+                    ),
+                }
             )
             if previous_gen:
-                prompt.append({
-                    'role': 'system',
-                    'content': previous_gen
-                }
-                )
+                prompt.append({"role": "system", "content": previous_gen})
             return prompt
 
         else:
@@ -96,7 +98,7 @@ class IRCOT(pt.Transformer):
             prompt.append(self.prompt_template(reference=reference, question=question))
             if previous_gen:
                 prompt.append(previous_gen)
-            return '\n'.join(prompt)
+            return "\n".join(prompt)
 
     @pta.transform.by_query(add_ranks=False)
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
@@ -111,7 +113,9 @@ class IRCOT(pt.Transformer):
             if self.max_docs is not None:
                 retrieval_results = retrieval_results.head(self.max_docs)
             reference = self.context_aggregation(retrieval_results)
-            prompt = self.construct_prompt(reference, question, ' '.join(previous_thoughts))
+            prompt = self.construct_prompt(
+                reference, question, " ".join(previous_thoughts)
+            )
             results = self.reader.search(prompt)
             if self.exit_condition(results) or self._exceeded_max_iter(iter):
                 stop = True
@@ -120,8 +124,12 @@ class IRCOT(pt.Transformer):
 
             current_retrieval_results = self.retriever.search(current_thought)
             # add current retrieval results, overwriting scores if necessary
-            retrieval_results = retrieval_results.append(current_retrieval_results, ignore_index=True).sort_values(by='score', ascending=False)
-            retrieval_results = retrieval_results.drop_duplicates(subset='docno', keep='last').reset_index(drop=True)
+            retrieval_results = retrieval_results.append(
+                current_retrieval_results, ignore_index=True
+            ).sort_values(by="score", ascending=False)
+            retrieval_results = retrieval_results.drop_duplicates(
+                subset="docno", keep="last"
+            ).reset_index(drop=True)
 
             iter += 1
 
@@ -130,13 +138,18 @@ class IRCOT(pt.Transformer):
 
 class Iterative(pt.Transformer):
 
-    def __init__(self, retriever : pt.Transformer, reader : pt.Transformer, max_iter : Optional[int] =None):
+    def __init__(
+        self,
+        retriever: pt.Transformer,
+        reader: pt.Transformer,
+        max_iter: Optional[int] = None,
+    ):
         self.retriever = retriever
         self.reader = reader
         self.max_iter = max_iter
 
     @pta.transform.by_query(add_ranks=False)
-    def transform(self, inp : pd.DataFrame) -> pd.DataFrame:
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         iter = 1
         stop = False
         while not stop:
