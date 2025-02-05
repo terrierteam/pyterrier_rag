@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
-from typing import Iterable, Tuple, Union
+from abc import ABC
+from typing import Iterable, Tuple, Union, List
 
 import pyterrier as pt
 import pyterrier_alpha as pta
@@ -93,3 +93,21 @@ class Reader(pt.Transformer, ABC):
         else:
             context = None
         return context
+
+
+class PromptTransformer(pt.Transformer):
+    def __init__(self,
+                 prompt: Union[callable, str] = GENERIC_PROMPT,
+                 output_field: str = 'query',
+                 relevant_fields: List[str] = ['query', 'context']):
+        self.prompt = prompt if isinstance(prompt, callable) else prompt.format
+        self.output_field = output_field
+        self.relevant_fields = relevant_fields
+
+    def transform(self, inp: pd.DataFrame):
+        relevant_features = inp[self.relevant_fields].to_dict(orient='records')
+        inp[self.output_field] = [self.prompt(**rf) for rf in relevant_features]
+        return inp
+
+
+__all__ = ["Reader", "PromptTransformer"]
