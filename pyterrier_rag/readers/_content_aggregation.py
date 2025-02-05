@@ -5,7 +5,7 @@ import pyterrier_alpha as pta
 
 
 def concat(
-    input_texts: List[Union[str, Tuple]],
+    input_texts: List[Union[str, Tuple, List]],
     intermediate_format: Optional[callable] = None,
     tokenizer: Any = None,
     max_length: int = -1,
@@ -13,8 +13,6 @@ def concat(
     max_per_context: int = 512,
     truncation_rate: int = 50,
 ) -> str:
-    if isinstance(input_texts[0], tuple):
-        input_texts = ["\n".join(list(t)) for t in input_texts]
     if max_elements > 0:
         input_texts = input_texts[:max_elements]
     if tokenizer is not None:
@@ -22,7 +20,7 @@ def concat(
             total_context = ""
             for c in input_texts:
                 if intermediate_format is not None:
-                    if isinstance(c, tuple):
+                    if not isinstance(c, str):
                         c = intermediate_format(*c)
                     else:
                         c = intermediate_format(c)
@@ -37,9 +35,12 @@ def concat(
                 max_per_context -= truncation_rate
     else:
         if intermediate_format is not None:
-            total_context = "\n".join(map(intermediate_format, input_texts))
+            total_context = "\n".join(map(lambda x: intermediate_format(x) if isinstance(x, str) else intermediate_format(*x), input_texts))
         else:
+            if not isinstance(input_texts[0], str):
+                input_texts = ["\n".join(list(t)) for t in input_texts]
             total_context = "\n".join(input_texts)
+
     return total_context
 
 
