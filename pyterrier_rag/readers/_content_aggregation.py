@@ -25,7 +25,10 @@ def concat(input_texts: List[str],
             else:
                 max_per_context -= truncation_rate
     else:
-        total_context = "\n".join(map(intermediate_format, input_texts))
+        if intermediate_format is not None:
+            total_context = "\n".join(map(intermediate_format, input_texts))
+        else:
+            total_context = "\n".join(input_texts)
     return total_context
 
 
