@@ -56,6 +56,8 @@ def f1_score(prediction: str, ground_truth: List[str]) -> float:
     return f1
 
 
+
+
 import ir_measures
 
 # we aggregate across multiple gold_answer values using max().

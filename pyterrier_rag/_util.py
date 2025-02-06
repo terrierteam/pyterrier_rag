@@ -3,7 +3,7 @@ import itertools
 
 
 def push_queries_dict(inp: Union[Iterable[dict], dict], keep_originals: bool = False) -> Union[Iterable[dict], dict]:
-    def per_element(i : dict):
+    def per_element(i: dict):
         cols = i.keys()
         if "query" not in cols:
             raise KeyError(f"Expected a query column, but found {list(cols)}")

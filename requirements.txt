@@ -5,3 +5,4 @@ regex
 transformers==4.44.2
 torch
 outlines
+fastchat
