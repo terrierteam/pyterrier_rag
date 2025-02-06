@@ -3,6 +3,7 @@ from typing import List, Union, Optional, Any
 from ._base import PromptTransformer
 from ._context_aggregation import ContextAggregationTransformer
 
+
 def make_prompt(
         prompt_system_message: str = None,
         prompt_instruction: Union[callable, str] = None,

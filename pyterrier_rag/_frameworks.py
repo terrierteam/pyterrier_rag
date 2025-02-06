@@ -1,5 +1,4 @@
 from typing import Any, List, Optional, Union
-from functools import partial
 from outlines import prompt
 
 import pandas as pd

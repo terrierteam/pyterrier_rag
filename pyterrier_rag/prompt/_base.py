@@ -13,7 +13,8 @@ class PromptTransformer(pt.Transformer):
                  model_name_or_path: str = None,
                  conversation_template: str = None,
                  output_field: str = 'query',
-                 relevant_fields: List[str] = ['query', 'context']):
+                 relevant_fields: List[str] = ['query', 'context'],
+                 api_type: str = None):
         assert model_name_or_path or conversation_template, "Either model_name_or_path or conversation_template must be provided"
 
         self.system_message = system_message
@@ -23,10 +24,20 @@ class PromptTransformer(pt.Transformer):
             self.conversation_template.set_system_message(self.system_message)
         self.output_field = output_field
         self.relevant_fields = relevant_fields
+        self.api_type = api_type
+        self.output_attribute = {
+            'openai': 'to_openai_api_messages',
+            'gemini': 'to_gemini_api_messages',
+            'vertex': 'to_vertex_api_messages',
+            'reka': 'to_reka_api_messages',
+        }[api_type] if api_type else 'get_prompt'
 
     @property
     def prompt(self):
         return self.conversation_template.copy()
+
+    def to_output(self, prompt):
+        return getattr(prompt, self.output_attribute)()
 
     def create_prompt(self, fields: dict):
         current_prompt = self.prompt
