@@ -108,7 +108,7 @@ class IRCOT(Iterative):
         context_max_length: Optional[int] = -1,
         context_max_elements: Optional[int] = -1,
         context_max_per_context: Optional[int] = 512,
-        truncation_rate: Optional[int] = 50,
+        context_truncation_rate: Optional[int] = 50,
         context_aggregate_func: Optional[callable] = None,
         context_per_query: bool = False
 
@@ -133,7 +133,7 @@ class IRCOT(Iterative):
             context_max_length=context_max_length,
             context_max_elements=context_max_elements,
             context_max_per_context=context_max_per_context,
-            context_truncation_rate=truncation_rate,
+            context_truncation_rate=context_truncation_rate,
             context_aggregate_func=context_aggregate_func,
             context_per_query=context_per_query
         )
