@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Iterable, Tuple, Union, List
+from typing import Iterable, Union
 
 import pyterrier as pt
 import pyterrier_alpha as pta
@@ -7,18 +7,17 @@ import torch
 import pandas as pd
 from transformers import GenerationConfig
 
-GENERIC_PROMPT = "Use the context information to answer the Question: \n Context: {context} \n Question: {query} \n Answer:"
+from .._util import push_queries_dict
 
 
 class Reader(pt.Transformer, ABC):
-
     def __init__(
         self,
         *,
+        input_field: str = "query",
+        output_field: str = "query",
         batch_size: int = 4,
-        text_field: str = "text",
         max_input_length: int = 512,
-        num_context: Union[int, str] = "auto",
         max_new_tokens: int = 32,
         generation_config: GenerationConfig = None,
         verbose: bool = False,
@@ -33,11 +32,11 @@ class Reader(pt.Transformer, ABC):
             device = torch.device(device)
         self.device = device
 
-        self.text_field = text_field
-        self.max_input_length = max_input_length
-        self.num_context = num_context
-        self.max_new_tokens = max_new_tokens
+        self.input_field = input_field
+        self.output_field = output_field
         self.batch_size = batch_size
+        self.max_input_length = max_input_length
+        self.max_new_tokens = max_new_tokens
         self.verbose = verbose
         self.kwargs = kwargs
 
@@ -52,9 +51,8 @@ class Reader(pt.Transformer, ABC):
         else:
             self.generation_config = generation_config
 
-    @property
-    def is_openai(self):
-        return False
+    def generate(self, inp: Iterable[str]) -> Iterable[str]:
+        raise NotImplementedError("Implement the generate method")
 
     # TODO: couldn't pass self.verbose to pta.transform.by_query
     @pta.transform.by_query(add_ranks=False)
@@ -62,51 +60,22 @@ class Reader(pt.Transformer, ABC):
         return self.transform_by_query(inp)
 
     def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
-        inp = list(inp)
-        qid = inp[0]["qid"]
-        query = inp[0]["query"]
-        outputs = self._generate(query)
+        inp = list(inp)[0]
+        query = inp["query"]
+        outputs = self.generate([query])
+        if self.input_field == "query" and self.output_field == "query":
+            inp = push_queries_dict(inp)
+        inp[self.output_field] = outputs[0]
 
-        return [{"qid": qid, "query": query, "qanswer": outputs}]
+        return inp
 
-    def transform(self, inp : pd.DataFrame) -> pd.DataFrame:
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         inp = inp.drop_duplicates(subset='qid')
-        qids = inp['qid'].tolist()
         queries = inp['query'].tolist()
-        qanswers = self.generate(queries)
+        if self.input_field == 'query' and self.output_field == 'query':
+            inp = pt.model.push_queries(inp)
+        inp[self.output_field] = self.generate(queries)
 
-        return pd.DataFrame({'qid': qids, 'query': queries, 'qanswer': qanswers})
-
-    def get_context_by_query(
-        self, inp: Iterable[dict]
-    ) -> Iterable[Union[str, Tuple[str]]]:
-        """Return at most self.num_context retrieved context."""
-        if self.num_context and inp:
-            num = len(inp) if self.num_context == "auto" else self.num_context
-            if "score" in inp[0]:
-                inp = sorted(inp, key=lambda x: x["score"], reverse=True)
-            if "title" in inp[0]:
-                context = [(item["title"], item[self.text_field]) for item in inp]
-            else:
-                context = [item[self.text_field] for item in inp]
-            context = context[:num]
-        else:
-            context = None
-        return context
-
-
-class PromptTransformer(pt.Transformer):
-    def __init__(self,
-                 prompt: Union[callable, str] = GENERIC_PROMPT,
-                 output_field: str = 'query',
-                 relevant_fields: List[str] = ['query', 'context']):
-        self.prompt = prompt if isinstance(prompt, callable) else prompt.format
-        self.output_field = output_field
-        self.relevant_fields = relevant_fields
-
-    def transform(self, inp: pd.DataFrame):
-        relevant_features = inp[self.relevant_fields].to_dict(orient='records')
-        inp[self.output_field] = [self.prompt(**rf) for rf in relevant_features]
         return inp
 
 

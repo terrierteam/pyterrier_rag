@@ -1,36 +1,26 @@
 import os
 import time
-from typing import Any, Iterable, List
+from typing import List
 
 from .._optional import is_openai_availible, is_tiktoken_availible
-from . import _content_aggregation as content_aggregation
-from ._base import GENERIC_PROMPT, Reader
+from ._base import Reader
 
 
 class OpenAIReader(Reader):
-    _prompt = GENERIC_PROMPT
-
     def __init__(
         self,
         model_name_or_path: str,
         api_key: str = None,
-        system_message: str = None,
         generation_args: dict = None,
-        context_aggregation: str = "concat",
-        prompt: Any = None,
         batch_size: int = 4,
-        text_field: str = "text",
         max_input_length: int = 512,
-        num_context: int = 5,
         max_new_tokens: int = 32,
         verbose: bool = False,
         **kwargs,
     ):
         super().__init__(
             batch_size=batch_size,
-            text_field=text_field,
             max_input_length=max_input_length,
-            num_context=num_context,
             max_new_tokens=max_new_tokens,
             generation_config=None,
             verbose=verbose,
@@ -53,17 +43,6 @@ class OpenAIReader(Reader):
             self._tokenizer = tiktoken.get_encoding(self.model)
         else:
             self._tokenizer = None
-
-        if context_aggregation not in content_aggregation.__all__:
-            raise ValueError(
-                f"context_aggregation must be one of {content_aggregation.__all__}"
-            )
-        self._context_aggregation = getattr(content_aggregation, context_aggregation)
-        self._prompt = prompt or self._prompt
-        self._system_message = system_message
-
-        if isinstance(self._prompt, str):
-            self._prompt = self._prompt.format
 
         if generation_args is None:
             generation_args = {
@@ -103,16 +82,13 @@ class OpenAIReader(Reader):
             completion = completion["choices"][0]["message"]["content"]
         return completion
 
-    def _generate(self, prompt: str):
-        messages = []
-        if self._system_message:
-            messages.append({"role": "system", "content": self._system_message})
-        messages.append({"role": "user", "content": prompt})
+    def _generate(self, prompt: List[dict]) -> List[str]:
         response = self._call_completion(
-            messages=messages,
+            messages=prompt,
             return_text=True,
             **{"model": self._model_name_or_path, **self._generation_args},
         )
         return response
 
-    
+
+__all__ = ["OpenAIReader"]

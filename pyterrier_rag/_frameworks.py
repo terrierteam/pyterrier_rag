@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, List, Optional, Union
 from functools import partial
 from outlines import prompt
 
@@ -6,7 +6,33 @@ import pandas as pd
 import pyterrier as pt
 import pyterrier_alpha as pta
 
-from .readers._content_aggregation import dataframe_concat
+from .prompt import make_prompt
+
+
+class Iterative(pt.Transformer):
+    def __init__(
+        self,
+        pipeline: pt.Transformer,
+        exit_condition: callable = lambda _: False,
+        max_iter: Optional[int] = None,
+    ):
+        self.pipeline = pipeline
+        self.exit_condition = exit_condition
+        self.max_iter = max_iter
+
+    def _exceeded_max_iter(self, iter: int) -> bool:
+        return self.max_iter is not None and iter == self.max_iter
+
+    @pta.transform.by_query(add_ranks=False)
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
+        iter = 1
+        stop = False
+        while not stop:
+            inp = self.pipeline.transform(inp)
+            if self.exit_condition(inp) or self._exceeded_max_iter(iter):
+                stop = True
+        return inp
+
 
 """
 Interleaving Retrieval with Chain-of-Thought Reasoning for Knowledge-Intensive Multi-Step Questions (IRCOT) ACL 2023
@@ -16,16 +42,15 @@ Implementation Derived from: https://github.com/RUC-NLPIR/FlashRAG/blob/main/fla
 """
 
 ircot_system_message = 'You serve as an intelligent assistant, adept at facilitating users through complex, multi-hop reasoning across multiple documents. This task is illustrated through demonstrations, each consisting of a document set paired with a relevant question and its multi-hop reasoning thoughts. Your task is to generate one thought for current step, DON\'T generate the whole thoughts at once! If you reach what you believe to be the final step, start with "So the answer is:".'
-default_example = "Wikipedia Title: Kurram Garhi\nKurram Garhi is a small village located near the city of Bannu, which is the part of Khyber Pakhtunkhwa province of Pakistan. Its population is approximately 35000. Barren hills are near this village. This village is on the border of Kurram Agency. Other nearby villages are Peppal, Surwangi and Amandi Kala.\n\nWikipedia Title: 2001–02 UEFA Champions League second group stage\nEight winners and eight runners- up from the first group stage were drawn into four groups of four teams, each containing two group winners and two runners- up. Teams from the same country or from the same first round group could not be drawn together. The top two teams in each group advanced to the quarter- finals.\n\nWikipedia Title: Satellite tournament\nA satellite tournament is either a minor tournament or event on a competitive sporting tour or one of a group of such tournaments that form a series played in the same country or region.\n\nWikipedia Title: Trojkrsti\nTrojkrsti is a village in Municipality of Prilep, Republic of Macedonia.\n\nWikipedia Title: Telephone numbers in Ascension Island\nCountry Code:+ 247< br> International Call Prefix: 00 Ascension Island does not share the same country code( +290) with the rest of St Helena.\n\nQuestion: Are both Kurram Garhi and Trojkrsti located in the same country?\nThought: Kurram Garhi is located in the country of Pakistan. Trojkrsti is located in the country of Republic of Macedonia. Thus, they are not in the same country. So the answer is: no.\n\n"
 
 
 @prompt
-def ircot_prompt(reference: str, question: str) -> str:
-    """{reference}Question: {question}\nThought:"""
+def ircot_prompt(context: str, query: str) -> str:
+    """{context}Question: {query}\nThought:"""
 
 
 @prompt
-def example_format(text: str, title: str = None) -> str:
+def ircot_example_format(text: str, title: str = None) -> str:
     """
     {% if title != None %}
     Wikipedia Title: {{title}}
@@ -34,132 +59,90 @@ def example_format(text: str, title: str = None) -> str:
     """
 
 
-class IRCOT(pt.Transformer):
-    _system_message = ircot_system_message
-    _default_example = default_example
-    _prompt_template = ircot_prompt
-    _example_format = example_format
+class ReScorerTransformer(pt.Transformer):
+    def __init__(self):
+        super().__init__()
+        self.scores = {}
+        self.texts = {}
+
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
+        scores = inp.set_index(['query_id', 'doc_id'])['score'].to_dict()
+        texts = inp.set_index(['query_id', 'doc_id'])['text'].to_dict()
+
+        self.scores.update(scores)
+        self.texts.update(texts)
+
+        current_query_ids = inp['query_id'].unique().tolist()
+        query_ids = [k[0] for k in self.scores.keys() if k[0] in current_query_ids]
+
+        doc_ids = [k[1] for k in self.scores.keys() if k[0] in current_query_ids]
+        scores = [v for k, v in self.scores.items() if k[0] in current_query_ids]
+        texts = [self.texts[(query_id, doc_id)] for query_id, doc_id in zip(query_ids, doc_ids)]
+
+        return pd.DataFrame({
+            'qid': query_ids,
+            'docno': doc_ids,
+            'score': scores,
+            'text': texts
+        }).sort_values(['qid', 'score'], ascending=[True, False])
+
+
+class IRCOT(Iterative):
 
     def __init__(
         self,
         retriever: pt.Transformer,
         reader: pt.Transformer,
-        system_message: Optional[str] = None,
-        default_example: Optional[str] = None,
-        prompt_template: Optional[prompt] = None,
-        example_format: Optional[prompt] = None,
-        context_aggregation: Optional[callable] = None,
         max_iter: Optional[int] = None,
         max_docs: Optional[int] = None,
+        exit_condition: callable = lambda x: "so the answer is" in x.iloc[0]['query'].lower(),
+        prompt_system_message: str = None,
+        prompt_instruction: Union[callable, str] = None,
+        model_name_or_path: str = None,
+        prompt_conversation_template: str = None,
+        prompt_output_field: str = 'query',
+        prompt_relevant_fields: List[str] = ['query', 'context'],
+        context_in_fields: Optional[List[str]] = ['text'],
+        context_out_field: Optional[str] = "context",
+        context_intermediate_format: Optional[callable] = None,
+        context_tokenizer: Optional[Any] = None,
+        context_max_length: Optional[int] = -1,
+        context_max_elements: Optional[int] = -1,
+        context_max_per_context: Optional[int] = 512,
+        truncation_rate: Optional[int] = 50,
+        context_aggregate_func: Optional[callable] = None,
+        context_per_query: bool = False
+
     ):
         self.retriever = retriever
         self.reader = reader
-        self.system_message = system_message or self._system_message
-        self.default_example = default_example or self._default_example
-        self.prompt_template = prompt_template or self._prompt_template
-        self.example_format = example_format or self._example_format
-        self.context_aggregation = context_aggregation or partial(
-            dataframe_concat,
-            intermediate_format=self.example_format,
-            relevant_fields=["text", "title"],
+        _system_message = prompt_system_message or ircot_system_message
+        _prompt_instruction = prompt_instruction or ircot_prompt
+        _example_format = context_intermediate_format or ircot_example_format
+
+        self.prompt = make_prompt(
+            prompt_system_message=_system_message,
+            prompt_instruction=_prompt_instruction,
+            model_name_or_path=model_name_or_path,
+            prompt_conversation_template=prompt_conversation_template,
+            prompt_output_field=prompt_output_field,
+            prompt_relevant_fields=prompt_relevant_fields,
+            context_in_fields=context_in_fields,
+            context_out_field=context_out_field,
+            context_intermediate_format=_example_format,
+            context_tokenizer=context_tokenizer,
+            context_max_length=context_max_length,
+            context_max_elements=context_max_elements,
+            context_max_per_context=context_max_per_context,
+            context_truncation_rate=truncation_rate,
+            context_aggregate_func=context_aggregate_func,
+            context_per_query=context_per_query
         )
-        self.max_iter = max_iter
+
         self.max_docs = max_docs
 
-        self.is_openai = self.reader.is_openai()
-
-    def _exceeded_max_iter(self, iter: int) -> bool:
-        return self.max_iter is not None and iter == self.max_iter
-
-    def exit_condition(self, results: pd.DataFrame) -> bool:
-        return "so the answer is" in results.iloc[0].qanswer.lower()
-
-    def construct_prompt(
-        self, reference: str, question: str, previous_gen: str = None
-    ) -> str:
-        if self.is_openai:
-            prompt = []
-            prompt.append({"role": "system", "content": self.system_message})
-            prompt.append(
-                {
-                    "role": "user",
-                    "content": self.prompt_template(
-                        reference=reference, question=question
-                    ),
-                }
-            )
-            if previous_gen:
-                prompt.append({"role": "system", "content": previous_gen})
-            return prompt
-
-        else:
-            prompt = []
-            prompt.append(self.system_message)
-            prompt.append(self.prompt_template(reference=reference, question=question))
-            if previous_gen:
-                prompt.append(previous_gen)
-            return "\n".join(prompt)
-
-    @pta.transform.by_query(add_ranks=False)
-    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
-        previous_thoughts = []
-        question = inp.iloc[0].query
-        retrieval_results = self.retriever.search(question)
-
-        iter = 1
-        stop = False
-
-        while not stop:
-            if self.max_docs is not None:
-                retrieval_results = retrieval_results.head(self.max_docs)
-            reference = self.context_aggregation(retrieval_results)
-            prompt = self.construct_prompt(
-                reference, question, " ".join(previous_thoughts)
-            )
-            results = self.reader.search(prompt)
-            if self.exit_condition(results) or self._exceeded_max_iter(iter):
-                stop = True
-            current_thought = results.iloc[0].qanswer
-            previous_thoughts.append(current_thought)
-
-            current_retrieval_results = self.retriever.search(current_thought)
-            # add current retrieval results, overwriting scores if necessary
-            retrieval_results = retrieval_results.append(
-                current_retrieval_results, ignore_index=True
-            ).sort_values(by="score", ascending=False)
-            retrieval_results = retrieval_results.drop_duplicates(
-                subset="docno", keep="last"
-            ).reset_index(drop=True)
-
-            iter += 1
-
-        return results
-
-
-class Iterative(pt.Transformer):
-
-    def __init__(
-        self,
-        retriever: pt.Transformer,
-        reader: pt.Transformer,
-        max_iter: Optional[int] = None,
-    ):
-        self.retriever = retriever
-        self.reader = reader
-        self.max_iter = max_iter
-
-    @pta.transform.by_query(add_ranks=False)
-    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
-        iter = 1
-        stop = False
-        while not stop:
-            results = self.retriever(inp)
-            answers = self.reader(results)
-            # TODO is self.reader assumed to append LLM output to query?
-            if self.max_iter is not None and iter == self.max_iter:
-                stop = True
-            # TODO should be more customisable - perhaps a lambda?
-            if "the answer is" in answers.iloc[0].qanswer.lower():
-                stop = True
-            inp = answers
-        return answers
+        super().__init__(
+            pipeline=self.retriever >> ReScorerTransformer() >> self.prompt >> self.reader,
+            exit_condition=exit_condition,
+            max_iter=max_iter
+        )
