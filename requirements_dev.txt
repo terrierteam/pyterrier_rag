@@ -3,3 +3,4 @@ pytest-cov
 pytest-subtests
 pytest-json-report
 ruff
+evaluate # used by bertscore
