@@ -51,3 +51,32 @@ F1 = ir_measures.define_byquery(
 # ems function handles the max()
 EM = ir_measures.define_byquery(
     lambda qrels, res: ems(res.iloc[0]['qanswer'], qrels['gold_answer']), support_cutoff=False, name="EM")
+
+_bertscore_model = None
+def _bertscore(qrels, res, minlabel = 3, submeasure='f1', agg='max'):
+    import pyterrier_alpha as pta
+    global _bertscore_model
+    pta.validate.result_frame(qrels, extra_columns=['label', 'text'])
+    pta.validate.result_frame(res, extra_columns=['text'])
+
+    qrels = qrels[qrels.label >= minlabel]
+    assert len(qrels), "No qrels found with minlabel of %d" % minlabel
+    
+    if __bertscore_model is None:
+        from evaluate import load # this is a huggingface package
+        __bertscore_model = load("bertscore")
+    
+    predictions = res['text'].to_list()
+    references = qrels['text'].to_list()
+
+    results = _bertscore_model.compute(predictions=predictions, references=references, lang="en", model_type="bert-large-uncased", verbose=False)
+    precisions, recall, f1 = results['precision'], results['recall'], results['f1']
+    r = {
+        'precision': {'avg': sum(precisions)/len(precisions), 'max': max(precisions)},
+        'recall': {'avg': sum(recall)/len(recall), 'max': max(recall)},
+        'f1': {'avg': sum(f1)/len(f1), 'max': max(f1)},
+        }
+    return r[submeasure][agg]
+
+def BERTScore(minlabel=3, submeasure='f1', agg='max'):
+    return ir_measures.define_byquery( lambda qrels, res: _bertscore(qrels, res, minlabel=minlabel, agg=agg))
