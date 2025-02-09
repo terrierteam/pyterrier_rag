@@ -140,7 +140,7 @@ class IRCOT(Iterative):
 
         self.max_docs = max_docs
 
-        pipeline = self.retriever >> ReScorerTransformer() >> self.prompt >> self.reader
+        pipeline = self.retriever % max_docs >> ReScorerTransformer() % max_docs >> self.prompt >> self.reader
 
         super().__init__(
             pipeline,

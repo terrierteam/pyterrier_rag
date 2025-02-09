@@ -51,7 +51,7 @@ def dataframe_concat(
     max_length: int = -1,
     max_elements: int = -1,
     max_per_context: int = 512,
-    truncation_rate: int = 50,
+    truncation_rate: int = 25,
     intermediate_format: Optional[callable] = None,
     relevant_fields: Optional[list] = ["text"],
     by_query: bool = False,

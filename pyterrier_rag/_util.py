@@ -1,16 +1,55 @@
-from typing import Union, Iterable
+from typing import Union, Iterable, Tuple
+import pandas as pd
 import itertools
 
 
-def push_queries_dict(inp: Union[Iterable[dict], dict], keep_originals: bool = False) -> Union[Iterable[dict], dict]:
+def push_queries(df: pd.DataFrame,
+                 *,
+                 keep_original: bool = False,
+                 inplace: bool = False,
+                 base_column: str = 'query') -> pd.DataFrame:
+    """
+        Changes a dataframe such that the "query" column becomes "query_0", and any
+        "query_0" columns becames "query_1" etc.
+
+        Arguments:
+            df: Dataframe with a "query" column
+            keep_original: if True, the query column is also left unchanged. Useful for client code. 
+                Defaults to False.
+            inplace: if False, a copy of the dataframe is returned. If True, changes are made to the
+                supplied dataframe. Defaults to False. 
+    """
+    cols = set(df.columns)
+    if "query" not in cols:
+        raise KeyError(f"Expected a {base_column} column, but found {list(cols)}")
+    if not inplace:
+        df = df.copy()
+    prev_col = base_column
+    rename_cols = {}
+    for query_idx in itertools.count():
+        next_col = f'{base_column}_{query_idx}'
+        if prev_col in cols:
+            rename_cols[prev_col] = next_col # map e.g., query_0 to be renamed to query_1
+            prev_col = next_col
+        else:
+            break
+    df = df.rename(columns=rename_cols)
+    if keep_original:
+        df[base_column] = df[f"{base_column}_0"]
+    return df
+
+
+def push_queries_dict(inp: Union[Iterable[dict], dict],
+                      keep_originals: bool = False,
+                      base_column: str = 'query') -> Union[Iterable[dict], dict]:
     def per_element(i: dict):
         cols = i.keys()
         if "query" not in cols:
-            raise KeyError(f"Expected a query column, but found {list(cols)}")
-        prev_col = 'query'
+            raise KeyError(f"Expected a {base_column} column, but found {list(cols)}")
+        prev_col = base_column
         rename_cols = {}
         for query_idx in itertools.count():
-            next_col = f'query_{query_idx}'
+            next_col = f'{base_column}_{query_idx}'
             if prev_col in cols:
                 rename_cols[prev_col] = next_col
                 prev_col = next_col
@@ -25,9 +64,42 @@ def push_queries_dict(inp: Union[Iterable[dict], dict], keep_originals: bool = F
                 renamed[k] = v
 
         if keep_originals:
-            renamed['query'] = renamed['query_0']
+            renamed[base_column] = renamed[f'{base_column}_0']
 
         return renamed
+
+    if isinstance(inp, dict):
+        return per_element(inp)
+    return map(per_element, inp)
+
+
+def find_maximum_push(inp: pd.DataFrame,
+                      base_column: str = 'query') -> Tuple[str, int]:
+    columns = inp.columns
+    maxcol = None
+    maxval = -1
+    for col in columns:
+        if col.startswith(f"{base_column}_"):
+            val = int(col.split("_")[1])
+            if val > maxval:
+                maxval = val
+                maxcol = col
+    return maxcol, maxval
+
+
+def find_maximum_push_dict(inp: Union[Iterable[dict], dict],
+                           base_column: str = 'query') -> Tuple[str, int]:
+    def per_element(i: dict):
+        cols = i.keys()
+        maxcol = None
+        maxval = -1
+        for col in cols:
+            if col.startswith(f"{base_column}_"):
+                val = int(col.split("_")[1])
+                if val > maxval:
+                    maxval = val
+                    maxcol = col
+        return maxcol, maxval
 
     if isinstance(inp, dict):
         return per_element(inp)

@@ -7,10 +7,12 @@ import torch
 import pandas as pd
 from transformers import GenerationConfig
 
-from .._util import push_queries_dict
+from .._util import push_queries_dict, push_queries
 
 
 class Reader(pt.Transformer, ABC):
+    _model_name_or_path = None
+
     def __init__(
         self,
         *,
@@ -51,6 +53,10 @@ class Reader(pt.Transformer, ABC):
         else:
             self.generation_config = generation_config
 
+    @property
+    def model_name_or_path(self):
+        return self._model_name_or_path
+
     def generate(self, inp: Iterable[str]) -> Iterable[str]:
         raise NotImplementedError("Implement the generate method")
 
@@ -65,6 +71,9 @@ class Reader(pt.Transformer, ABC):
         outputs = self.generate([query])
         if self.input_field == "query" and self.output_field == "query":
             inp = push_queries_dict(inp)
+        else:
+            if self.output_field in inp.columns:
+                inp = push_queries_dict(inp, base_column=self.output_field)
         inp[self.output_field] = outputs[0]
 
         return inp
@@ -73,7 +82,10 @@ class Reader(pt.Transformer, ABC):
         inp = inp.drop_duplicates(subset='qid')
         queries = inp['query'].tolist()
         if self.input_field == 'query' and self.output_field == 'query':
-            inp = pt.model.push_queries(inp)
+            inp = push_queries(inp)
+        else:
+            if self.output_field in inp.columns:
+                inp = push_queries_dict(inp, base_column=self.output_field)
         inp[self.output_field] = self.generate(queries)
 
         return inp
