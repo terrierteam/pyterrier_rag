@@ -2,7 +2,6 @@ from typing import List, Union, Iterable
 
 import pyterrier as pt
 import pyterrier_alpha as pta
-import pandas as pd
 from fastchat import get_conversation_template
 
 
@@ -55,10 +54,6 @@ class PromptTransformer(pt.Transformer):
         prompt = self.create_prompt(fields)
 
         return {self.output_field: prompt, **inp[0]}
-
-    def transform(self, inp: pd.DataFrame):
-        inp[self.output_field] = inp.apply(lambda x: x[self.relevant_fields].to_dict(), axis=1)
-        return inp
 
 
 __all__ = ['PromptTransformer']

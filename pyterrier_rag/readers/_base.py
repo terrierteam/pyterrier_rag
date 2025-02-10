@@ -60,32 +60,13 @@ class Reader(pt.Transformer, ABC):
     def generate(self, inp: Iterable[str]) -> Iterable[str]:
         raise NotImplementedError("Implement the generate method")
 
-    # TODO: couldn't pass self.verbose to pta.transform.by_query
-    @pta.transform.by_query(add_ranks=False)
-    def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
-        return self.transform_by_query(inp)
-
-    def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
-        inp = list(inp)[0]
-        query = inp["query"]
-        outputs = self.generate([query])
-        if self.input_field == "query" and self.output_field == "query":
-            inp = push_queries_dict(inp)
-        else:
-            if self.output_field in inp.columns:
-                inp = push_queries_dict(inp, base_column=self.output_field)
-        inp[self.output_field] = outputs[0]
-
-        return inp
-
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
-        inp = inp.drop_duplicates(subset='qid')
         queries = inp['query'].tolist()
         if self.input_field == 'query' and self.output_field == 'query':
             inp = push_queries(inp)
         else:
             if self.output_field in inp.columns:
-                inp = push_queries_dict(inp, base_column=self.output_field)
+                inp = push_queries(inp, base_column=self.output_field)
         inp[self.output_field] = self.generate(queries)
 
         return inp

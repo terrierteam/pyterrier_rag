@@ -131,13 +131,6 @@ class ContextAggregationTransformer(pt.Transformer):
         self.aggregate_func = aggregate_func
         self.per_query = per_query
 
-    @pta.transform.by_query(add_ranks=False)
-    def transform_iter(self, inp: Iterable[dict]) -> pd.DataFrame:
-        raise TypeError("This transformer does not support by_query transformations")
-
-    def transform_by_query(self, inp: pd.DataFrame) -> pd.DataFrame:
-        raise TypeError("This transformer does not support by_query transformations")
-
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         if self.aggregate_func is not None:
             if self.per_query:

@@ -3,7 +3,6 @@ from outlines import prompt
 
 import pandas as pd
 import pyterrier as pt
-import pyterrier_alpha as pta
 
 from .prompt import make_prompt
 
@@ -22,15 +21,24 @@ class Iterative(pt.Transformer):
     def _exceeded_max_iter(self, iter: int) -> bool:
         return self.max_iter is not None and iter == self.max_iter
 
-    @pta.transform.by_query(add_ranks=False)
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         iter = 1
         stop = False
+        out = pd.DataFrame()
+        if 'active' not in inp.columns:
+            inp['active'] = True
         while not stop:
             inp = self.pipeline.transform(inp)
-            if self.exit_condition(inp) or self._exceeded_max_iter(iter):
+            inp['active'] = inp.apply(lambda x: not self.exit_condition(x), axis=1)
+            out.append(inp[~inp['active']])
+            inp = inp[inp['active']]
+            if self._exceeded_max_iter(iter):
                 stop = True
-        return inp
+                out.append(inp)
+            if inp.empty:
+                stop = True
+            iter += 1
+        return out.drop(columns=['active'])
 
 
 """
@@ -94,7 +102,8 @@ class IRCOT(Iterative):
         reader: pt.Transformer,
         max_iter: Optional[int] = None,
         max_docs: Optional[int] = None,
-        exit_condition: callable = lambda x: "so the answer is" in x.iloc[0]['query'].lower(),
+        exit_condition: callable = lambda x: "so the answer is" in x['query'].lower(),
+        prompt: pt.Transformer = None,
         prompt_system_message: str = None,
         prompt_instruction: Union[callable, str] = None,
         model_name_or_path: str = None,
@@ -111,7 +120,6 @@ class IRCOT(Iterative):
         context_truncation_rate: Optional[int] = 50,
         context_aggregate_func: Optional[callable] = None,
         context_per_query: bool = False
-
     ):
         self.retriever = retriever
         self.reader = reader
@@ -136,7 +144,7 @@ class IRCOT(Iterative):
             context_truncation_rate=context_truncation_rate,
             context_aggregate_func=context_aggregate_func,
             context_per_query=context_per_query
-        )
+        ) if prompt is None else prompt
 
         self.max_docs = max_docs
 
