@@ -1,35 +1,49 @@
-from typing import List, Union, Iterable
+from typing import Optional, Union, Iterable
 
 import pyterrier as pt
 import pyterrier_alpha as pta
 from fastchat import get_conversation_template
 
+from ._config import PromptConfig, ContextConfig
+from ._context_aggregation import ContextAggregationTransformer
+
 
 class PromptTransformer(pt.Transformer):
     def __init__(self,
-                 system_message: str = None,
                  instruction: Union[callable, str] = None,
                  model_name_or_path: str = None,
-                 conversation_template: str = None,
-                 output_field: str = 'query',
-                 relevant_fields: List[str] = ['query', 'context'],
-                 api_type: str = None):
-        assert model_name_or_path or conversation_template, "Either model_name_or_path or conversation_template must be provided"
+                 system_message: Optional[str] = None,
+                 config: Optional[PromptConfig] = None,
+                 context_aggregation: Optional[callable] = None,
+                 context_config: Optional[ContextConfig] = None,):
 
-        self.system_message = system_message
-        self.instruction = instruction if isinstance(instruction, callable) else instruction.format
-        self.conversation_template = get_conversation_template(model_name_or_path) or conversation_template
-        if system_message:
-            self.conversation_template.set_system_message(self.system_message)
-        self.output_field = output_field
-        self.relevant_fields = relevant_fields
-        self.api_type = api_type
+        if config is None:
+            config = PromptConfig(
+                instruction=instruction,
+                model_name_or_path=model_name_or_path,
+                system_message=system_message
+            )
+        if context_config is None:
+            context_config = ContextConfig(aggregate_func=context_aggregation)
+        self.config = config
+        self.context_config = context_config
+        self.output_field = config.output_field
+        self.relevant_fields = config.input_fields
+        self.api_type = config.api_type
+
+    def __post_init__(self):
+        self.conversation_template = get_conversation_template(self.config.model_name_or_path) or self.config.conversation_template
+        if self.config.system_message is not None:
+            self.conversation_template.set_system_message(self.config.system_message)
+
         self.output_attribute = {
             'openai': 'to_openai_api_messages',
             'gemini': 'to_gemini_api_messages',
             'vertex': 'to_vertex_api_messages',
             'reka': 'to_reka_api_messages',
-        }[api_type] if api_type else 'get_prompt'
+        }[self.api_type] if self.api_type else 'get_prompt'
+
+        self.context_aggregation = ContextAggregationTransformer(**self.context_config.__dict__)
 
     @property
     def prompt(self):

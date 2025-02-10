@@ -1,45 +1,9 @@
-from typing import Any, List, Optional, Union
-from outlines import prompt
+from typing import Iterable, Optional
 
-import pandas as pd
+from outlines import prompt
 import pyterrier as pt
 
-from .prompt import make_prompt
-
-
-class Iterative(pt.Transformer):
-    def __init__(
-        self,
-        pipeline: pt.Transformer,
-        exit_condition: callable = lambda _: False,
-        max_iter: Optional[int] = None,
-    ):
-        self.pipeline = pipeline
-        self.exit_condition = exit_condition
-        self.max_iter = max_iter
-
-    def _exceeded_max_iter(self, iter: int) -> bool:
-        return self.max_iter is not None and iter == self.max_iter
-
-    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
-        iter = 1
-        stop = False
-        out = pd.DataFrame()
-        if 'active' not in inp.columns:
-            inp['active'] = True
-        while not stop:
-            inp = self.pipeline.transform(inp)
-            inp['active'] = inp.apply(lambda x: not self.exit_condition(x), axis=1)
-            out.append(inp[~inp['active']])
-            inp = inp[inp['active']]
-            if self._exceeded_max_iter(iter):
-                stop = True
-                out.append(inp)
-            if inp.empty:
-                stop = True
-            iter += 1
-        return out.drop(columns=['active'])
-
+from pyterrier_rag.prompt import PromptTransformer, PromptConfig, ContextConfig
 
 """
 Interleaving Retrieval with Chain-of-Thought Reasoning for Knowledge-Intensive Multi-Step Questions (IRCOT) ACL 2023
@@ -66,92 +30,95 @@ def ircot_example_format(text: str, title: str = None) -> str:
     """
 
 
-class ReScorerTransformer(pt.Transformer):
-    def __init__(self):
-        super().__init__()
-        self.scores = {}
-        self.texts = {}
-
-    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
-        scores = inp.set_index(['query_id', 'doc_id'])['score'].to_dict()
-        texts = inp.set_index(['query_id', 'doc_id'])['text'].to_dict()
-
-        self.scores.update(scores)
-        self.texts.update(texts)
-
-        current_query_ids = inp['query_id'].unique().tolist()
-        query_ids = [k[0] for k in self.scores.keys() if k[0] in current_query_ids]
-
-        doc_ids = [k[1] for k in self.scores.keys() if k[0] in current_query_ids]
-        scores = [v for k, v in self.scores.items() if k[0] in current_query_ids]
-        texts = [self.texts[(query_id, doc_id)] for query_id, doc_id in zip(query_ids, doc_ids)]
-
-        return pd.DataFrame({
-            'qid': query_ids,
-            'docno': doc_ids,
-            'score': scores,
-            'text': texts
-        }).sort_values(['qid', 'score'], ascending=[True, False])
-
-
-class IRCOT(Iterative):
-
+class IRCOT(pt.Transformer):
     def __init__(
         self,
         retriever: pt.Transformer,
         reader: pt.Transformer,
-        max_iter: Optional[int] = None,
-        max_docs: Optional[int] = None,
-        exit_condition: callable = lambda x: "so the answer is" in x['query'].lower(),
-        prompt: pt.Transformer = None,
-        prompt_system_message: str = None,
-        prompt_instruction: Union[callable, str] = None,
-        model_name_or_path: str = None,
-        prompt_conversation_template: str = None,
-        prompt_output_field: str = 'query',
-        prompt_relevant_fields: List[str] = ['query', 'context'],
-        context_in_fields: Optional[List[str]] = ['text'],
-        context_out_field: Optional[str] = "context",
-        context_intermediate_format: Optional[callable] = None,
-        context_tokenizer: Optional[Any] = None,
-        context_max_length: Optional[int] = -1,
-        context_max_elements: Optional[int] = -1,
-        context_max_per_context: Optional[int] = 512,
-        context_truncation_rate: Optional[int] = 50,
-        context_aggregate_func: Optional[callable] = None,
-        context_per_query: bool = False
+        input_field: str = "query",
+        output_field: str = "qanswer",
+        prompt: Optional[pt.Transformer] = None,
+        prompt_config: Optional[PromptConfig] = None,
+        context_config: Optional[ContextConfig] = None,
+        max_docs: int = 10,
+        max_iterations: int = -1,
+        exit_condition: callable = lambda x: 'so the answer is' in x['qanswer'].iloc[0].lower()
     ):
-        self.retriever = retriever
+        self.retriever = retriever % max_docs
         self.reader = reader
-        _system_message = prompt_system_message or ircot_system_message
-        _prompt_instruction = prompt_instruction or ircot_prompt
-        _example_format = context_intermediate_format or ircot_example_format
-
-        self.prompt = make_prompt(
-            prompt_system_message=_system_message,
-            prompt_instruction=_prompt_instruction,
-            model_name_or_path=model_name_or_path,
-            prompt_conversation_template=prompt_conversation_template,
-            prompt_output_field=prompt_output_field,
-            prompt_relevant_fields=prompt_relevant_fields,
-            context_in_fields=context_in_fields,
-            context_out_field=context_out_field,
-            context_intermediate_format=_example_format,
-            context_tokenizer=context_tokenizer,
-            context_max_length=context_max_length,
-            context_max_elements=context_max_elements,
-            context_max_per_context=context_max_per_context,
-            context_truncation_rate=context_truncation_rate,
-            context_aggregate_func=context_aggregate_func,
-            context_per_query=context_per_query
-        ) if prompt is None else prompt
+        self.input_field = input_field
+        self.output_field = output_field
+        self.exit_condition = exit_condition
+        self.prompt_config = prompt_config
+        self.context_config = context_config
+        self.prompt = prompt
 
         self.max_docs = max_docs
+        self.max_iterations = max_iterations
 
-        pipeline = self.retriever % max_docs >> ReScorerTransformer() % max_docs >> self.prompt >> self.reader
+        self.__post_init__()
 
-        super().__init__(
-            pipeline,
-            exit_condition=exit_condition,
-            max_iter=max_iter
+    def __post_init__(self):
+        if self.prompt_config is None:
+            self.prompt_config = self._make_default_prompt_config()
+        if self.context_config is None:
+            self.context_config = self._make_default_context_config()
+        if self.prompt is None:
+            self.prompt = PromptTransformer(config=self.prompt_config,
+                                            context_config=self.context_config)
+
+    def _exceeded_max_iterations(self, iter):
+        return self.max_iterations > 0 and iter >= self.max_iterations
+
+    def _make_default_prompt_config(self):
+        return PromptConfig(
+            model_name_or_path=self.reader.model_name_or_path,
+            system_message=ircot_system_message,
+            instruction=ircot_prompt,
+            output_field='qanswer',
+            input_fields=['query', 'context'],
         )
+
+    def _make_default_context_config(self):
+        return ContextConfig(
+            in_fields=['text'],
+            out_field='context',
+            tokenizer=self.reader.tokenizer,
+            max_length=self.reader.max_input_length,
+            max_elements=self.max_docs,
+            intermediate_format=ircot_example_format
+        )
+
+    def transform_by_query(self, 
+                           inp: Iterable[dict]
+                           ) -> Iterable[dict]:
+        inp = list(inp)
+        qid = inp[0]["qid"]
+        query = inp[0]["query"]
+        for row in inp:
+            assert (
+                row["query"] == query
+            ), "All rows must have the same query for `transform_by_query`"
+
+        prev = []
+        top_k_docs = self.retriever.search(query)
+        iter = 1
+        stop = False
+
+        while not stop:
+            prompt = self.prompt.transform(top_k_docs)
+            output = self.reader.transform(prompt)
+
+            if self.exit_condition(output) or self._exceeded_max_iterations(iter):
+                stop = True
+                break
+            else:
+                prev.append(output[self.output_field].iloc[0])
+                top_k_docs.append(self.retriever.search(output[self.output_field].iloc[0]))
+                top_k_docs.sort_values(by='score', ascending=False, inplace=True)
+                top_k_docs.drop_duplicates(subset=['docid'], inplace=True)
+                top_k_docs = top_k_docs.head(self.max_docs)
+                iter += 1
+
+        qanswer = output[self.output_field].iloc[0]
+        return [{"qid": qid, "query": query, "qanswer": qanswer}]
