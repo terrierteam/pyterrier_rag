@@ -6,8 +6,8 @@ import pyterrier_alpha as pta
 import torch
 import pandas as pd
 from transformers import GenerationConfig
-
-from .._util import push_queries_dict, push_queries
+from more_itertools import chunked
+from .._util import push_queries
 
 
 class Reader(pt.Transformer, ABC):
@@ -67,8 +67,11 @@ class Reader(pt.Transformer, ABC):
         else:
             if self.output_field in inp.columns:
                 inp = push_queries(inp, base_column=self.output_field)
-        inp[self.output_field] = self.generate(queries)
-
+        out = []
+        for chunk in chunked(queries, self.batch_size):
+            out.extend(self.generate(chunk))
+        inp[self.output_field] = out
+        
         return inp
 
 

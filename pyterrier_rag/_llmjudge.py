@@ -37,9 +37,3 @@ def _make_pointwise_judge_function(model: pt.Transformer, minlabel : int = 3):
     def judge_fn(res: pd.DataFrame, qrels: pd.DataFrame = None):
         import pyterrier_alpha as pta
         pta.validate.result_frame(res, extra_columns=['text'])
-
-        
-
-
-
-        
