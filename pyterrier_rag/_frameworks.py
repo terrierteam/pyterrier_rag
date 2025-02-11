@@ -89,7 +89,7 @@ class IRCOT(pt.Transformer):
             intermediate_format=ircot_example_format
         )
 
-    def transform_by_query(self, 
+    def transform_by_query(self,
                            inp: Iterable[dict]
                            ) -> Iterable[dict]:
         inp = list(inp)

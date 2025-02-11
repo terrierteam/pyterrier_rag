@@ -69,13 +69,15 @@ class PromptTransformer(pt.Transformer):
         return self.transform_by_query(inp)
 
     def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
+        qid = inp[0].get("qid", None)
+        query = inp[0].get("query", None)
         fields = {k: v for k, v in inp[0].items() if k in self.relevant_fields}
         if self.use_context:
             context = self.context_aggregation.transform_by_query(inp)['context']
             fields['context'] = context
         prompt = self.create_prompt(fields)
 
-        return {self.output_field: prompt, **inp[0]}
+        return [{self.output_field: prompt, "qid": qid, "query_0": query}]
 
 
 __all__ = ['PromptTransformer']
