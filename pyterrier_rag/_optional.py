@@ -7,6 +7,15 @@ def is_openai_availible():
         return False
 
 
+def is_transformers_availible():
+    try:
+        import transformers
+
+        return True
+    except ImportError:
+        return False
+
+
 def is_vllm_availible():
     try:
         import vllm
