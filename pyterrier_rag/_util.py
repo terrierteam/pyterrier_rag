@@ -3,21 +3,23 @@ import pandas as pd
 import itertools
 
 
-def push_queries(df: pd.DataFrame,
-                 *,
-                 keep_original: bool = False,
-                 inplace: bool = False,
-                 base_column: str = 'query') -> pd.DataFrame:
+def push_queries(
+    df: pd.DataFrame,
+    *,
+    keep_original: bool = False,
+    inplace: bool = False,
+    base_column: str = "query",
+) -> pd.DataFrame:
     """
-        Changes a dataframe such that the "query" column becomes "query_0", and any
-        "query_0" columns becames "query_1" etc.
+    Changes a dataframe such that the "query" column becomes "query_0", and any
+    "query_0" columns becames "query_1" etc.
 
-        Arguments:
-            df: Dataframe with a "query" column
-            keep_original: if True, the query column is also left unchanged. Useful for client code. 
-                Defaults to False.
-            inplace: if False, a copy of the dataframe is returned. If True, changes are made to the
-                supplied dataframe. Defaults to False. 
+    Arguments:
+        df: Dataframe with a "query" column
+        keep_original: if True, the query column is also left unchanged. Useful for client code.
+            Defaults to False.
+        inplace: if False, a copy of the dataframe is returned. If True, changes are made to the
+            supplied dataframe. Defaults to False.
     """
     cols = set(df.columns)
     if "query" not in cols:
@@ -27,9 +29,11 @@ def push_queries(df: pd.DataFrame,
     prev_col = base_column
     rename_cols = {}
     for query_idx in itertools.count():
-        next_col = f'{base_column}_{query_idx}'
+        next_col = f"{base_column}_{query_idx}"
         if prev_col in cols:
-            rename_cols[prev_col] = next_col # map e.g., query_0 to be renamed to query_1
+            rename_cols[prev_col] = (
+                next_col  # map e.g., query_0 to be renamed to query_1
+            )
             prev_col = next_col
         else:
             break
@@ -39,9 +43,11 @@ def push_queries(df: pd.DataFrame,
     return df
 
 
-def push_queries_dict(inp: Union[Iterable[dict], dict],
-                      keep_originals: bool = False,
-                      base_column: str = 'query') -> Union[Iterable[dict], dict]:
+def push_queries_dict(
+    inp: Union[Iterable[dict], dict],
+    keep_originals: bool = False,
+    base_column: str = "query",
+) -> Union[Iterable[dict], dict]:
     def per_element(i: dict):
         cols = i.keys()
         if "query" not in cols:
@@ -49,7 +55,7 @@ def push_queries_dict(inp: Union[Iterable[dict], dict],
         prev_col = base_column
         rename_cols = {}
         for query_idx in itertools.count():
-            next_col = f'{base_column}_{query_idx}'
+            next_col = f"{base_column}_{query_idx}"
             if prev_col in cols:
                 rename_cols[prev_col] = next_col
                 prev_col = next_col
@@ -64,7 +70,7 @@ def push_queries_dict(inp: Union[Iterable[dict], dict],
                 renamed[k] = v
 
         if keep_originals:
-            renamed[base_column] = renamed[f'{base_column}_0']
+            renamed[base_column] = renamed[f"{base_column}_0"]
 
         return renamed
 
@@ -73,8 +79,7 @@ def push_queries_dict(inp: Union[Iterable[dict], dict],
     return map(per_element, inp)
 
 
-def find_maximum_push(inp: pd.DataFrame,
-                      base_column: str = 'query') -> Tuple[str, int]:
+def find_maximum_push(inp: pd.DataFrame, base_column: str = "query") -> Tuple[str, int]:
     columns = inp.columns
     maxcol = None
     maxval = -1
@@ -87,8 +92,9 @@ def find_maximum_push(inp: pd.DataFrame,
     return maxcol, maxval
 
 
-def find_maximum_push_dict(inp: Union[Iterable[dict], dict],
-                           base_column: str = 'query') -> Tuple[str, int]:
+def find_maximum_push_dict(
+    inp: Union[Iterable[dict], dict], base_column: str = "query"
+) -> Tuple[str, int]:
     def per_element(i: dict):
         cols = i.keys()
         maxcol = None
@@ -106,8 +112,9 @@ def find_maximum_push_dict(inp: Union[Iterable[dict], dict],
     return map(per_element, inp)
 
 
-def intermediate_formatting(inp: Union[str, Tuple, List, dict],
-                            intermediate_format: Optional[callable] = None) -> str:
+def intermediate_formatting(
+    inp: Union[str, Tuple, List, dict], intermediate_format: Optional[callable] = None
+) -> str:
     if intermediate_format is not None:
         if isinstance(inp, dict):
             return intermediate_format(**inp)
@@ -145,7 +152,12 @@ def concat(
                 max_per_context -= truncation_rate
     else:
         if intermediate_format is not None:
-            total_context = "\n".join(map(lambda x: intermediate_formatting(x, intermediate_format), input_texts))
+            total_context = "\n".join(
+                map(
+                    lambda x: intermediate_formatting(x, intermediate_format),
+                    input_texts,
+                )
+            )
         else:
             if not isinstance(input_texts[0], str):
                 input_texts = ["\n".join(list(t)) for t in input_texts]

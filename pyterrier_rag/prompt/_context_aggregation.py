@@ -8,15 +8,18 @@ from pyterrier_rag._util import concat
 
 
 class ContextAggregationTransformer(pt.Transformer):
-    def __init__(self,
-                 config: Optional[ContextConfig] = None,
-                 in_fields: Optional[List[str]] = ['text'],
-                 out_field: Optional[str] = "context",
-                 aggregate_func: Optional[callable] = None,
-                 ):
+    def __init__(
+        self,
+        config: Optional[ContextConfig] = None,
+        in_fields: Optional[List[str]] = ["text"],
+        out_field: Optional[str] = "context",
+        aggregate_func: Optional[callable] = None,
+    ):
         super().__init__()
         self.config = config
-        assert config is not None or aggregate_func is not None, "Either a config or an aggregate function must be provided"
+        assert (
+            config is not None or aggregate_func is not None
+        ), "Either a config or an aggregate function must be provided"
         if config is not None:
             self.in_fields = in_fields or config.in_fields
             self.out_field = out_field or config.out_field

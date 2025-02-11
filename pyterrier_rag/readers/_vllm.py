@@ -47,4 +47,6 @@ class VLLMReader(Reader):
         self.model = LLM(self._model, self._generation_args)
 
     def generate(self, inps: Iterable[str]) -> Iterable[str]:
-        return map(lambda x: x[0].text, self.model.generate(inps, self._generation_args))
+        return map(
+            lambda x: x[0].text, self.model.generate(inps, self._generation_args)
+        )

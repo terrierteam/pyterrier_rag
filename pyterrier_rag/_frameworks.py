@@ -42,7 +42,8 @@ class IRCOT(pt.Transformer):
         context_config: Optional[ContextConfig] = None,
         max_docs: int = 10,
         max_iterations: int = -1,
-        exit_condition: callable = lambda x: 'so the answer is' in x['qanswer'].iloc[0].lower()
+        exit_condition: callable = lambda x: "so the answer is"
+        in x["qanswer"].iloc[0].lower(),
     ):
         self.retriever = retriever % max_docs
         self.reader = reader
@@ -64,8 +65,9 @@ class IRCOT(pt.Transformer):
         if self.context_config is None:
             self.context_config = self._make_default_context_config()
         if self.prompt is None:
-            self.prompt = PromptTransformer(config=self.prompt_config,
-                                            context_config=self.context_config)
+            self.prompt = PromptTransformer(
+                config=self.prompt_config, context_config=self.context_config
+            )
 
     def _exceeded_max_iterations(self, iter):
         return self.max_iterations > 0 and iter >= self.max_iterations
@@ -75,23 +77,21 @@ class IRCOT(pt.Transformer):
             model_name_or_path=self.reader.model_name_or_path,
             system_message=ircot_system_message,
             instruction=ircot_prompt,
-            output_field='qanswer',
-            input_fields=['query', 'context'],
+            output_field="qanswer",
+            input_fields=["query", "context"],
         )
 
     def _make_default_context_config(self):
         return ContextConfig(
-            in_fields=['text'],
-            out_field='context',
+            in_fields=["text"],
+            out_field="context",
             tokenizer=self.reader.tokenizer,
             max_length=self.reader.max_input_length,
             max_elements=self.max_docs,
-            intermediate_format=ircot_example_format
+            intermediate_format=ircot_example_format,
         )
 
-    def transform_by_query(self,
-                           inp: Iterable[dict]
-                           ) -> Iterable[dict]:
+    def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
         inp = list(inp)
         qid = inp[0]["qid"]
         query = inp[0]["query"]
@@ -114,9 +114,11 @@ class IRCOT(pt.Transformer):
                 break
             else:
                 prev.append(output[self.output_field].iloc[0])
-                top_k_docs.append(self.retriever.search(output[self.output_field].iloc[0]))
-                top_k_docs.sort_values(by='score', ascending=False, inplace=True)
-                top_k_docs.drop_duplicates(subset=['docid'], inplace=True)
+                top_k_docs.append(
+                    self.retriever.search(output[self.output_field].iloc[0])
+                )
+                top_k_docs.sort_values(by="score", ascending=False, inplace=True)
+                top_k_docs.drop_duplicates(subset=["docid"], inplace=True)
                 top_k_docs = top_k_docs.head(self.max_docs)
                 iter += 1
 
