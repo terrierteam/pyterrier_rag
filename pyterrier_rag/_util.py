@@ -1,4 +1,4 @@
-from typing import Union, Iterable, Tuple
+from typing import Union, Iterable, Tuple, List, Optional, Any
 import pandas as pd
 import itertools
 
@@ -105,8 +105,21 @@ def find_maximum_push_dict(inp: Union[Iterable[dict], dict],
         return per_element(inp)
     return map(per_element, inp)
 
+
+def intermediate_formatting(inp: Union[str, Tuple, List, dict],
+                            intermediate_format: Optional[callable] = None) -> str:
+    if intermediate_format is not None:
+        if isinstance(inp, dict):
+            return intermediate_format(**inp)
+        elif isinstance(inp, list) or isinstance(inp, tuple):
+            return intermediate_format(*inp)
+        else:
+            return intermediate_format(inp)
+    return inp
+
+
 def concat(
-    input_texts: List[Union[str, Tuple, List]],
+    input_texts: List[Union[str, Tuple, List, dict]],
     intermediate_format: Optional[callable] = None,
     tokenizer: Any = None,
     max_length: int = -1,
@@ -120,11 +133,7 @@ def concat(
         while True:
             total_context = ""
             for c in input_texts:
-                if intermediate_format is not None:
-                    if not isinstance(c, str):
-                        c = intermediate_format(*c)
-                    else:
-                        c = intermediate_format(c)
+                c = intermediate_formatting(c, intermediate_format)
                 tokens = tokenizer.encode(c)
                 if len(tokens) > max_per_context:
                     tokens = tokens[:max_per_context]
@@ -136,7 +145,7 @@ def concat(
                 max_per_context -= truncation_rate
     else:
         if intermediate_format is not None:
-            total_context = "\n".join(map(lambda x: intermediate_format(x) if isinstance(x, str) else intermediate_format(*x), input_texts))
+            total_context = "\n".join(map(lambda x: intermediate_formatting(x, intermediate_format), input_texts))
         else:
             if not isinstance(input_texts[0], str):
                 input_texts = ["\n".join(list(t)) for t in input_texts]

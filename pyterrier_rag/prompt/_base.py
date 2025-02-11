@@ -1,4 +1,4 @@
-from typing import Optional, Union, Iterable
+from typing import Optional, Union, Iterable, List
 
 import pyterrier as pt
 import pyterrier_alpha as pta
@@ -23,8 +23,13 @@ class PromptTransformer(pt.Transformer):
                 model_name_or_path=model_name_or_path,
                 system_message=system_message
             )
-        if context_config is None:
+        if context_aggregation is None and context_config is None:
+            self.use_context = False
+        elif context_config is None and context_aggregation is not None:
             context_config = ContextConfig(aggregate_func=context_aggregation)
+            self.use_context = True
+        elif context_config is not None:
+            self.use_context = True
         self.config = config
         self.context_config = context_config
         self.output_field = config.output_field
@@ -35,6 +40,7 @@ class PromptTransformer(pt.Transformer):
         self.conversation_template = get_conversation_template(self.config.model_name_or_path) or self.config.conversation_template
         if self.config.system_message is not None:
             self.conversation_template.set_system_message(self.config.system_message)
+        self.instruction = self.config.instruction
 
         self.output_attribute = {
             'openai': 'to_openai_api_messages',
@@ -43,28 +49,30 @@ class PromptTransformer(pt.Transformer):
             'reka': 'to_reka_api_messages',
         }[self.api_type] if self.api_type else 'get_prompt'
 
-        self.context_aggregation = ContextAggregationTransformer(**self.context_config.__dict__)
+        self.context_aggregation = ContextAggregationTransformer(**self.context_config.__dict__) if self.use_context else None
 
     @property
     def prompt(self):
         return self.conversation_template.copy()
 
-    def to_output(self, prompt):
+    def to_output(self, prompt) -> Union[str, List[dict]]:
         return getattr(prompt, self.output_attribute)()
 
-    def create_prompt(self, fields: dict):
+    def create_prompt(self, fields: dict) -> Union[str, List[dict]]:
         current_prompt = self.prompt
         instruction = self.instruction(**fields)
         current_prompt.append_message('user', instruction)
-        return current_prompt
+        return self.to_output(current_prompt)
 
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
         return self.transform_by_query(inp)
 
     def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
-        all_fields = list(inp)
-        fields = {field: all_fields[0][field] for field in self.relevant_fields}
+        fields = {k: v for k, v in inp[0].items() if k in self.relevant_fields}
+        if self.use_context:
+            context = self.context_aggregation.transform_by_query(inp)['context']
+            fields['context'] = context
         prompt = self.create_prompt(fields)
 
         return {self.output_field: prompt, **inp[0]}

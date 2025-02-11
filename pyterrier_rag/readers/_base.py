@@ -2,12 +2,9 @@ from abc import ABC
 from typing import Iterable, Union
 
 import pyterrier as pt
-import pyterrier_alpha as pta
 import torch
-import pandas as pd
 from transformers import GenerationConfig
 from more_itertools import chunked
-from .._util import push_queries
 
 
 class Reader(pt.Transformer, ABC):
@@ -60,19 +57,14 @@ class Reader(pt.Transformer, ABC):
     def generate(self, inp: Iterable[str]) -> Iterable[str]:
         raise NotImplementedError("Implement the generate method")
 
-    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
-        queries = inp['query'].tolist()
-        if self.input_field == 'query' and self.output_field == 'query':
-            inp = push_queries(inp)
-        else:
-            if self.output_field in inp.columns:
-                inp = push_queries(inp, base_column=self.output_field)
+    def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
+        queries = [i[self.input_field] for i in inp]
         out = []
         for chunk in chunked(queries, self.batch_size):
             out.extend(self.generate(chunk))
-        inp[self.output_field] = out
-        
+        for i, o in zip(inp, out):
+            i[self.output_field] = o
         return inp
 
 
-__all__ = ["Reader", "PromptTransformer"]
+__all__ = ["Reader"]
