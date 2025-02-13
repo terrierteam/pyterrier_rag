@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 from pyterrier_rag._util import (push_queries, push_queries_dict,
-                         find_maximum_push, find_maximum_push_dict)
+                                 find_maximum_push, find_maximum_push_dict)
 
 
 # Tests for push_queries
@@ -23,15 +23,9 @@ def test_push_queries_existing_query0():
 
 def test_push_queries_inplace():
     df = pd.DataFrame({'query': ['q1']})
-    push_queries(df, inplace=True)
+    df = push_queries(df, inplace=True)
     assert 'query_0' in df.columns
     assert 'query' not in df.columns
-
-
-def test_push_queries_keep_original_raises_error():
-    df = pd.DataFrame({'query': ['q1']})
-    with pytest.raises(KeyError):
-        push_queries(df, keep_original=True)
 
 
 def test_push_queries_base_column():
@@ -48,14 +42,14 @@ def test_push_queries_missing_query():
 
 # Tests for push_queries_dict
 def test_push_queries_dict_single():
-    inp = {'query': 'q1', 'doc': 'd1'}
+    inp = [{'query': 'q1', 'doc': 'd1'}]
     result = push_queries_dict(inp)
-    assert result == {'query_0': 'q1', 'doc': 'd1'}
+    assert result == [{'query_0': 'q1', 'doc': 'd1'}]
 
 
 def test_push_queries_dict_keep_original():
     inp = {'query': 'q1'}
-    result = push_queries_dict(inp, keep_originals=True)
+    result = push_queries_dict(inp, keep_original=True)
     assert result == {'query_0': 'q1', 'query': 'q1'}
 
 

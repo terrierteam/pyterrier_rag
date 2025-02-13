@@ -35,7 +35,7 @@ class PromptConfig:
         ), "Either model_name_or_path or conversation_template must be provided"
         self.instruction = (
             self.instruction
-            if isinstance(self.instruction, callable)
+            if callable(self.instruction)
             else self.instruction.format
         )
 

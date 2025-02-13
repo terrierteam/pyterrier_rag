@@ -21,20 +21,20 @@ class TestPyterrier_rag(unittest.TestCase):
     def _test_fid(self, model):
         data = [
                 {
-                    "qid": "0", 
-                    "query": "where is Beijing?", 
-                    "docno": "d1", 
-                    "text": "New York is the capital city of USA.", 
+                    "qid": "0",
+                    "query": "where is Beijing?",
+                    "docno": "d1",
+                    "text": "New York is the capital city of USA.",
                     "score": 0.001
                 },
                 {
-                    "qid": "0", 
-                    "query": 
-                    "where is Beijing?", 
-                    "docno": "d2", 
-                    "text": "Beijing is the capital city of China.", 
+                    "qid": "0",
+                    "query":
+                    "where is Beijing?",
+                    "docno": "d2",
+                    "text": "Beijing is the capital city of China.",
                     "score": 0.98
-                },  
+                },
             ]
 
         # now check without titles

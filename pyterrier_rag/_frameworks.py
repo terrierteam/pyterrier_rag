@@ -2,6 +2,7 @@ from typing import Iterable, Optional
 
 from outlines import prompt
 import pyterrier as pt
+import pyterrier_alpha as pta
 
 from pyterrier_rag.prompt import PromptTransformer, PromptConfig, ContextConfig
 
@@ -91,6 +92,10 @@ class IRCOT(pt.Transformer):
             intermediate_format=ircot_example_format,
         )
 
+    @pta.transform.by_query(add_ranks=False)
+    def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
+        return self.transform_by_query(inp)
+
     def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
         inp = list(inp)
         qid = inp[0]["qid"]
@@ -118,7 +123,7 @@ class IRCOT(pt.Transformer):
                     self.retriever.search(output[self.output_field].iloc[0])
                 )
                 top_k_docs.sort_values(by="score", ascending=False, inplace=True)
-                top_k_docs.drop_duplicates(subset=["docid"], inplace=True)
+                top_k_docs.drop_duplicates(subset=["docno"], inplace=True)
                 top_k_docs = top_k_docs.head(self.max_docs)
                 iter += 1
 

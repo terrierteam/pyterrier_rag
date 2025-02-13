@@ -19,7 +19,8 @@ from transformers.modeling_outputs import (
 from transformers.models.bart.configuration_bart import BartConfig
 from transformers.models.t5.configuration_t5 import T5Config
 
-from ._base import Reader
+import pyterrier as pt
+import pyterrier_alpha as pta
 
 
 class T5FiDReader(T5ForConditionalGeneration):
@@ -420,7 +421,7 @@ class BARTFiDReader(BartForConditionalGeneration):
         return model_kwargs
 
 
-class FiD(Reader):
+class FiD(pt.Transformer):
 
     def __init__(
         self,
@@ -434,25 +435,41 @@ class FiD(Reader):
         generation_config: GenerationConfig = None,
         verbose: bool = False,
         device: Union[str, torch.device] = None,
-        **kwargs,
     ):
-        super().__init__(
-            batch_size=batch_size,
-            text_field=text_field,
-            text_max_length=text_max_length,
-            num_context=num_context,
-            max_new_tokens=max_new_tokens,
-            generation_config=generation_config,
-            verbose=verbose,
-            device=device,
-            **kwargs,
-        )
+        self.device = ("cuda" if torch.cuda.is_available() else "cpu") if device is None else device
         self.model = model.to(self.device)
         self.model.eval()
         self.tokenizer = tokenizer
+        self.batch_size = batch_size
+        self.text_field = text_field
+        self.text_max_length = text_max_length
+        self.num_context = num_context
+        self.max_new_tokens = max_new_tokens
+        self.generation_config = generation_config
+        self.verbose = verbose
         self.query_prefix = "question:"
         self.title_prefix = "title:"
         self.context_prefix = "context:"
+
+    def get_context_by_query(self, inp: Iterable[dict]) -> Iterable[Union[str, Tuple[str]]]:
+        """Return at most self.num_context retrieved context.
+        """
+        if self.num_context and inp:
+            num = len(inp) if self.num_context == "auto" else self.num_context
+            if "score" in inp[0]:
+                inp = sorted(inp, key=lambda x: x["score"], reverse=True)
+            if "title" in inp[0]:
+                context = [(item["title"], item[self.text_field]) for item in inp]
+            else:
+                context = [item[self.text_field] for item in inp]
+            context = context[:num]
+        else:
+            context = None
+        return context
+
+    @pta.transform.by_query(add_ranks=False)
+    def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
+        return self.transform_by_query(inp)
 
     def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
         inp = list(inp)

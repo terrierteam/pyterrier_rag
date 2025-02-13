@@ -2,7 +2,7 @@ from typing import Optional, Union, Iterable, List
 
 import pyterrier as pt
 import pyterrier_alpha as pta
-from fastchat import get_conversation_template
+from fastchat.model import get_conversation_template
 
 from ._config import PromptConfig, ContextConfig
 from ._context_aggregation import ContextAggregationTransformer
@@ -38,6 +38,8 @@ class PromptTransformer(pt.Transformer):
         self.relevant_fields = config.input_fields
         self.api_type = config.api_type
 
+        self.__post_init__()
+
     def __post_init__(self):
         self.conversation_template = (
             get_conversation_template(self.config.model_name_or_path)
@@ -59,7 +61,7 @@ class PromptTransformer(pt.Transformer):
         )
 
         self.context_aggregation = (
-            ContextAggregationTransformer(**self.context_config.__dict__)
+            ContextAggregationTransformer(config=self.context_config)
             if self.use_context
             else None
         )
@@ -82,6 +84,7 @@ class PromptTransformer(pt.Transformer):
         return self.transform_by_query(inp)
 
     def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
+        inp = list(inp)
         qid = inp[0].get("qid", None)
         query = inp[0].get("query", None)
         fields = {k: v for k, v in inp[0].items() if k in self.relevant_fields}

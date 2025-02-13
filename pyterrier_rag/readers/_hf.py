@@ -35,8 +35,9 @@ class HuggingFaceReader(Reader):
         )
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
 
+        max_position_embeddings = getattr(self._model.config, "max_position_embeddings", None)
         self.max_input_length = (
-            max_input_length or self._model.config.max_position_embeddings
+            max_input_length or max_position_embeddings
         )
 
         if generation_args is None:

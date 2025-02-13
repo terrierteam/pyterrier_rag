@@ -1,5 +1,4 @@
 from typing import Iterable
-import pandas as pd
 
 from ._base import Reader
 from .._optional import is_vllm_availible

@@ -22,7 +22,7 @@ def push_queries(
             supplied dataframe. Defaults to False.
     """
     cols = set(df.columns)
-    if "query" not in cols:
+    if base_column not in cols:
         raise KeyError(f"Expected a {base_column} column, but found {list(cols)}")
     if not inplace:
         df = df.copy()
@@ -45,7 +45,7 @@ def push_queries(
 
 def push_queries_dict(
     inp: Union[Iterable[dict], dict],
-    keep_originals: bool = False,
+    keep_original: bool = False,
     base_column: str = "query",
 ) -> Union[Iterable[dict], dict]:
     def per_element(i: dict):
@@ -66,17 +66,17 @@ def push_queries_dict(
         for k, v in i.items():
             if k in rename_cols:
                 renamed[rename_cols[k]] = v
-            elif keep_originals:
+            else:
                 renamed[k] = v
 
-        if keep_originals:
+        if keep_original:
             renamed[base_column] = renamed[f"{base_column}_0"]
 
         return renamed
 
     if isinstance(inp, dict):
         return per_element(inp)
-    return map(per_element, inp)
+    return [*map(per_element, inp)]
 
 
 def find_maximum_push(inp: pd.DataFrame, base_column: str = "query") -> Tuple[str, int]:
