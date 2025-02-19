@@ -63,6 +63,10 @@ class OpenAIReader(Reader):
                 'num_beams' : 1,
             }
         self._generation_args = generation_args
+    
+    @property
+    def is_openai(self):
+        return True
 
     def _call_completion(
         self,
