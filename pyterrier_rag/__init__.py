@@ -2,12 +2,12 @@
 
 __version__ = '0.1.0'
 
-import pyterrier_rag._datasets
-import pyterrier_rag.measures
-import pyterrier_rag.model
-import pyterrier_rag.readers
+from _pyterrier_rag import _datasets
+from pyterrier_rag import measures
+from pyterrier_rag import model
+from pyterrier_rag import readers
 from pyterrier_rag._frameworks import Iterative
 
 __all__ = [
-    'Iterative', 'readers'
+    'Iterative', 'model', 'readers', 'measures', '_datasets',
 ]
