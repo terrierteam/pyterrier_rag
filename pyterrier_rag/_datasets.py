@@ -181,9 +181,15 @@ DROPBOX_2WikiMultihopQA = {
 DATASET_MAP['2wikimultihopqa'] = RemoteRAGDataset('rag:2wikimultihopqa', DROPBOX_2WikiMultihopQA)
 
 
-class RagDatasetProvider(pt.datasets.DatasetProvider):
-    def get_dataset(self, name: str) -> pt.datasets.Dataset:
-        return DATASET_MAP[name]
+if hasattr(pt.datasets, 'DatasetProvider'):
+    # PyTerrier version that supports DatasetProviders
+    class RagDatasetProvider(pt.datasets.DatasetProvider):
+        def get_dataset(self, name: str) -> pt.datasets.Dataset:
+            return DATASET_MAP[name]
 
-    def list_datasets(self) -> Iterable[str]:
-        return list(DATASET_MAP.keys())
+        def list_datasets(self) -> Iterable[str]:
+            return list(DATASET_MAP.keys())
+else:
+    # Fallback: manually change PyTerrier core's DATASET_MAP. (This requires that this module be loaded before
+    # these datasets are available)
+    pt.datasets.DATASET_MAP.update({f'rag:{k}': v for k, v in DATASET_MAP})
