@@ -30,8 +30,8 @@ dependencies = {file = ["requirements.txt"]}
 exclude = ["tests"]
 
 [project.urls]
-Repository = "https://github.com/terrierteam/pyterrier-rag"
-"Bug Tracker" = "https://github.com/terrierteam/pyterrier-rag/issues"
+Repository = "https://github.com/terrierteam/pyterrier_rag"
+"Bug Tracker" = "https://github.com/terrierteam/pyterrier_rag/issues"
 
 [tool.ruff]
 line-length = 120
