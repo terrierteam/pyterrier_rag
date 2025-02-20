@@ -192,4 +192,4 @@ if hasattr(pt.datasets, 'DatasetProvider'):
 else:
     # Fallback: manually change PyTerrier core's DATASET_MAP. (This requires that this module be loaded before
     # these datasets are available)
-    pt.datasets.DATASET_MAP.update({f'rag:{k}': v for k, v in DATASET_MAP})
+    pt.datasets.DATASET_MAP.update({f'rag:{k}': v for k, v in DATASET_MAP.items()})
