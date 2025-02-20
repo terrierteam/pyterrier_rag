@@ -4,3 +4,4 @@ ir_measures>=0.3.4
 regex
 transformers==4.44.2
 torch
+outlines
