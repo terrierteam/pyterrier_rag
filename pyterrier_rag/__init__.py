@@ -6,8 +6,8 @@ from pyterrier_rag import _datasets
 from pyterrier_rag import measures
 from pyterrier_rag import model
 from pyterrier_rag import readers
-from pyterrier_rag._frameworks import Iterative
+from pyterrier_rag._frameworks import Iterative, Genetic
 
 __all__ = [
-    'Iterative', 'model', 'readers', 'measures', '_datasets',
+    'Iterative', 'model', 'readers', 'measures', '_datasets', 'Genetic',
 ]
