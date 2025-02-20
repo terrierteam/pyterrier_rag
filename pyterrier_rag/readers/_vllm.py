@@ -1,7 +1,23 @@
-from typing import Iterable
+from typing import Iterable, List
+import numpy as np
 
 from ._base import Reader
 from .._optional import is_vllm_availible
+
+
+def get_logits_from_dict(d : List[dict], tokenizer):
+    # get ordering of vocabulary from tokenizer
+    vocab = tokenizer.get_vocab()
+    id2token = {k: v for k, v in vocab.items()}
+
+    # get the logits from the dictionary
+    output = np.zeros((len(d), len(vocab)))
+    for i in range(len(d)):
+        for j in range(len(vocab)):
+            # get jth token from vocab
+            token = id2token[j]
+            output[i, j] = d[i].get(token, 0.0)
+    return output
 
 
 class VLLMReader(Reader):
@@ -9,6 +25,7 @@ class VLLMReader(Reader):
         self,
         model_name_or_path: str,
         model_args: dict = {},
+        output_format: str = "text",
         generation_args: dict = None,
         batch_size: int = 4,
         max_input_length: int = 512,
@@ -17,6 +34,7 @@ class VLLMReader(Reader):
         **kwargs,
     ):
         super().__init__(
+            output_format=output_format,
             batch_size=batch_size,
             max_input_length=max_input_length,
             max_new_tokens=max_new_tokens,
@@ -42,10 +60,19 @@ class VLLMReader(Reader):
                 "do_sample": False,
                 "num_beams": 1,
             }
+        if self.output_format == 'logits':
+            generation_args['log_probs'] = self._model.llm_engine.model_config.vocab_size
         self._generation_args = SamplingParams(**generation_args)
         self.model = LLM(self._model, self._generation_args)
 
     def generate(self, inps: Iterable[str]) -> Iterable[str]:
-        return map(
-            lambda x: x[0].text, self.model.generate(inps, self._generation_args)
-        )
+        if self.output_format == 'logits':
+            return map(
+                lambda x: get_logits_from_dict(x, self.model.tokenizer), self.model.generate(inps, self._generation_args)
+            )
+        elif self.output_format == 'text':
+            return map(
+                lambda x: x[0].text, self.model.generate(inps, self._generation_args)
+            )
+        else:
+            raise ValueError(f"output_format {self.output_format} not supported by VLLMReader")

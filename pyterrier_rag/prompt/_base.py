@@ -14,11 +14,12 @@ class PromptTransformer(pt.Transformer):
         instruction: Union[callable, str] = None,
         model_name_or_path: str = None,
         system_message: Optional[str] = None,
+        text_loader : Optional[callable] = None,
         config: Optional[PromptConfig] = None,
         context_aggregation: Optional[callable] = None,
         context_config: Optional[ContextConfig] = None,
     ):
-
+        self.text_loader = text_loader
         if config is None:
             config = PromptConfig(
                 instruction=instruction,
@@ -87,7 +88,14 @@ class PromptTransformer(pt.Transformer):
         inp = list(inp)
         qid = inp[0].get("qid", None)
         query = inp[0].get("query", None)
+        if query is None and self.text_loader is not None:
+            query = self.text_loader(qid)
+            for i in inp:
+                i["query"] = query
         fields = {k: v for k, v in inp[0].items() if k in self.relevant_fields}
+        if 'text' in self.relevant_fields and 'text' not in fields and self.text_loader is not None:
+            for i in inp:
+                fields['text'] = self.text_loader(i['docno'])
         if self.use_context:
             context = self.context_aggregation.transform_by_query(inp)["context"]
             fields["context"] = context

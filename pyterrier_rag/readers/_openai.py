@@ -11,6 +11,7 @@ class OpenAIReader(Reader):
         self,
         model_name_or_path: str,
         api_key: str = None,
+        output_format: str = "text",
         generation_args: dict = None,
         batch_size: int = 4,
         max_input_length: int = 512,
@@ -19,6 +20,7 @@ class OpenAIReader(Reader):
         **kwargs,
     ):
         super().__init__(
+            output_format=output_format,
             batch_size=batch_size,
             max_input_length=max_input_length,
             max_new_tokens=max_new_tokens,
@@ -26,6 +28,8 @@ class OpenAIReader(Reader):
             verbose=verbose,
             **kwargs,
         )
+        if self.output_format != "text":
+            raise ValueError("OpenAIReader currently only supports output_format='text'")
         if not is_openai_availible():
             raise ImportError("Please install openai to use OpenAIReader")
         import openai

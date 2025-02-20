@@ -1,6 +1,8 @@
 from typing import Iterable, List
 
 from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer
+import torch
+
 from ._base import Reader
 
 
@@ -11,6 +13,7 @@ class HuggingFaceReader(Reader):
         self,
         model_name_or_path: str,
         model_args: dict = {},
+        output_format:str = "text",
         generation_args: dict = None,
         batch_size: int = 4,
         max_input_length: int = None,
@@ -19,6 +22,7 @@ class HuggingFaceReader(Reader):
         **kwargs,
     ):
         super().__init__(
+            output_format=output_format,
             batch_size=batch_size,
             max_new_tokens=max_new_tokens,
             generation_config=None,
@@ -50,6 +54,7 @@ class HuggingFaceReader(Reader):
         self._generation_args = generation_args
         self.model = self._model
 
+    @torch.no_grad()
     def generate(self, inps: Iterable[str]) -> List[str]:
         assert (
             self.model is not None
@@ -63,6 +68,8 @@ class HuggingFaceReader(Reader):
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         outputs = self.model.generate(**inputs, **self._generation_args)
+        if self.output_format == "logits":
+            return [output.logits.numpy() for output in outputs]
 
         return self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
 

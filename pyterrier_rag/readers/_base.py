@@ -15,6 +15,7 @@ class Reader(pt.Transformer, ABC):
         *,
         input_field: str = "query",
         output_field: str = "qanswer",
+        output_format: str = "text",
         batch_size: int = 4,
         max_input_length: int = 512,
         max_new_tokens: int = 32,
@@ -33,6 +34,7 @@ class Reader(pt.Transformer, ABC):
 
         self.input_field = input_field
         self.output_field = output_field
+        self.output_format = output_format
         self.batch_size = batch_size
         self.max_input_length = max_input_length
         self.max_new_tokens = max_new_tokens
