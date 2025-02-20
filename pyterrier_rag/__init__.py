@@ -2,7 +2,7 @@
 
 __version__ = '0.1.0'
 
-from _pyterrier_rag import _datasets
+from pyterrier_rag import _datasets
 from pyterrier_rag import measures
 from pyterrier_rag import model
 from pyterrier_rag import readers
