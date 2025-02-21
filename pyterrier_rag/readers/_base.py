@@ -1,23 +1,22 @@
-from abc import ABC, abstractmethod
-from typing import Iterable, Tuple, Union
+from abc import ABC
+from typing import Iterable, Union
 
 import pyterrier as pt
-import pyterrier_alpha as pta
 import torch
 from transformers import GenerationConfig
-
-GENERIC_PROMPT = "Use the context information to answer the Question: \n Context: {context} \n Question: {query} \n Answer:"
+from more_itertools import chunked
 
 
 class Reader(pt.Transformer, ABC):
+    _model_name_or_path = None
 
     def __init__(
         self,
         *,
+        input_field: str = "query",
+        output_field: str = "qanswer",
         batch_size: int = 4,
-        text_field: str = 'text',
-        text_max_length: int = 512,
-        num_context: Union[int, str] = "auto",
+        max_input_length: int = 512,
         max_new_tokens: int = 32,
         generation_config: GenerationConfig = None,
         verbose: bool = False,
@@ -32,9 +31,10 @@ class Reader(pt.Transformer, ABC):
             device = torch.device(device)
         self.device = device
 
-        self.text_field = text_field
-        self.text_max_length = text_max_length
-        self.num_context = num_context
+        self.input_field = input_field
+        self.output_field = output_field
+        self.batch_size = batch_size
+        self.max_input_length = max_input_length
         self.max_new_tokens = max_new_tokens
         self.verbose = verbose
         self.kwargs = kwargs
@@ -42,39 +42,29 @@ class Reader(pt.Transformer, ABC):
         if generation_config is None:
             # use greedy decoding by default
             self.generation_config = GenerationConfig(
-                max_new_tokens = self.max_new_tokens,
+                max_new_tokens=self.max_new_tokens,
                 temperature=1.0,
-                do_sample = False,
-                num_beams = 1
+                do_sample=False,
+                num_beams=1,
             )
         else:
             self.generation_config = generation_config
-    
+
     @property
-    def is_openai(self):
-        return False
+    def model_name_or_path(self):
+        return self._model_name_or_path
 
-    # TODO: couldn't pass self.verbose to pta.transform.by_query
-    @pta.transform.by_query(add_ranks=False)
+    def generate(self, inp: Iterable[str]) -> Iterable[str]:
+        raise NotImplementedError("Implement the generate method")
+
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
-        return self.transform_by_query(inp)
+        queries = [i[self.input_field] for i in inp]
+        out = []
+        for chunk in chunked(queries, self.batch_size):
+            out.extend(self.generate(chunk))
+        for i, o in zip(inp, out):
+            i[self.output_field] = o
+        return inp
 
-    @abstractmethod
-    def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
-        pass
 
-    def get_context_by_query(self, inp: Iterable[dict]) -> Iterable[Union[str, Tuple[str]]]:
-        """Return at most self.num_context retrieved context.
-        """
-        if self.num_context and inp:
-            num = len(inp) if self.num_context == "auto" else self.num_context
-            if "score" in inp[0]:
-                inp = sorted(inp, key=lambda x: x["score"], reverse=True)
-            if "title" in inp[0]:
-                context = [(item["title"], item[self.text_field]) for item in inp]
-            else:
-                context = [item[self.text_field] for item in inp]
-            context = context[:num]
-        else:
-            context = None
-        return context
+__all__ = ["Reader"]
