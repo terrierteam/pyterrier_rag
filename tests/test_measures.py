@@ -12,4 +12,4 @@ class TestPyterrier_rag(unittest.TestCase):
 
         eval1 = pt.Evaluate(run1, qrels, [pyterrier_rag.measures.BERTScore(minlabel=2)])
         eval2 = pt.Evaluate(run2, qrels, [pyterrier_rag.measures.BERTScore(minlabel=2)])
-        self.assertTrue(eval1['<lambda>'] > eval2['<lambda>'])
+        self.assertTrue(eval1['BERTScore'] > eval2['BERTScore'])

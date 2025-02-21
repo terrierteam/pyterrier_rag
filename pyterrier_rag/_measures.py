@@ -80,4 +80,4 @@ def _bertscore(qrels, res, minlabel = 3, submeasure='f1', agg='max'):
     return r[submeasure][agg]
 
 def BERTScore(minlabel=3, submeasure='f1', agg='max'):
-    return ir_measures.define_byquery( lambda qrels, res: _bertscore(qrels, res, minlabel=minlabel, agg=agg))
+    return ir_measures.define_byquery( lambda qrels, res: _bertscore(qrels, res, minlabel=minlabel, agg=agg), name='BERTScore', support_cutoff=False)
