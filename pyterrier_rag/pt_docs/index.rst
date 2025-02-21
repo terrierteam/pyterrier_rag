@@ -29,3 +29,4 @@ Credits
 - Jinyuan Fang, University of Glasgow
 - Andrew Parry, University of Glasgow
 - Zaiqiao Meng, University of Glasgow
+- Sean MacAvaney, University of Glasgow

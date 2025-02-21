@@ -36,3 +36,6 @@ Repository = "https://github.com/terrierteam/pyterrier_rag"
 [tool.ruff]
 line-length = 120
 exclude = ["tests"]
+
+[project.entry-points."pyterrier.dataset_provider"]
+rag = "pyterrier_rag._datasets:RagDatasetProvider"
