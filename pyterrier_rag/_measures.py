@@ -3,6 +3,7 @@ from collections import Counter
 from typing import List
 
 import regex
+import ir_measures
 
 
 # Normalization from SQuAD evaluation script https://worksheets.codalab.org/rest/bundles/0x6b567e1cf2e041ec80d7098f031c5c9e/contents/blob/
@@ -42,8 +43,6 @@ def f1_score(prediction : str, ground_truth : List[str]) -> float:
     f1 = (2 * precision * recall) / (precision + recall)
     # return f1, precision, recall
     return f1
-
-import ir_measures
 
 # we aggregate across multiple gold_answer values using max().
 F1 = ir_measures.define_byquery(

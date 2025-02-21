@@ -49,6 +49,10 @@ class Reader(pt.Transformer, ABC):
             )
         else:
             self.generation_config = generation_config
+    
+    @property
+    def is_openai(self):
+        return False
 
     # TODO: couldn't pass self.verbose to pta.transform.by_query
     @pta.transform.by_query(add_ranks=False)
