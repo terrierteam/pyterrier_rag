@@ -1,7 +1,7 @@
 from typing import Iterable, List
 import numpy as np
 
-from ._base import Reader
+from ._base import Reader, ReaderOutput
 from .._optional import is_vllm_availible
 
 
@@ -21,6 +21,9 @@ def get_logits_from_dict(d : List[dict], tokenizer):
 
 
 class VLLMReader(Reader):
+    _logit_type = "sparse"
+    _support_logits = True
+
     def __init__(
         self,
         model_name_or_path: str,
@@ -60,19 +63,12 @@ class VLLMReader(Reader):
                 "do_sample": False,
                 "num_beams": 1,
             }
-        if self.output_format == 'logits':
-            generation_args['log_probs'] = self._model.llm_engine.model_config.vocab_size
+        generation_args['log_probs'] = self._model.llm_engine.model_config.vocab_size
         self._generation_args = SamplingParams(**generation_args)
         self.model = LLM(self._model, self._generation_args)
 
     def generate(self, inps: Iterable[str]) -> Iterable[str]:
-        if self.output_format == 'logits':
-            return map(
-                lambda x: get_logits_from_dict(x, self.model.tokenizer), self.model.generate(inps, self._generation_args)
-            )
-        elif self.output_format == 'text':
-            return map(
-                lambda x: x[0].text, self.model.generate(inps, self._generation_args)
-            )
-        else:
-            raise ValueError(f"output_format {self.output_format} not supported by VLLMReader")
+        responses = self.model.generate(inps, self._generation_args)
+        logits = map(lambda x: x[0].log_probs, responses)
+        text = map(lambda x: x[0].text, responses)
+        return [ReaderOutput(text=t, logits=l) for t, l in zip(text, logits)]

@@ -3,7 +3,7 @@ import time
 from typing import List
 
 from .._optional import is_openai_availible, is_tiktoken_availible
-from ._base import Reader
+from ._base import Reader, ReaderOutput
 
 
 class OpenAIReader(Reader):
@@ -11,7 +11,6 @@ class OpenAIReader(Reader):
         self,
         model_name_or_path: str,
         api_key: str = None,
-        output_format: str = "text",
         generation_args: dict = None,
         batch_size: int = 4,
         max_input_length: int = 512,
@@ -20,7 +19,6 @@ class OpenAIReader(Reader):
         **kwargs,
     ):
         super().__init__(
-            output_format=output_format,
             batch_size=batch_size,
             max_input_length=max_input_length,
             max_new_tokens=max_new_tokens,
@@ -28,8 +26,6 @@ class OpenAIReader(Reader):
             verbose=verbose,
             **kwargs,
         )
-        if self.output_format != "text":
-            raise ValueError("OpenAIReader currently only supports output_format='text'")
         if not is_openai_availible():
             raise ImportError("Please install openai to use OpenAIReader")
         import openai
@@ -86,13 +82,13 @@ class OpenAIReader(Reader):
             completion = completion["choices"][0]["message"]["content"]
         return completion
 
-    def _generate(self, prompt: List[dict]) -> List[str]:
+    def generate(self, prompt: List[dict]) -> List[str]:
         response = self._call_completion(
             messages=prompt,
             return_text=True,
             **{"model": self._model_name_or_path, **self._generation_args},
         )
-        return response
+        return [ReaderOutput(text=r) for r in response]
 
 
 __all__ = ["OpenAIReader"]

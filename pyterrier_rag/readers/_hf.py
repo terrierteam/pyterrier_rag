@@ -3,11 +3,13 @@ from typing import Iterable, List
 from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer
 import torch
 
-from ._base import Reader
+from ._base import Reader, ReaderOutput
 
 
 class HuggingFaceReader(Reader):
     _model_class = None
+    _support_logits = True
+    _logit_type = "dense"
 
     def __init__(
         self,
@@ -68,10 +70,10 @@ class HuggingFaceReader(Reader):
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         outputs = self.model.generate(**inputs, **self._generation_args)
-        if self.output_format == "logits":
-            return [output.logits.numpy() for output in outputs]
+        logits = [output.logits.numpy() for output in outputs]
+        texts = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
 
-        return self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
+        return [ReaderOutput(text=text, logits=logit) for text, logit in zip(texts, logits)]
 
 
 class CausalLMReader(HuggingFaceReader):
