@@ -53,19 +53,21 @@ EM = ir_measures.define_byquery(
 
 _bertscore_model = None
 def _bertscore(qrels, res, minlabel = 3, submeasure='f1', agg='max'):
-    import pyterrier_alpha as pta
-    global _bertscore_model
-    pta.validate.result_frame(qrels, extra_columns=['label', 'text'])
-    pta.validate.result_frame(res, extra_columns=['text'])
 
-    qrels = qrels[qrels.label >= minlabel]
+    for k in ['query_id', 'relevance', 'text']:
+        assert k in qrels.columns, "%s not found in qrels frame, found %s" % (k, str(qrels.columns))
+    for k in ['query_id', 'qanswer']:
+        assert k in res.columns, "%s not found in res frame, found %s" % (k, str(res.columns))
+    
+    qrels = qrels[qrels.relevance >= minlabel]
     assert len(qrels), "No qrels found with minlabel of %d" % minlabel
-    
-    if __bertscore_model is None:
+
+    global _bertscore_model
+    if _bertscore_model is None:
         from evaluate import load # this is a huggingface package
-        __bertscore_model = load("bertscore")
+        _bertscore_model = load("bertscore")
     
-    predictions = res['text'].to_list()
+    predictions = res['qanswer'].to_list()
     references = qrels['text'].to_list()
 
     results = _bertscore_model.compute(predictions=predictions, references=references, lang="en", model_type="bert-large-uncased", verbose=False)
