@@ -6,7 +6,7 @@ PyTerrier-RAG is an extension for [PyTerrier](https://github.com/terrier-org/pyt
 3. Popular reader models, such as Fusion-in-Decoder, LLama
 4. Evaluation measures
 
-As well as access to the all of the retrievers (sparse, learned sparse and dense) and rerankers (from MonoT5 to RankGPT) accessible through the wider [PyTerrier ecosystem](https://pyterrier.readthedocs.io/en/latest/).
+As well as access to all of the retrievers (sparse, learned sparse and dense) and rerankers (from MonoT5 to RankGPT) accessible through the wider [PyTerrier ecosystem](https://pyterrier.readthedocs.io/en/latest/).
 
 ## Example Notebooks
 Try it out here on Google Colab now!
