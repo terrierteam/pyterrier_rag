@@ -1,5 +1,8 @@
-from typing import Optional
+from typing import Optional, List, Union, Literal
+import random
+import itertools
 from functools import partial
+from collections import Counter
 from outlines import prompt
 
 import pandas as pd
@@ -150,3 +153,96 @@ class Iterative(pt.Transformer):
                 stop = True
             inp = answers
         return answers
+
+
+class Genetic(pt.Transformer):
+    """Genetic RAG pipeline (Gen2IR)
+
+    .. cite.dblp:: conf/doceng/KulkarniYGFM23
+    """
+
+    def __init__(self,
+        fitness: pt.Transformer,
+        mutators: List[pt.Transformer],
+        *,
+        convergence_depth: int = 2,
+        mutation_depth: int = 2,
+        mutations_per_generation: int = 8,
+        response_type: Union[Literal['result_frame'], Literal['answer_frame']] = 'answer_frame',
+        rng: Optional[int] = None,
+    ):
+        """
+        Args:
+            fitness: a Transformer that scores the input DataFrame (to determine the best answers)
+            mutators: a list of Transformers that generate new answers
+            convergence_depth: the depth at which we consider the results to have converged
+            mutation_depth: the depth at which sample from for mutations
+            mutations_per_generation: the number of mutations to generate per generation
+            response_type: the type of frame to return: either an ``answer_frame`` (which includes only a single qanswer per query)
+                or a ``result_frame`` which includes all retrieved generated documents.
+            rng: the random seed
+        """
+        self.fitness = fitness
+        self.mutators = mutators
+        self.convergence_depth = convergence_depth
+        self.mutation_depth = mutation_depth
+        self.mutations_per_generation = mutations_per_generation
+        self.response_type = response_type
+        self.rng = random.Random(rng) or random.Random()
+
+    @pta.transform.by_query(add_ranks=False)
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
+        pta.validate.result_frame(inp, extra_columns=['query', 'text'])
+        qid, query = inp['qid'].iloc[0], inp['query'].iloc[0]
+        scores = Counter()
+        threshold = float('-inf')
+        next_res = inp
+        for generation in itertools.count():
+            # Evaluate Fitness
+            next_res = self.fitness(next_res)
+            for docno, text, score in next_res[['docno', 'text', 'score']].itertuples(index=False):
+                scores[docno, text] = score
+            sorted_res = scores.most_common()
+            if len(next_res[next_res['score'] > threshold]) == 0:
+                break # converged
+            threshold = sorted_res[self.convergence_depth][1]
+
+            # Mutate
+            top_frame = pd.DataFrame({
+                'qid': qid,
+                'query': query,
+                'docno': [r[0][0] for r in sorted_res[:self.mutation_depth]],
+                'text': [r[0][1] for r in sorted_res[:self.mutation_depth]],
+                'score': [r[1] for r in sorted_res[:self.mutation_depth]],
+                'rank': list(range(len(sorted_res[:self.mutation_depth]))),
+            })
+            next_res = []
+            for i in range(self.mutations_per_generation):
+                mutator = self.rng.choice(self.mutators)
+                answer = mutator(top_frame)
+                assert len(answer) == 1
+                next_res.append({
+                    'qid': qid,
+                    'query': query,
+                    'docno': f'g{generation}i{i}',
+                    'text': answer['qanswer'].iloc[0],
+                })
+            next_res = pd.DataFrame(next_res)
+
+        if self.response_type == 'answer_frame':
+            return pd.DataFrame({
+                'qid': [qid],
+                'query': [query],
+                'qanswer': [sorted_res[0][0][1]],
+            })
+        elif self.response_type == 'result_frame':
+            return pd.DataFrame({
+                'qid': qid,
+                'query': query,
+                'docno': [r[0][0] for r in sorted_res],
+                'text': [r[0][1] for r in sorted_res],
+                'score': [r[1] for r in sorted_res],
+                'rank': list(range(len(sorted_res))),
+            })
+        else:
+            raise ValueError(f'unknown response_type: {self.response_type!r}')
