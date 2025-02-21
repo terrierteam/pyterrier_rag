@@ -58,6 +58,8 @@ def _bertscore(qrels, res, rel = 3, submeasure='f1', agg='max'):
     pta.validate.columns(qrels, includes=['query_id', 'relevance', 'text'])
     pta.validate.columns(res, includes=['query_id', 'qanswer'])
     
+    assert len(res), "Empty res df provided"
+    assert len(qrels), "Empty qrels df provided"
     qrels = qrels[qrels.relevance >= rel]
     assert len(qrels), "No qrels found with minimum label of %d" % rel
 
