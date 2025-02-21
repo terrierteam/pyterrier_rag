@@ -46,22 +46,20 @@ class FlashRAGDataset(RAGDataset):
 
 
 # TODO perhaps this should be done with entrypoints?
-pt.datasets.DATASET_MAP["rag:nq"] = FlashRAGDataset(
-    {"train": "nq/train.jsonl", "dev": "nq/dev.jsonl", "test": "nq/test.jsonl"}
-)
-pt.datasets.DATASET_MAP["rag:hotpotqa"] = FlashRAGDataset(
-    {"train": "hotpotqa/train.jsonl", "dev": "hotpotqa/dev.jsonl"}
-)
-pt.datasets.DATASET_MAP["rag:triviaqa"] = FlashRAGDataset(
-    {
-        "train": "triviaqa/train.jsonl",
-        "dev": "triviaqa/dev.jsonl",
-        "test": "triviaqa/test.jsonl",
-    }
-)
-pt.datasets.DATASET_MAP["rag:musique"] = FlashRAGDataset(
-    {"train": "musique/train.jsonl", "dev": "musique/dev.jsonl"}
-)
+pt.datasets.DATASET_MAP['rag:nq'] = FlashRAGDataset(
+    {'train': 'nq/train.jsonl', 'dev': 'nq/dev.jsonl', 'test': 'nq/test.jsonl'})
+pt.datasets.DATASET_MAP['rag:hotpotqa'] = FlashRAGDataset(
+    {'train': 'hotpotqa/train.jsonl', 'dev': 'hotpotqa/dev.jsonl'})
+pt.datasets.DATASET_MAP['rag:triviaqa'] = FlashRAGDataset(
+    {'train': 'triviaqa/train.jsonl', 'dev': 'triviaqa/dev.jsonl', 'test': 'triviaqa/test.jsonl'})
+pt.datasets.DATASET_MAP['rag:musique'] = FlashRAGDataset(
+    {'train': 'musique/train.jsonl', 'dev': 'musique/dev.jsonl'})
+pt.datasets.DATASET_MAP['rag:web_questions'] = FlashRAGDataset(
+    {'train': 'web_questions/train.jsonl', 'test': 'web_questions/test.jsonl'})
+pt.datasets.DATASET_MAP['rag:wow'] = FlashRAGDataset(
+    {'train': 'web_questions/train.jsonl', 'dev': 'web_questions/dev.jsonl'})
+pt.datasets.DATASET_MAP['rag:popqa'] = FlashRAGDataset(
+    {'test': 'popqa/dev.jsonl'})
 
 
 def _hotspot_files(dataset: Dataset, components: str, variant: str, **kwargs):

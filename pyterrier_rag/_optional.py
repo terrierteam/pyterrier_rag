@@ -1,7 +1,6 @@
 def is_openai_availible():
     try:
-        import openai
-
+        import openai # noqa: F401
         return True
     except ImportError:
         return False
@@ -9,7 +8,7 @@ def is_openai_availible():
 
 def is_transformers_availible():
     try:
-        import transformers
+        import transformers # noqa: F401
 
         return True
     except ImportError:
@@ -18,8 +17,7 @@ def is_transformers_availible():
 
 def is_vllm_availible():
     try:
-        import vllm
-
+        import vllm # noqa: F401
         return True
     except ImportError:
         return False
@@ -27,8 +25,7 @@ def is_vllm_availible():
 
 def is_outlines_availible():
     try:
-        import outlines
-
+        import outlines # noqa: F401
         return True
     except ImportError:
         return False
@@ -36,8 +33,7 @@ def is_outlines_availible():
 
 def is_tiktoken_availible():
     try:
-        import tiktoken
-
+        import tiktoken # noqa: F401
         return True
     except ImportError:
         return False
