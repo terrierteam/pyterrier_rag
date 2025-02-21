@@ -69,7 +69,10 @@ def _bertscore(qrels, res, rel = 3, submeasure='f1', agg='max'):
         _bertscore_model = load("bertscore")
     
     predictions = res['qanswer'].to_list()
+    assert len(predictions) == 1, "Unexpected number of predictions"
     references = qrels['text'].to_list()
+    # duplicate the prediction for the nbr of ground truths 
+    predictions = predictions * len(references)
 
     results = _bertscore_model.compute(predictions=predictions, references=references, lang="en", model_type="bert-large-uncased", verbose=False)
     precisions, recall, f1 = results['precision'], results['recall'], results['f1']
@@ -88,7 +91,7 @@ def BERTScore(rel=3, submeasure : str = 'f1', agg : str = 'max'):
     Arguments:
      - rel(int): Minimum label value for relevant qrels. Defaults to 3, which is the highest label in MSMARCO.
      - submeasure(str): One of 'precision', 'recall' and 'f1'. Defaults to 'f1'.
-     - agg(str): One of 'max' or 'avg'. Defaults to 'max'.
+     - agg(str): How to combine (aggregate) when there are multiple relevant documents. Valid options are 'max' or 'avg'. Defaults to 'max'.
 
     Returns:
      An IR measures measure object that can be used in pt.Evaluate or pt.Experiment
