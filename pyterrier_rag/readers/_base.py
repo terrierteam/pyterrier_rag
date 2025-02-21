@@ -1,119 +1,54 @@
-from abc import ABC
-from typing import Iterable, Union
-
+from typing import Union
+import pandas as pd
 import pyterrier as pt
 import torch
-import numpy as np
-from transformers import GenerationConfig
-from more_itertools import chunked
-from dataclasses import dataclass
+from typing import Union, Optional
 
+from pyterrier_rag.backend import Backend
+from pyterrier_rag.prompt import PromptTransformer, PromptConfig, ContextConfig, ContextAggregationTransformer
 
-@dataclass
-class ReaderOutput:
-    text: str = None
-    logits: np.array = None
-
-
-class Reader(pt.Transformer, ABC):
-    _model_name_or_path = None
-    _support_logits = False
-    _logit_type = None
-
-    def __init__(
-        self,
-        *,
-        input_field: str = "query",
-        output_field: str = "qanswer",
-        output_format: str = "text",
-        batch_size: int = 4,
-        max_input_length: int = 512,
-        max_new_tokens: int = 32,
-        generation_config: GenerationConfig = None,
-        verbose: bool = False,
-        device: Union[str, torch.device] = None,
-        **kwargs
-    ):
-        super().__init__()
-
-        if device is None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-        if isinstance(device, str):
-            device = torch.device(device)
-        self.device = device
-
-        self.input_field = input_field
+class Reader(pt.Transformer):
+    def __init__(self,
+                 backend: Union[Backend, str],
+                 prompt: Union[PromptTransformer, str] = None,
+                 context_aggregation: Optional[callable] = None,
+                 prompt_config: Optional[PromptConfig] = None,
+                 context_config: Optional[ContextConfig] = None,
+                 output_field: str = "qanswer"
+                 ):
+        self.prompt = prompt
+        self.backend = backend
+        self.context_aggregation = context_aggregation
+        self.prompt_config = prompt_config
+        self.context_config = context_config
         self.output_field = output_field
-        self.output_format = output_format
-        self.batch_size = batch_size
-        self.max_input_length = max_input_length
-        self.max_new_tokens = max_new_tokens
-        self.verbose = verbose
-        self.kwargs = kwargs
+        self.__post_init__()
 
-        if generation_config is None:
-            # use greedy decoding by default
-            self.generation_config = GenerationConfig(
-                max_new_tokens=self.max_new_tokens,
-                temperature=1.0,
-                do_sample=False,
-                num_beams=1,
-            )
+    def __post_init__(self):
+        if self.context_config is not None:
+            if self.context_aggregation is not None:
+                self.context_aggregation = ContextAggregationTransformer(config=self.context_config, aggregate_func=self.context_aggregation)
+            else:
+                self.context_aggregation = ContextAggregationTransformer(config=self.context_config)
+        if isinstance(self.prompt, str):
+            self.prompt = PromptTransformer(instruction=self.prompt,
+                                            model_name_or_path=self.backend._model_name_or_path,
+                                            config=self.prompt_config,
+                                            context_aggregation=self.context_aggregation,
+                                            context_config=self.context_config)
+
+        self.prompt.set_output_attribute(self.backend._api_type)
+        if self.prompt.expect_logits and not self.backend._support_logits:
+            raise ValueError("The backend does not support logits")
+        elif self.prompt.expect_logits and self.backend._support_logits:
+            self.backend = self.backend.logit_generator()
         else:
-            self.generation_config = generation_config
+            self.backend = self.backend.text_generator()
 
-    @property
-    def model_name_or_path(self):
-        return self._model_name_or_path
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
+        prompts = self.prompt(inp)
+        outputs = self.backend(prompts)
+        answers = self.prompt.answer_extraction(outputs)
 
-    def text_generator(self):
-        return TextReader(self)
-
-    def logit_generator(self):
-        return LogitReader(self)
-
-    def generate(self, inp: Iterable[str]) -> Iterable[Union[ReaderOutput, str]]:
-        raise NotImplementedError("Implement the generate method")
-
-    def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
-        return self.text_generator(self).transform_iter(inp)
-
-
-class TextReader:
-    def __init__(self, reader : Reader):
-        self.reader = reader
-
-    def transform_iter(self, inp: Iterable[str]) -> Iterable[str]:
-        queries = [i[self.input_field] for i in inp]
-        out = []
-        for chunk in chunked(queries, self.batch_size):
-            out.extend(self.reader.generate(chunk))
-        if not hasattr(out[0], "text"):
-            if not out[0] is str:
-                raise ValueError("Reader must return ReaderOutput or str, not {}".format(type(out[0])))
-        for i, o in zip(inp, out):
-            i[self.output_field] = o.text
-        return inp
-
-
-class LogitReader:
-    def __init__(self, reader : Reader):
-        if not reader._support_logits:
-            raise ValueError("Reader does not support logits")
-        self.reader = reader
-
-    def transform_iter(self, inp: Iterable[str]) -> Iterable[str]:
-        queries = [i[self.input_field] for i in inp]
-        out = []
-        for chunk in chunked(queries, self.batch_size):
-            out.extend(self.reader.generate(chunk))
-        if not hasattr(out[0], "logits"):
-            raise ValueError("Reader must return ReaderOutput to use LogitReader, not {}".format(type(out[0])))
-        if out[0].logits is None:
-            raise ValueError("Reader must return logits to use LogitReader")
-        for i, o in zip(inp, out):
-            i[self.output_field] = o.logits
-        return inp
-
-
-__all__ = ["Reader", "ReaderOutput", "TextReader", "LogitReader"]
+        prompts[self.output_field] = answers
+        return prompts

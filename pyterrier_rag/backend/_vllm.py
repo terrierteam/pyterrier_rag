@@ -1,7 +1,7 @@
 from typing import Iterable, List
 import numpy as np
 
-from ._base import Reader, ReaderOutput
+from ._base import Backend, BackendOutput
 from .._optional import is_vllm_availible
 
 
@@ -20,7 +20,7 @@ def get_logits_from_dict(d : List[dict], tokenizer):
     return output
 
 
-class VLLMReader(Reader):
+class VLLMBackend(Backend):
     _logit_type = "sparse"
     _support_logits = True
 
@@ -46,15 +46,12 @@ class VLLMReader(Reader):
             **kwargs,
         )
         if not is_vllm_availible():
-            raise ImportError("Please install vllm to use VLLMReader")
+            raise ImportError("Please install vllm to use VLLMBackend")
         from vllm import LLM, EngineArgs, LLMEngine, SamplingParams
 
         self._model_name_or_path = model_name_or_path
         self._args = EngineArgs(model=model_name_or_path, **model_args)
         self._model = LLMEngine.from_engine_args(self._args)
-
-        if isinstance(self._prompt, str):
-            self._prompt = self._prompt.format
 
         if generation_args is None:
             generation_args = {
@@ -71,4 +68,4 @@ class VLLMReader(Reader):
         responses = self.model.generate(inps, self._generation_args)
         logits = map(lambda x: x[0].log_probs, responses)
         text = map(lambda x: x[0].text, responses)
-        return [ReaderOutput(text=t, logits=l) for t, l in zip(text, logits)]
+        return [BackendOutput(text=t, logits=l) for t, l in zip(text, logits)]

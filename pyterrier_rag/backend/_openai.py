@@ -3,10 +3,12 @@ import time
 from typing import List
 
 from .._optional import is_openai_availible, is_tiktoken_availible
-from ._base import Reader, ReaderOutput
+from ._base import Backend, BackendOutput
 
 
-class OpenAIReader(Reader):
+class OpenAIBackend(Backend):
+    _api_type = "openai"
+
     def __init__(
         self,
         model_name_or_path: str,
@@ -27,7 +29,7 @@ class OpenAIReader(Reader):
             **kwargs,
         )
         if not is_openai_availible():
-            raise ImportError("Please install openai to use OpenAIReader")
+            raise ImportError("Please install openai to use OpenAIBackend")
         import openai
 
         self._key = api_key or os.environ.get("OPENAI_API_KEY")
@@ -52,10 +54,6 @@ class OpenAIReader(Reader):
                 "num_beams": 1,
             }
         self._generation_args = generation_args
-
-    @property
-    def is_openai(self):
-        return True
 
     def _call_completion(
         self,
@@ -88,7 +86,7 @@ class OpenAIReader(Reader):
             return_text=True,
             **{"model": self._model_name_or_path, **self._generation_args},
         )
-        return [ReaderOutput(text=r) for r in response]
+        return [BackendOutput(text=r) for r in response]
 
 
-__all__ = ["OpenAIReader"]
+__all__ = ["OpenAIBackend"]

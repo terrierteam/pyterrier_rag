@@ -18,6 +18,8 @@ class PromptTransformer(pt.Transformer):
         config: Optional[PromptConfig] = None,
         context_aggregation: Optional[callable] = None,
         context_config: Optional[ContextConfig] = None,
+        expects_logits: bool = False,
+        answer_extraction: Optional[callable] = None,
     ):
         self.text_loader = text_loader
         if config is None:
@@ -38,6 +40,8 @@ class PromptTransformer(pt.Transformer):
         self.output_field = config.output_field
         self.relevant_fields = config.input_fields
         self.api_type = config.api_type
+        self.expect_logits = expects_logits
+        self.answer_extraction = answer_extraction or self.answer_extraction
 
         self.__post_init__()
 
@@ -66,6 +70,17 @@ class PromptTransformer(pt.Transformer):
             if self.use_context
             else None
         )
+
+    def answer_extraction(self, output):
+        return output
+
+    def set_output_attribute(self, api_type: str = None):
+        self.output_attribute = {
+            "openai": "to_openai_api_messages",
+            "gemini": "to_gemini_api_messages",
+            "vertex": "to_vertex_api_messages",
+            "reka": "to_reka_api_messages",
+        }[api_type] if api_type else "get_prompt"
 
     @property
     def prompt(self):
