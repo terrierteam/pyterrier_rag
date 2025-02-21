@@ -17,3 +17,4 @@ Try it out here on Google Colab now!
  - Jinyuan Fang, University of Glasgow
  - Andrew Parry, University of Glasgow
  - Zaiqiao Meng, University of Glasgow
+ - Sean MacAvaney, University of Glasgow
