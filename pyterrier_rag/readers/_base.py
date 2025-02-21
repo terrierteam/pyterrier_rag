@@ -76,14 +76,14 @@ class Reader(pt.Transformer, ABC):
         raise NotImplementedError("Implement the generate method")
 
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
-        return self.text_generator()(inp)
+        return self.text_generator(self).transform_iter(inp)
 
 
 class TextReader:
     def __init__(self, reader : Reader):
         self.reader = reader
 
-    def __call__(self, inp: Iterable[str]) -> Iterable[str]:
+    def transform_iter(self, inp: Iterable[str]) -> Iterable[str]:
         queries = [i[self.input_field] for i in inp]
         out = []
         for chunk in chunked(queries, self.batch_size):
@@ -102,7 +102,7 @@ class LogitReader:
             raise ValueError("Reader does not support logits")
         self.reader = reader
 
-    def __call__(self, inp: Iterable[str]) -> Iterable[str]:
+    def transform_iter(self, inp: Iterable[str]) -> Iterable[str]:
         queries = [i[self.input_field] for i in inp]
         out = []
         for chunk in chunked(queries, self.batch_size):
