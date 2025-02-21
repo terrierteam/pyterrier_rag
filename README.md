@@ -9,8 +9,8 @@ PyTerrier-RAG is an extension for [PyTerrier](https://github.com/terrier-org/pyt
 As well as access to all of the retrievers (sparse, learned sparse and dense) and rerankers (from MonoT5 to RankGPT) accessible through the wider [PyTerrier ecosystem](https://pyterrier.readthedocs.io/en/latest/).
 
 ## Example Notebooks
-Try it out here on Google Colab now!
-- Sparse Retrieval with FiD and FlanT5 readers: [sparse_retrieval_FiD_FlanT5.ipynb]([sparse_retrieval_FiD_FlanT5.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/stable/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb)) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/stable/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb) 
+Try it out here on Google Colab now by cliking the "Open in Colab" button!
+- Sparse Retrieval with FiD and FlanT5 readers: [sparse_retrieval_FiD_FlanT5.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/stable/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/stable/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb) 
 
 ## Credits
  - Craig Macdonald, University of Glasgow
