@@ -4,6 +4,7 @@ from typing import List
 
 import regex
 import ir_measures
+import pyterrier_alpha as pta
 
 
 # Normalization from SQuAD evaluation script https://worksheets.codalab.org/rest/bundles/0x6b567e1cf2e041ec80d7098f031c5c9e/contents/blob/
@@ -52,15 +53,13 @@ EM = ir_measures.define_byquery(
     lambda qrels, res: ems(res.iloc[0]['qanswer'], qrels['gold_answer']), support_cutoff=False, name="EM")
 
 _bertscore_model = None
-def _bertscore(qrels, res, minlabel = 3, submeasure='f1', agg='max'):
+def _bertscore(qrels, res, rel = 3, submeasure='f1', agg='max'):
 
-    for k in ['query_id', 'relevance', 'text']:
-        assert k in qrels.columns, "%s not found in qrels frame, found %s" % (k, str(qrels.columns))
-    for k in ['query_id', 'qanswer']:
-        assert k in res.columns, "%s not found in res frame, found %s" % (k, str(res.columns))
+    pta.validate.columns(qrels, includes=['query_id', 'relevance', 'text'])
+    pta.validate.columns(res, includes=['query_id', 'qanswer'])
     
-    qrels = qrels[qrels.relevance >= minlabel]
-    assert len(qrels), "No qrels found with minlabel of %d" % minlabel
+    qrels = qrels[qrels.relevance >= rel]
+    assert len(qrels), "No qrels found with minimum label of %d" % rel
 
     global _bertscore_model
     if _bertscore_model is None:
@@ -79,5 +78,17 @@ def _bertscore(qrels, res, minlabel = 3, submeasure='f1', agg='max'):
         }
     return r[submeasure][agg]
 
-def BERTScore(minlabel=3, submeasure='f1', agg='max'):
-    return ir_measures.define_byquery( lambda qrels, res: _bertscore(qrels, res, minlabel=minlabel, agg=agg), name='BERTScore', support_cutoff=False)
+def BERTScore(rel=3, submeasure : str = 'f1', agg : str = 'max'):
+    '''
+    Implements BERTScore, a semantic measure of equivalence. This is defined to take a qrels dataframe with an additional text attribute,
+    and compare with the generated qanswers. 
+
+    Arguments:
+     - rel(int): Minimum label value for relevant qrels. Defaults to 3, which is the highest label in MSMARCO.
+     - submeasure(str): One of 'precision', 'recall' and 'f1'. Defaults to 'f1'.
+     - agg(str): One of 'max' or 'avg'. Defaults to 'max'.
+
+    Returns:
+     An IR measures measure object that can be used in pt.Evaluate or pt.Experiment
+    '''
+    return ir_measures.define_byquery( lambda qrels, res: _bertscore(qrels, res, rel=rel, agg=agg), name='BERTScore', support_cutoff=False)
