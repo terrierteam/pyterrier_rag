@@ -1,3 +1,6 @@
+import pandas as pd
+import pyterrier as pt
+
 from pyterrier_rag.prompt._judge import (
     PairwiseLLMJudgePrompt,
     PointwiseLLMJudgePrompt,
