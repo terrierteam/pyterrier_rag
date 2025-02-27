@@ -3,7 +3,7 @@ from typing import Iterable, List
 from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer
 import torch
 
-from ._base import Backend, BackendOutput
+from pyterrier_rag.backend._base import Backend, BackendOutput
 
 
 class HuggingFaceBackend(Backend):

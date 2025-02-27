@@ -3,7 +3,7 @@ from typing import List, Optional, Iterable
 import pyterrier as pt
 import pyterrier_alpha as pta
 
-from ._config import ContextConfig
+from pyterrier_rag.prompt._config import ContextConfig
 from pyterrier_rag._util import concat
 
 

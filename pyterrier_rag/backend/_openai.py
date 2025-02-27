@@ -2,8 +2,8 @@ import os
 import time
 from typing import List
 
-from .._optional import is_openai_availible, is_tiktoken_availible
-from ._base import Backend, BackendOutput
+from pyterrier_rag._optional import is_openai_availible, is_tiktoken_availible
+from pyterrier_rag.backend._base import Backend, BackendOutput
 
 
 class OpenAIBackend(Backend):

@@ -1,8 +1,8 @@
 from typing import Iterable, List
 import numpy as np
 
-from ._base import Backend, BackendOutput
-from .._optional import is_vllm_availible
+from pyterrier_rag.backend._base import Backend, BackendOutput
+from pyterrier_rag._optional import is_vllm_availible
 
 
 def get_logits_from_dict(d : List[dict], tokenizer):

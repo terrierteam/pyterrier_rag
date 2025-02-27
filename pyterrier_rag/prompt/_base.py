@@ -4,8 +4,8 @@ import pyterrier as pt
 import pyterrier_alpha as pta
 from fastchat.model import get_conversation_template
 
-from ._config import PromptConfig, ContextConfig
-from ._context_aggregation import ContextAggregationTransformer
+from pyterrier_rag.prompt._config import PromptConfig, ContextConfig
+from pyterrier_rag.prompt._context_aggregation import ContextAggregationTransformer
 
 
 class PromptTransformer(pt.Transformer):

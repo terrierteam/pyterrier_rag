@@ -1,10 +1,10 @@
-from .prompt._judge import (
+from pyterrier_rag.prompt._judge import (
     PairwiseLLMJudgePrompt,
     PointwiseLLMJudgePrompt,
     PairwiseLLMJudgeSystemMessage,
     PointwiseLLMJudgeSystemMessage,
 )
-from .prompt import PromptTransformer
+from pyterrier_rag.prompt import PromptTransformer
 
 
 def _pointwise_llm_judge(model):
