@@ -47,11 +47,10 @@ class VLLMBackend(Backend):
         )
         if not is_vllm_availible():
             raise ImportError("Please install vllm to use VLLMBackend")
-        from vllm import LLM, EngineArgs, LLMEngine, SamplingParams
+        from vllm import LLM, SamplingParams
 
         self._model_name_or_path = model_name_or_path
-        self._args = EngineArgs(model=model_name_or_path, **model_args)
-        self._model = LLMEngine.from_engine_args(self._args)
+        self.model = LLM(model=model_name_or_path, **model_args)
 
         if generation_args is None:
             generation_args = {
@@ -60,9 +59,8 @@ class VLLMBackend(Backend):
                 "do_sample": False,
                 "num_beams": 1,
             }
-        generation_args['log_probs'] = self._model.llm_engine.model_config.vocab_size
+        generation_args['log_probs'] = self.model.llm_engine.model_config.vocab_size
         self._generation_args = SamplingParams(**generation_args)
-        self.model = LLM(self._model, self._generation_args)
 
     def generate(self, inps: Iterable[str]) -> Iterable[str]:
         responses = self.model.generate(inps, self._generation_args)

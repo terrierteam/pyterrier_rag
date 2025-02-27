@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock
 import pandas as pd
 from pyterrier_rag.prompt import PromptConfig, ContextConfig
-from pyterrier_rag._frameworks import IRCOT, ircot_prompt, ircot_example_format
+from pyterrier_rag._frameworks import IRCOT
 
 @pytest.fixture
 def mock_retriever():

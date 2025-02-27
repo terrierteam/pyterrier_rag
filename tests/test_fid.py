@@ -14,9 +14,11 @@ class TestPyterrier_rag(unittest.TestCase):
         self._test_fid(model)
 
     def test_FlanT5(self):
-        from pyterrier_rag.readers import Seq2SeqLMReader
-        model = Seq2SeqLMReader(model_name_or_path='google/flan-t5-base', model=None)
-        self._test_fid(model)
+        from pyterrier_rag.readers import Reader
+        from pyterrier_rag.backend import Seq2SeqLMBackend
+        model = Seq2SeqLMBackend(model_name_or_path='google/flan-t5-base')
+        reader = Reader(model)
+        self._test_fid(reader)
 
     def _test_fid(self, model):
         data = [
