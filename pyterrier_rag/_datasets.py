@@ -46,7 +46,7 @@ DATASET_MAP['musique'] = FlashRAGDataset(
 pt.datasets.DATASET_MAP['rag:web_questions'] = FlashRAGDataset(
     {'train': 'web_questions/train.jsonl', 'test': 'web_questions/test.jsonl'})
 pt.datasets.DATASET_MAP['rag:wow'] = FlashRAGDataset(
-    {'train': 'web_questions/train.jsonl', 'dev': 'web_questions/dev.jsonl'})
+    {'train': 'wow/train.jsonl', 'dev': 'wow/dev.jsonl'})
 pt.datasets.DATASET_MAP['rag:popqa'] = FlashRAGDataset(
     {'test': 'popqa/dev.jsonl'})
 
