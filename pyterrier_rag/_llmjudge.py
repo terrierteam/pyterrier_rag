@@ -49,6 +49,7 @@ def llmjudge_fn(qrels, res, backend_type: str, model_name: str, rel = 3, agg = '
     assert len(qrels), "No qrels found with minimum label of %d" % rel
 
     global backend_obj
+    global prompt
     if backend_obj is None:
         backend_obj = get_backend(backend_type, model_name)
         prompt = PromptTransformer(
