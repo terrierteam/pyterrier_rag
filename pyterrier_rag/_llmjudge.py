@@ -1,66 +1,55 @@
+from typing import List
 import pandas as pd
 import ir_measures
 import pyterrier as pt
 
 from pyterrier_rag.prompt._judge import (
-    PairwiseLLMJudgePrompt,
     PointwiseLLMJudgePrompt,
-    PairwiseLLMJudgeSystemMessage,
     PointwiseLLMJudgeSystemMessage,
 )
 from pyterrier_rag.backend._base import Backend
 from pyterrier_rag.prompt import PromptTransformer
 
+backend_obj = None
 
-def _pointwise_llm_judge(backend):
+def llmjudge_fn(prediction: str, gold: List[str], backend: Backend=None):
+    """
+    LLMasJudge function to evaluate the prediction against the gold standard.
+    """
+    global backend_obj
+    if backend is None:
+        if backend_obj is None:
+            raise ValueError("Backend must be provided or set globally.")
+        backend = backend_obj
+    else:
+        backend_obj = backend
     prompt = PromptTransformer(
         system_message=PointwiseLLMJudgeSystemMessage,
         instruction=PointwiseLLMJudgePrompt,
         model_name_or_path=backend.model_name_or_path,
         relevant_fields=["prediction", "gold"],
     )
-    return prompt >> pt.apply.generic(lambda x: backend.generate(x['query']))
+    prompt_string = [prompt.create_prompt({
+        "prediction": prediction,
+        "gold": g,
+    }) for g in gold]
+    response = backend.generate(prompt_string)
+    # parse to int
+    rating = []
+    for r in response:
+        try:
+            rating.append(int(r.split("[[")[1].split("]]")[0]))
+        except ValueError:
+            rating.append(0)
+    return rating
 
-
-def _pairwise_llm_judge(backend):
-    prompt = PromptTransformer(
-        system_message=PairwiseLLMJudgeSystemMessage,
-        instruction=PairwiseLLMJudgePrompt,
-        model_name_or_path=backend.model_name_or_path,
-        relevant_fields=["prediction", "gold"],
-    )
-    return prompt >> pt.apply.generic(lambda x: backend.generate(x['query']))
-
-
-def _make_pairwise_judge_function(backend: Backend, minlabel: int = 3):
-    judge = _pairwise_llm_judge(backend)
-
-    def judge_fn(res: pd.DataFrame, qrels: pd.DataFrame):
-        import pyterrier_alpha as pta
-
-        pta.validate.result_frame(qrels, extra_columns=["label", "text"])
-        pta.validate.result_frame(res, extra_columns=["text"])
-
-        qrels = qrels[qrels.label >= minlabel]
-        qrels = qrels[qrels.label >= minlabel]
-        assert len(qrels), "No qrels found with minlabel of %d" % minlabel
-
-
-def _make_pointwise_judge_function(backend: Backend, minlabel: int = 3):
-    judge = _pointwise_llm_judge(backend)
-
-    def judge_fn(res: pd.DataFrame, qrels: pd.DataFrame = None):
-        import pyterrier_alpha as pta
-
-        pta.validate.result_frame(res, extra_columns=["text"])
-        qrels = qrels[qrels.label >= minlabel]
-        qrels = qrels[qrels.label >= minlabel]
-        assert len(qrels), "No qrels found with minlabel of %d" % minlabel
-
-LLMJudge = ir_measures.define_byquery(
-    lambda qrels, res: max(
-        [judge(res.iloc[0], qrels) for judge in _make_pairwise_judge_function()]
+LLMasJudge = ir_measures.define_byquery(
+    lambda qrels, res, backend: max(
+        [
+            llmjudge_fn(res.iloc[0]["qanswer"], gold, backend)
+            for gold in qrels["gold_answer"]
+        ]
     ),
     support_cutoff=False,
-    name="LLMJudge",
+    name="LLMasJudge",
 )
