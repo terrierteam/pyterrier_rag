@@ -31,53 +31,7 @@ def get_backend(backend_type: str, model_name: str) -> Backend:
         return OpenAIBackend(model_name)
     else:
         raise ValueError(f"Unknown backend type: {backend_type}")
-
-
-_bertscore_model = None
-def _bertscore(qrels, res, rel = 3, submeasure='f1', agg='max'):
-
-    pta.validate.columns(qrels, includes=['query_id', 'relevance', 'text'])
-    pta.validate.columns(res, includes=['query_id', 'qanswer'])
     
-    assert len(res), "Empty res df provided"
-    assert len(qrels), "Empty qrels df provided"
-    qrels = qrels[qrels.relevance >= rel]
-    assert len(qrels), "No qrels found with minimum label of %d" % rel
-
-    global _bertscore_model
-    if _bertscore_model is None:
-        from evaluate import load # this is a huggingface package
-        _bertscore_model = load("bertscore")
-    
-    predictions = res['qanswer'].to_list()
-    assert len(predictions) == 1, "Unexpected number of predictions"
-    references = qrels['text'].to_list()
-    # duplicate the prediction for the nbr of ground truths 
-    predictions = predictions * len(references)
-
-    results = _bertscore_model.compute(predictions=predictions, references=references, lang="en", model_type="bert-large-uncased", verbose=False)
-    precisions, recall, f1 = results['precision'], results['recall'], results['f1']
-    r = {
-        'precision': {'avg': sum(precisions)/len(precisions), 'max': max(precisions)},
-        'recall': {'avg': sum(recall)/len(recall), 'max': max(recall)},
-        'f1': {'avg': sum(f1)/len(f1), 'max': max(f1)},
-        }
-    return r[submeasure][agg]
-
-def BERTScore(rel=3, submeasure : str = 'f1', agg : str = 'max'):
-    '''
-    Implements BERTScore, a semantic measure of equivalence. This is defined to take a qrels dataframe with an additional text attribute,
-    and compare with the generated qanswers. 
-
-    Arguments:
-     - rel(int): Minimum label value for relevant qrels. Defaults to 3, which is the highest label in MSMARCO.
-     - submeasure(str): One of 'precision', 'recall' and 'f1'. Defaults to 'f1'.
-     - agg(str): How to combine (aggregate) when there are multiple relevant documents. Valid options are 'max' or 'avg'. Defaults to 'max'.
-
-    Returns:
-     An IR measures measure object that can be used in pt.Evaluate or pt.Experiment
-    '''
-    return ir_measures.define_byquery( lambda qrels, res: _bertscore(qrels, res, rel=rel, agg=agg), name='BERTScore', support_cutoff=False)
 
 backend_obj, prompt = None, None
 
