@@ -131,8 +131,6 @@ def llmjudge_fn(qrels, res, backend_type: str, model_name: str, rel = 3, agg = '
     else:
         raise ValueError(f"Unknown aggregation method: {agg}")
 
-    return parsed_ints
-
 
 def LLMasJudge(backend_type, model_name_or_path):
     return ir_measures.define_byquery(
