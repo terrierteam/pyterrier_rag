@@ -11,7 +11,7 @@ As well as access to all of the retrievers (sparse, learned sparse and dense) an
 Installation is as easy as `pip install git+https://github.com/terrierteam/pyterrier_rag`.
 
 ## Example Notebooks
-Try it out here on Google Colab now by cliking the "Open in Colab" button!
+Try it out here on Google Colab now by clicking the "Open in Colab" button!
 - Sparse Retrieval with FiD and FlanT5 readers: [sparse_retrieval_FiD_FlanT5.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/stable/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/stable/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb)
 
 ## RAG Readers
@@ -59,6 +59,13 @@ Available measures include:
  - Exact match percentage: `pyterrier_rag.measures.EM`
  - F1: `pyterrier_rag.measures.F1`
  - BERTScore
+
+## Citations
+
+If you use PyTerrier-RAG for you research, please cite our work:
+
+_Constructing and Evaluating Declarative RAG Pipelines in PyTerrier. Craig Macdonald, Jinyuan Fang, Andrew Parry and Zaiqiao Meng. In Proceedings of SIGIER 2025._
+
 
 ## Credits
  - Craig Macdonald, University of Glasgow
