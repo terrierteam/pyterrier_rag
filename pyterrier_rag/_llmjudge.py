@@ -83,6 +83,12 @@ def llmjudge_fn(qrels, res, backend_type: str, model_name: str, rel = 3, agg = '
         return max(parsed_ints)
     elif agg == 'avg':
         return sum(parsed_ints) / len(parsed_ints)
+    elif agg == 'sum':
+        return sum(parsed_ints)
+    elif agg == 'min':
+        return min(parsed_ints)
+    elif agg == 'none':
+        return parsed_ints
     else:
         raise ValueError(f"Unknown aggregation method: {agg}")
 
