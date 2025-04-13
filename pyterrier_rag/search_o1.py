@@ -1,7 +1,9 @@
+from abc import abstractmethod
 import re 
-from typing import List
+from typing import List, Dict, Iterable
 
 import pyterrier as pt
+import pyterrier_alpha as pta
 from pyterrier_rag.readers import HuggingFaceReader
 
 
@@ -223,7 +225,7 @@ class SearchO1(pt.Transformer):
 
     def __init__(
         self, 
-        retriever, 
+        retriever : pt.Transformer, 
         generator,
         max_turn: int=10, 
         max_retrieval_step: int=5,
@@ -247,6 +249,8 @@ class SearchO1(pt.Transformer):
         self.top_k = top_k
         self.kwargs = kwargs
 
+        self.multihop_qa = False
+
     def get_init_prompt(self, question: str, multihop_qa: bool=False) -> str:
 
         if multihop_qa:
@@ -259,7 +263,7 @@ class SearchO1(pt.Transformer):
         else:
             user_prompt = get_task_instruction_openqa(question)
         
-        if self.generator.is_chat:
+        if hasattr(self.generator, "is_chat") and self.generator.is_chat:
             prompt = [{"role": "user", "content": instruction + user_prompt}]
             prompt = self.tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
         else:
@@ -269,9 +273,9 @@ class SearchO1(pt.Transformer):
     
     def generate(self, sequences: List[dict]) -> List[str]:
         prompts = [s['prompt'] for s in sequences]
-        inputs = self.generator.tokenizer_encode(prompts)
+        inputs = self.tokenizer(prompts)
         # from pdb import set_trace; set_trace()
-        generated_token_ids = self.generator.generate(
+        generated_token_ids = self.generator.model.generate(
             inputs, 
             do_sample=True, 
             temperature=self.temperature, 
@@ -294,8 +298,13 @@ class SearchO1(pt.Transformer):
         """
         retrieve documents from the retriever for a list of search queries.
         """
-        retrieval_results: List[List[dict]] = self.retriever(queries=search_queries, topk=self.topk)
-        return retrieval_results 
+        retrieval_results = (self.retriever % self.topk)(pt.new.queries(search_queries))
+        
+
+        rtr = []    
+        for qid, results in retrieval_results.groupby('qid'):
+            rtr.extend(results.to_dict('records'))
+        return rtr
     
     def format_retrieval_docs(self, retrieval_results: List[List[dict]]) -> List[List[str]]:
 
@@ -356,13 +365,14 @@ class SearchO1(pt.Transformer):
                 }
             )
         return outputs 
-        
-    def transform_by_query(self, questions: List[str], multihop_qa: bool=False):
 
+    
+    def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
+        questions = [row ['query'] for row in inp]
         sequences = [
             {
                 "question": question, 
-                "prompt": self.get_init_prompt(question, multihop_qa), 
+                "prompt": self.get_init_prompt(question, self.multihop_qa), 
                 "output": "", 
                 "finished": False,
                 "history": [], 
@@ -519,7 +529,7 @@ class SearchO1ForceRetrieval(SearchO1):
                 additional_retrieval_required_prompts.append(prompt)
         generated_texts = [""] * len(new_prompts)
         if additional_retrieval_required_prompts: 
-            inputs = self.generator.tokenizer_encode(additional_retrieval_required_prompts)
+            inputs = self.tokenizer.encode(additional_retrieval_required_prompts)
             generated_token_ids = self.generator.generate(
                 inputs, 
                 do_sample=True, 
