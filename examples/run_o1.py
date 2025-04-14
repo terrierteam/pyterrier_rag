@@ -20,7 +20,7 @@ generator = pyterrier_rag.readers.CausalLMReader(
 
 # model = pyterrier_rag.search_o1.SearchO1ForceRetrieval(
 model = pyterrier_rag.search_o1.SearchO1(
-    retriever = pt.terrier.Retriever.from_dataset("vaswani", "terrier_stemmed_text"),
+    retriever = pt.terrier.Retriever.from_dataset("vaswani", "terrier_stemmed_text", metadata=['docno', 'text']),
     generator = generator,
     multihop_qa=True 
 )

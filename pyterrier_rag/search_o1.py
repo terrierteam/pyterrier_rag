@@ -317,16 +317,15 @@ class SearchO1(pt.Transformer):
         retrieve documents from the retriever for a list of search queries.
         """
         retrieval_results = (self.retriever % self.topk)(pt.new.queries(search_queries))
+        with pta.validate.any(retrieval_results) as v:
+            # we need either passages with (text column), or sentences column
+            v.result_frame(extra_columns=['text'], mode='passages')
+            v.result_frame(extra_columns=['sentences'], mode='sentences')
         
         rtr = []    
         for qid, results in retrieval_results.groupby('qid'):
             rtr.append(results.to_dict('records'))
         
-        # TODO obtain text for each result (the following is just a placeholder)
-        for one_result in rtr:
-            for item in one_result:
-                item["title"] = "pseudo title" # (optional)
-                item["text"] = "pseudo text"
         return rtr
     
     def format_retrieval_docs(self, retrieval_results: List[List[dict]]) -> List[List[str]]:
@@ -345,7 +344,6 @@ class SearchO1(pt.Transformer):
                 title = item["title"] if "title" in item else None 
                 text = item["text"] if "text" in item else " ".join(sent.strip() for sent in item["sentences"])
                 text = truncate_text(text)
-                # docs.append(f"Title: {title}\nText: {text}")
                 if title:
                     docs.append(f"Title: {title}\nText: {text}")
                 else:
