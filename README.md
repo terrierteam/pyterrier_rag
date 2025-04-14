@@ -29,7 +29,7 @@ bm25_rag = bm25 % 10 >> fid
 monoT5_rag = bm25 % 10 >> MonoT5() >> fid 
 ```
 
-See also the example notebooks...
+See also the example notebooks above.
 
 ## Datasets
 
@@ -58,13 +58,13 @@ pt.Experiment(
 Available measures include:
  - Exact match percentage: `pyterrier_rag.measures.EM`
  - F1: `pyterrier_rag.measures.F1`
- - BERTScore
+ - BERTScore (measures similarity of answer with relevant documents): `pyterrier_rag.measures.BERTScore`
 
 ## Citations
 
 If you use PyTerrier-RAG for you research, please cite our work:
 
-_Constructing and Evaluating Declarative RAG Pipelines in PyTerrier. Craig Macdonald, Jinyuan Fang, Andrew Parry and Zaiqiao Meng. In Proceedings of SIGIER 2025._
+_Constructing and Evaluating Declarative RAG Pipelines in PyTerrier. Craig Macdonald, Jinyuan Fang, Andrew Parry and Zaiqiao Meng. In Proceedings of SIGIR 2025._
 
 
 ## Credits
