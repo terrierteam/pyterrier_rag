@@ -23,6 +23,7 @@ def get_logits_from_dict(d : List[dict], tokenizer):
 class VLLMBackend(Backend):
     _logit_type = "sparse"
     _support_logits = True
+    _remove_prompt = True
 
     def __init__(
         self,
@@ -60,10 +61,13 @@ class VLLMBackend(Backend):
                 "num_beams": 1,
             }
         generation_args['log_probs'] = self.model.llm_engine.model_config.vocab_size
-        self._generation_args = SamplingParams(**generation_args)
+        self.generation_args = generation_args
+        self.to_params = lambda x: SamplingParams(**x)
 
-    def generate(self, inps: Iterable[str]) -> Iterable[str]:
-        responses = self.model.generate(inps, self._generation_args)
+    def generate(self, inps: Iterable[str], **kwargs) -> Iterable[str]:
+        args = self.to_params(**self.generation_args, **kwargs)
+        responses = self.model.generate(inps, args)
         logits = map(lambda x: x[0].log_probs, responses)
         text = map(lambda x: x[0].text, responses)
+
         return [BackendOutput(text=t, logits=l) for t, l in zip(text, logits)]

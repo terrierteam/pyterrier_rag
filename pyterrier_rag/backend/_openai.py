@@ -80,11 +80,11 @@ class OpenAIBackend(Backend):
             completion = completion["choices"][0]["message"]["content"]
         return completion
 
-    def generate(self, prompt: List[dict]) -> List[str]:
+    def generate(self, prompt: List[dict], **kwargs) -> List[str]:
         response = self._call_completion(
             messages=prompt,
             return_text=True,
-            **{"model": self._model_name_or_path, **self._generation_args},
+            **{"model": self._model_name_or_path, **self._generation_args, **kwargs},
         )
         return [BackendOutput(text=r) for r in response]
 

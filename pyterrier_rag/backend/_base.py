@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Iterable, Union
+from typing import Iterable, Union, List
 
 import pyterrier as pt
 import torch
@@ -13,6 +13,7 @@ from dataclasses import dataclass
 class BackendOutput:
     text: str = None
     logits: np.array = None
+    prompt_length: int = None
 
 
 class Backend(pt.Transformer, ABC):
@@ -20,6 +21,7 @@ class Backend(pt.Transformer, ABC):
     _support_logits = False
     _logit_type = None
     _api_type = None
+    _remove_prompt = False
 
     def __init__(
         self,
@@ -72,6 +74,13 @@ class Backend(pt.Transformer, ABC):
 
     def logit_generator(self):
         return LogitBackend(self)
+    
+    def _raw_generate(self, tokenized_sequences: Iterable[dict]) -> List[str]:
+        """
+        Generate text from the tokenized input sequences.
+        This method is a placeholder and should be overridden by subclasses.
+        """
+        raise NotImplementedError("Subclasses should implement this method.")
 
     def generate(self, inp: Iterable[str]) -> Iterable[Union[BackendOutput, str]]:
         raise NotImplementedError("Implement the generate method")
