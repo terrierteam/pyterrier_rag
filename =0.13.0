@@ -1,0 +1,122 @@
+Collecting python-terrier
+  Using cached python_terrier-0.13.0-py3-none-any.whl.metadata (11 kB)
+Requirement already satisfied: numpy in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from python-terrier) (1.26.4)
+Requirement already satisfied: pandas in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from python-terrier) (2.2.3)
+Collecting more-itertools (from python-terrier)
+  Using cached more_itertools-10.6.0-py3-none-any.whl.metadata (37 kB)
+Requirement already satisfied: tqdm in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from python-terrier) (4.67.1)
+Requirement already satisfied: requests in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from python-terrier) (2.32.3)
+Collecting ir-datasets>=0.3.2 (from python-terrier)
+  Using cached ir_datasets-0.5.10-py3-none-any.whl.metadata (12 kB)
+Collecting wget (from python-terrier)
+  Using cached wget-3.2.zip (10 kB)
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'done'
+Collecting pyjnius>=1.4.2 (from python-terrier)
+  Using cached pyjnius-1.6.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (10 kB)
+Collecting deprecated (from python-terrier)
+  Using cached Deprecated-1.2.18-py2.py3-none-any.whl.metadata (5.7 kB)
+Requirement already satisfied: scipy in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from python-terrier) (1.15.2)
+Collecting ir-measures>=0.3.1 (from python-terrier)
+  Using cached ir_measures-0.3.7-py3-none-any.whl.metadata (7.0 kB)
+Collecting pytrec-eval-terrier>=0.5.3 (from python-terrier)
+  Using cached pytrec_eval_terrier-0.5.7-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (984 bytes)
+Requirement already satisfied: jinja2 in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from python-terrier) (3.1.6)
+Collecting statsmodels (from python-terrier)
+  Using cached statsmodels-0.14.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (9.2 kB)
+Requirement already satisfied: dill in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from python-terrier) (0.3.9)
+Requirement already satisfied: joblib in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from python-terrier) (1.4.2)
+Collecting chest (from python-terrier)
+  Using cached chest-0.2.3.tar.gz (9.6 kB)
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'done'
+Collecting lz4 (from python-terrier)
+  Using cached lz4-4.4.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (3.8 kB)
+Collecting beautifulsoup4>=4.4.1 (from ir-datasets>=0.3.2->python-terrier)
+  Using cached beautifulsoup4-4.13.3-py3-none-any.whl.metadata (3.8 kB)
+Collecting inscriptis>=2.2.0 (from ir-datasets>=0.3.2->python-terrier)
+  Using cached inscriptis-2.6.0-py3-none-any.whl.metadata (25 kB)
+Collecting lxml>=4.5.2 (from ir-datasets>=0.3.2->python-terrier)
+  Using cached lxml-5.3.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (3.6 kB)
+Requirement already satisfied: pyyaml>=5.3.1 in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from ir-datasets>=0.3.2->python-terrier) (6.0.2)
+Collecting trec-car-tools>=2.5.4 (from ir-datasets>=0.3.2->python-terrier)
+  Using cached trec_car_tools-2.6-py3-none-any.whl.metadata (640 bytes)
+Collecting warc3-wet>=0.2.3 (from ir-datasets>=0.3.2->python-terrier)
+  Using cached warc3_wet-0.2.5-py3-none-any.whl.metadata (2.2 kB)
+Collecting warc3-wet-clueweb09>=0.2.5 (from ir-datasets>=0.3.2->python-terrier)
+  Using cached warc3-wet-clueweb09-0.2.5.tar.gz (17 kB)
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'done'
+Collecting zlib-state>=0.1.3 (from ir-datasets>=0.3.2->python-terrier)
+  Using cached zlib_state-0.1.9-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (3.3 kB)
+Collecting ijson>=3.1.3 (from ir-datasets>=0.3.2->python-terrier)
+  Using cached ijson-3.3.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (21 kB)
+Collecting unlzw3>=0.2.1 (from ir-datasets>=0.3.2->python-terrier)
+  Using cached unlzw3-0.2.3-py3-none-any.whl.metadata (2.3 kB)
+Collecting pyarrow>=16.1.0 (from ir-datasets>=0.3.2->python-terrier)
+  Using cached pyarrow-19.0.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (3.3 kB)
+Requirement already satisfied: charset-normalizer<4,>=2 in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from requests->python-terrier) (3.4.1)
+Requirement already satisfied: idna<4,>=2.5 in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from requests->python-terrier) (3.10)
+Requirement already satisfied: urllib3<3,>=1.21.1 in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from requests->python-terrier) (2.4.0)
+Requirement already satisfied: certifi>=2017.4.17 in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from requests->python-terrier) (2025.1.31)
+Collecting heapdict (from chest->python-terrier)
+  Using cached HeapDict-1.0.1-py3-none-any.whl.metadata (1.9 kB)
+Collecting wrapt<2,>=1.10 (from deprecated->python-terrier)
+  Using cached wrapt-1.17.2-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.4 kB)
+Requirement already satisfied: MarkupSafe>=2.0 in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from jinja2->python-terrier) (3.0.2)
+Requirement already satisfied: python-dateutil>=2.8.2 in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from pandas->python-terrier) (2.9.0.post0)
+Requirement already satisfied: pytz>=2020.1 in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from pandas->python-terrier) (2025.2)
+Requirement already satisfied: tzdata>=2022.7 in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from pandas->python-terrier) (2025.2)
+Collecting patsy>=0.5.6 (from statsmodels->python-terrier)
+  Using cached patsy-1.0.1-py2.py3-none-any.whl.metadata (3.3 kB)
+Requirement already satisfied: packaging>=21.3 in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from statsmodels->python-terrier) (24.2)
+Collecting soupsieve>1.2 (from beautifulsoup4>=4.4.1->ir-datasets>=0.3.2->python-terrier)
+  Using cached soupsieve-2.6-py3-none-any.whl.metadata (4.6 kB)
+Requirement already satisfied: typing-extensions>=4.0.0 in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from beautifulsoup4>=4.4.1->ir-datasets>=0.3.2->python-terrier) (4.13.2)
+Requirement already satisfied: six>=1.5 in /opt/conda/envs/pyterrier/lib/python3.10/site-packages (from python-dateutil>=2.8.2->pandas->python-terrier) (1.17.0)
+Collecting cbor>=1.0.0 (from trec-car-tools>=2.5.4->ir-datasets>=0.3.2->python-terrier)
+  Using cached cbor-1.0.0.tar.gz (20 kB)
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'done'
+Using cached python_terrier-0.13.0-py3-none-any.whl (163 kB)
+Downloading ir_datasets-0.5.10-py3-none-any.whl (859 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 859.0/859.0 kB 23.5 MB/s eta 0:00:00
+Using cached ir_measures-0.3.7-py3-none-any.whl (60 kB)
+Downloading lz4-4.4.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (1.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 59.4 MB/s eta 0:00:00
+Downloading pyjnius-1.6.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (1.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.5/1.5 MB 41.2 MB/s eta 0:00:00
+Downloading pytrec_eval_terrier-0.5.7-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (287 kB)
+Downloading Deprecated-1.2.18-py2.py3-none-any.whl (10.0 kB)
+Downloading more_itertools-10.6.0-py3-none-any.whl (63 kB)
+Downloading statsmodels-0.14.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (10.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10.8/10.8 MB 36.2 MB/s eta 0:00:00
+Downloading beautifulsoup4-4.13.3-py3-none-any.whl (186 kB)
+Downloading ijson-3.3.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (114 kB)
+Downloading inscriptis-2.6.0-py3-none-any.whl (45 kB)
+Downloading lxml-5.3.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (5.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.1/5.1 MB 35.8 MB/s eta 0:00:00
+Downloading patsy-1.0.1-py2.py3-none-any.whl (232 kB)
+Using cached pyarrow-19.0.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (42.2 MB)
+Downloading trec_car_tools-2.6-py3-none-any.whl (8.4 kB)
+Downloading unlzw3-0.2.3-py3-none-any.whl (6.7 kB)
+Downloading warc3_wet-0.2.5-py3-none-any.whl (18 kB)
+Using cached wrapt-1.17.2-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl (82 kB)
+Downloading zlib_state-0.1.9-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (21 kB)
+Downloading HeapDict-1.0.1-py3-none-any.whl (3.9 kB)
+Downloading soupsieve-2.6-py3-none-any.whl (36 kB)
+Building wheels for collected packages: chest, wget, warc3-wet-clueweb09, cbor
+  Building wheel for chest (setup.py): started
+  Building wheel for chest (setup.py): finished with status 'done'
+  Created wheel for chest: filename=chest-0.2.3-py3-none-any.whl size=7662 sha256=ec0724c985021135fd76b35d6ec08068a2951e88a30962834670404b1a245679
+  Stored in directory: /root/.cache/pip/wheels/88/cf/99/4773b31f855f9ecedc32a0ae400f7a4a3001b37c439b6d1a73
+  Building wheel for wget (setup.py): started
+  Building wheel for wget (setup.py): finished with status 'done'
+  Created wheel for wget: filename=wget-3.2-py3-none-any.whl size=9685 sha256=3eba9e3c633eff475ff1bfe06a8985e8f37159e67eb2b809465d5e7f10733b97
+  Stored in directory: /root/.cache/pip/wheels/8b/f1/7f/5c94f0a7a505ca1c81cd1d9208ae2064675d97582078e6c769
+  Building wheel for warc3-wet-clueweb09 (setup.py): started
+  Building wheel for warc3-wet-clueweb09 (setup.py): finished with status 'done'
+  Created wheel for warc3-wet-clueweb09: filename=warc3_wet_clueweb09-0.2.5-py3-none-any.whl size=18965 sha256=e3c38de9758bf11c530ba7344146a16728bc02eac97394501a5d78e0cc622efb
+  Stored in directory: /root/.cache/pip/wheels/1a/d7/91/7ffb991df87e62355d945745035470ba2616aa3d83a250b5f9
+  Building wheel for cbor (setup.py): started
+  Building wheel for cbor (setup.py): finished with status 'canceled'

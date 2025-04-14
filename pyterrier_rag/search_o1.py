@@ -1,10 +1,14 @@
+# Modified from https://github.com/sunnynexus/Search-o1
+# Changes made by Jinyuan on 2025-04-14
+
 from abc import abstractmethod
 import re 
+import torch 
 from typing import List, Dict, Iterable
 
 import pyterrier as pt
 import pyterrier_alpha as pta
-from pyterrier_rag.readers import HuggingFaceReader
+from pyterrier_rag.readers import CausalLMReader, StopWordCriteria
 
 
 # Define special tokens
@@ -226,13 +230,14 @@ class SearchO1(pt.Transformer):
     def __init__(
         self, 
         retriever : pt.Transformer, 
-        generator,
+        generator: CausalLMReader,
         max_turn: int=10, 
         max_retrieval_step: int=5,
         topk: int=10, 
         temperature: float=0.7, 
         top_p: float=0.8, 
         top_k: int=20,
+        multihop_qa: bool=True, 
         **kwargs
     ):
         super().__init__()
@@ -249,7 +254,7 @@ class SearchO1(pt.Transformer):
         self.top_k = top_k
         self.kwargs = kwargs
 
-        self.multihop_qa = False
+        self.multihop_qa = multihop_qa
 
     def get_init_prompt(self, question: str, multihop_qa: bool=False) -> str:
 
@@ -258,31 +263,44 @@ class SearchO1(pt.Transformer):
         else:
             instruction = get_singleqa_search_o1_instruction(self.max_retrieval_step)
         
-        if "qwq" in self.generator.config._name_or_path.lower():
+        if "qwq" in self.generator.model.config._name_or_path.lower():
             user_prompt = get_task_instruction_openqa(question, model_name="qwq")
         else:
             user_prompt = get_task_instruction_openqa(question)
-        
-        if hasattr(self.generator, "is_chat") and self.generator.is_chat:
-            prompt = [{"role": "user", "content": instruction + user_prompt}]
-            prompt = self.tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
-        else:
-            prompt = instruction + user_prompt # + "<think>\n\n" # force thinking
+
+        # try:
+        #     prompt = [{"role": "user", "content": instruction + user_prompt}]
+        #     prompt = self.tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
+        # except Exception:
+        #     prompt = instruction + user_prompt 
+        prompt = instruction + user_prompt 
         
         return prompt 
     
+    def tokenizer_encode(self, prompts: List[str]) -> List[torch.Tensor]:
+        inputs = self.tokenizer(prompts, padding=True, truncation=True, max_length=self.generator.text_max_length, return_tensors="pt")
+        input_ids = inputs["input_ids"].to(self.device)
+        attention_mask = inputs["attention_mask"].to(self.device)
+        return input_ids, attention_mask
+    
     def generate(self, sequences: List[dict]) -> List[str]:
+
         prompts = [s['prompt'] for s in sequences]
-        inputs = self.tokenizer(prompts)
-        # from pdb import set_trace; set_trace()
-        generated_token_ids = self.generator.model.generate(
-            inputs, 
+        input_ids, attention_mask = self.tokenizer_encode(prompts)
+        # generation with stop words 
+        prompt_length = input_ids.shape[-1] 
+        token_ids = self.generator.model.generate(
+            input_ids, 
+            attention_mask=attention_mask,
             do_sample=True, 
             temperature=self.temperature, 
             top_p=self.top_p, 
             top_k=self.top_k,
-            stop_words=[END_SEARCH_QUERY, self.tokenizer.eos_token],
-        )[0]
+            max_new_tokens=self.generator.max_new_tokens,
+            pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id,
+            stopping_criteria=[StopWordCriteria(self.tokenizer, prompt_length, [END_SEARCH_QUERY, self.tokenizer.eos_token])]
+        )
+        generated_token_ids = token_ids[:, prompt_length:] 
         generated_texts = self.tokenizer.batch_decode(generated_token_ids, skip_special_tokens=True)
         return generated_texts
     
@@ -300,10 +318,15 @@ class SearchO1(pt.Transformer):
         """
         retrieval_results = (self.retriever % self.topk)(pt.new.queries(search_queries))
         
-
         rtr = []    
         for qid, results in retrieval_results.groupby('qid'):
-            rtr.extend(results.to_dict('records'))
+            rtr.append(results.to_dict('records'))
+        
+        # TODO obtain text for each result (the following is just a placeholder)
+        for one_result in rtr:
+            for item in one_result:
+                item["title"] = "pseudo title" # (optional)
+                item["text"] = "pseudo text"
         return rtr
     
     def format_retrieval_docs(self, retrieval_results: List[List[dict]]) -> List[List[str]]:
@@ -319,10 +342,14 @@ class SearchO1(pt.Transformer):
         for retrieval_result in retrieval_results:
             docs = [] 
             for item in retrieval_result:
-                title = item["title"]
+                title = item["title"] if "title" in item else None 
                 text = item["text"] if "text" in item else " ".join(sent.strip() for sent in item["sentences"])
                 text = truncate_text(text)
-                docs.append(f"Title: {title}\nText: {text}")
+                # docs.append(f"Title: {title}\nText: {text}")
+                if title:
+                    docs.append(f"Title: {title}\nText: {text}")
+                else:
+                    docs.append(f"Text: {text}")
             retrieved_docs.append(docs)
         return retrieved_docs 
     
@@ -336,21 +363,19 @@ class SearchO1(pt.Transformer):
             docs_info = "\n\n".join(docs)
             user_prompts.append(get_webpage_to_reasonchain_instruction(prev_reasoning, query, docs_info))
         
-        if self.generator.is_chat:
-            prompts = [{"role": "user", "content": prompt} for prompt in user_prompts]
-            prompts = self.tokenizer.apply_chat_template(prompts, tokenize=False, add_generation_prompt=True)
-        else:
-            prompts = user_prompts
-        
-        inputs = self.generator.tokenizer_encode(prompts)
-        # from pdb import set_trace; set_trace()
-        generated_token_ids = self.generator.generate(
-            inputs, 
+        prompts = user_prompts
+        input_ids, attention_mask = self.tokenizer_encode(prompts)
+        token_ids = self.generator.model.generate(
+            input_ids, 
+            attention_mask=attention_mask,
             do_sample=True, 
             temperature=self.temperature, 
             top_p=self.top_p, 
-            top_k=self.top_k
-        )[0]
+            top_k=self.top_k,
+            max_new_tokens=self.generator.max_new_tokens,
+            pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id,
+        )
+        generated_token_ids = token_ids[:, input_ids.shape[-1]:]  
         generated_texts = self.tokenizer.batch_decode(generated_token_ids, skip_special_tokens=True)
 
         extracted_infos = [extract_answer(text, mode="infogen") for text in generated_texts]
@@ -366,7 +391,7 @@ class SearchO1(pt.Transformer):
             )
         return outputs 
 
-    
+    @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
         questions = [row ['query'] for row in inp]
         sequences = [
@@ -470,6 +495,11 @@ class SearchO1(pt.Transformer):
                 if turn >= self.max_turn:
                     print(f"The maximum number of turns {self.max_turn} is exceeded, stopping...")
                     break
+            
+        # extract answer
+        for seq in sequences:
+            seq["qanswer"] = extract_answer(seq["output"], mode="qa")
+        
         return sequences
 
 
@@ -482,20 +512,35 @@ class SearchO1ForceRetrieval(SearchO1):
 
         reasoning_steps = [[] for _ in range(len(sequences))]
         for _ in range(3):
-            inputs = self.generator.tokenizer_encode(prompts)
-            generated_token_ids = self.generator.generate(
-                inputs, 
+            input_ids, attention_mask = self.tokenizer_encode(prompts)
+            token_ids = self.generator.model.generate(
+                input_ids, 
+                attention_mask=attention_mask,
                 do_sample=True, 
                 temperature=self.temperature, 
                 top_p=self.top_p, 
                 top_k=self.top_k,
-                stop_words=["\n\n", END_SEARCH_QUERY, self.tokenizer.eos_token],
-            )[0]
+                max_new_tokens=self.generator.max_new_tokens,
+                pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id,
+                stopping_criteria=[StopWordCriteria(self.tokenizer, input_ids.shape[-1], ["\n\n", END_SEARCH_QUERY, self.tokenizer.eos_token])]
+            )
+            generated_token_ids = token_ids[:, input_ids.shape[-1]:]
             texts = self.tokenizer.batch_decode(generated_token_ids, skip_special_tokens=True)
             for i, text in enumerate(texts):
                 reasoning_steps[i].append(text)
                 prompts[i] += text 
-
+        
+        # filter out </think>\n\n
+        new_reasoning_steps = [] 
+        for steps in reasoning_steps:
+            new_steps = [] 
+            for step in steps:
+                if step.strip().lower() == "</think>":
+                    continue 
+                new_steps.append(step)
+            new_reasoning_steps.append(new_steps)
+        reasoning_steps = new_reasoning_steps
+        
         generated_texts = [''.join(steps) for steps in reasoning_steps]
 
         new_prompts = []
@@ -529,15 +574,19 @@ class SearchO1ForceRetrieval(SearchO1):
                 additional_retrieval_required_prompts.append(prompt)
         generated_texts = [""] * len(new_prompts)
         if additional_retrieval_required_prompts: 
-            inputs = self.tokenizer.encode(additional_retrieval_required_prompts)
-            generated_token_ids = self.generator.generate(
-                inputs, 
+            input_ids, attention_mask = self.tokenizer_encode(additional_retrieval_required_prompts)
+            token_ids = self.generator.model.generate(
+                input_ids, 
+                attention_mask=attention_mask,
                 do_sample=True, 
                 temperature=self.temperature, 
                 top_p=self.top_p, 
                 top_k=self.top_k,
-                stop_words=[END_SEARCH_QUERY, self.tokenizer.eos_token],
-            )[0]
+                max_new_tokens=self.generator.max_new_tokens,
+                pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id,
+                stopping_criteria=[StopWordCriteria(self.tokenizer, input_ids.shape[-1], [END_SEARCH_QUERY, self.tokenizer.eos_token])]
+            )
+            generated_token_ids = token_ids[:, input_ids.shape[-1]:]
             additional_retrieval_required_generated_texts = self.tokenizer.batch_decode(generated_token_ids, skip_special_tokens=True)
             for i, text in enumerate(additional_retrieval_required_generated_texts):
                 generated_texts[additional_retrieval_required_indices[i]] = text 
@@ -545,6 +594,5 @@ class SearchO1ForceRetrieval(SearchO1):
         final_generated_texts = []
         for text, first_step_text in zip(generated_texts, first_step_generated_texts):
             final_generated_texts.append(first_step_text + text)
-
         return final_generated_texts
 
