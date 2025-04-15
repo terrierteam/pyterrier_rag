@@ -68,7 +68,7 @@ def search(search_pipeline : pt.Transformer, query: str, qid='1', top_k = None) 
 
     return _passages2string(res)
 
-class SearchR1(pt.Tranformer):
+class SearchR1(pt.Transformer):
     """
     Implements the SearchR1 model as a PyTerrier transformer.
     Uses code from https://github.com/PeterGriffinJin/Search-R1.
