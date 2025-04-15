@@ -111,7 +111,7 @@ class SearchR1(pt.Transformer):
             prompt = self.tokenizer.apply_chat_template([{"role": "user", "content": prompt}], add_generation_prompt=True, tokenize=False)
 
     @pta.transform.by_query(add_ranks=False)
-    def tranform_iter(self, inp : pyterrier.model.IterDict) -> pyterrier.model.IterDict:
+    def transform_iter(self, inp : pyterrier.model.IterDict) -> pyterrier.model.IterDict:
         inp = next(inp)
         cnt = 0
         question = inp['query']
