@@ -55,10 +55,8 @@ def get_answer(text):
         return None
 
 
-def search(search_pipeline : pt.Transformer, query: str, qid='1', top_k = None) -> str:
-    if top_k is not None:
-        search_pipeline = search_pipeline % top_k
-    
+def search(search_pipeline : pt.Transformer, query: str, qid='1') -> str:
+        
     res = search_pipeline.search(query, qid=qid)
           
     def _passages2string(retrieval_result):
@@ -84,7 +82,9 @@ class SearchR1(pt.Transformer):
      - qid
      - query
      - output (output of the model)
-     - answer (extracted from the output)
+     - qanswer (extracted from the output)
+     - iteration (how many thought iterations)
+     - all_queries (what was sent to the retriever)
     """
 
     def __init__(self, 
@@ -102,14 +102,35 @@ class SearchR1(pt.Transformer):
         self.retriever = retriever
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
         # Initialize the tokenizer and model
-        self.tokenizer = transformers.AutoTokenizer.from_pretrained(model_id)
-        self.model = transformers.AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map="auto")
+        if model_id is not None:
+            self.tokenizer = transformers.AutoTokenizer.from_pretrained(model_id)
+            self.model = transformers.AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map="auto")
+
+            # Initialize the stopping criteria
+            target_sequences = ["</search>", " </search>", "</search>\n", " </search>\n", "</search>\n\n", " </search>\n\n"]
+            self.stopping_criteria = transformers.StoppingCriteriaList([StopOnSequence(target_sequences, self.tokenizer)])
+
+        # TODO this came from upstream - what should these be for non Qwen models
         self.curr_eos = [151645, 151643] # for Qwen2.5 series models
         self.retrieval_top_k = retrieval_top_k
 
-        # Initialize the stopping criteria
-        target_sequences = ["</search>", " </search>", "</search>\n", " </search>\n", "</search>\n\n", " </search>\n\n"]
-        self.stopping_criteria = transformers.StoppingCriteriaList([StopOnSequence(target_sequences, self.tokenizer)])
+        if retrieval_top_k is not None:
+            retriever = retriever % retrieval_top_k
+            # use .compile() to force the retriever to cutoff at rank k (this helps efficiency)
+            retriever = retriever.compile()
+        self.retriever = retriever
+
+    def clone_for_retriever(self, new_retriever) -> 'Self':
+        """
+        Make a copy of this model with a new retiever. This ensures that the model doesnt need to be loaded multiple times for 
+        experiments that vary the retriever 
+        """
+        rtr = SearchR1(new_retriever, model_id = None)
+        rtr.model = self.model
+        rtr.tokenizer = self.tokenizer
+        rtr.stopping_criteria = self.stopping_criteria
+        rtr.retrieval_top_k = self.retrieval_top_k
+        return rtr
 
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp : pyterrier.model.IterDict) -> pyterrier.model.IterDict:
@@ -120,6 +141,8 @@ class SearchR1(pt.Transformer):
         question = question.strip()
         if question[-1] != '?':
             question += '?'
+
+        all_queries = []
         
         prompt = R1_PROMPT + question + "\n"
         if self.tokenizer.chat_template:
@@ -144,14 +167,15 @@ class SearchR1(pt.Transformer):
                 generated_tokens = outputs[0][input_ids.shape[1]:]
                 output_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
                 answer = get_answer(output_text)
-                return [{'qid' : qid, 'query' : question, 'answer' : answer, 'output': output_text}]
+                return [{'qid' : qid, 'query' : question, 'qanswer' : answer, 'output': output_text, 'iteration' : cnt, 'all_queries' : all_queries}]
 
             generated_tokens = outputs[0][input_ids.shape[1]:]
             output_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
             
-            tmp_query = get_query(self.tokenizer.decode(outputs[0], skip_special_tokens=True))
-            if tmp_query:
-                search_results = search(self.retriever, tmp_query, qid="%s-%d" % (qid, cnt))
+            this_query = get_query(self.tokenizer.decode(outputs[0], skip_special_tokens=True))
+            if this_query:
+                search_results = search(self.retriever, this_query, qid="%s-%d" % (qid, cnt))
+                all_queries.append((cnt, this_query))
             else:
                 search_results = ''
 
