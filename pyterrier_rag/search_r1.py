@@ -3,6 +3,9 @@ import torch
 import pyterrier as pt, pyterrier_alpha as pta
 import pyterrier.model
 
+# we'll need this to load the model using device_map, so best check its installed.
+import accelerate
+
 # Define the custom stopping criterion
 class StopOnSequence(transformers.StoppingCriteria):
     def __init__(self, target_sequences, tokenizer):
@@ -107,8 +110,6 @@ class SearchR1(pt.Transformer):
         # Initialize the stopping criteria
         target_sequences = ["</search>", " </search>", "</search>\n", " </search>\n", "</search>\n\n", " </search>\n\n"]
         self.stopping_criteria = transformers.StoppingCriteriaList([StopOnSequence(target_sequences, self.tokenizer)])
-        if self.tokenizer.chat_template:
-            prompt = self.tokenizer.apply_chat_template([{"role": "user", "content": prompt}], add_generation_prompt=True, tokenize=False)
 
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp : pyterrier.model.IterDict) -> pyterrier.model.IterDict:
