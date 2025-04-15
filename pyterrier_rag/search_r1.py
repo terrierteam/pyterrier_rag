@@ -50,7 +50,7 @@ def get_answer(text):
     pattern = re.compile(r"<answer>(.*?)</answer>", re.DOTALL)
     matches = pattern.findall(text)
     if matches:
-        return matches[-1]
+        return matches[-1].strip()
     else:
         return None
 
@@ -151,7 +151,7 @@ class SearchR1(pt.Transformer):
             
             tmp_query = get_query(self.tokenizer.decode(outputs[0], skip_special_tokens=True))
             if tmp_query:
-                search_results = search(self.retriever, self.tmp_query, qid="%s-%d" % (qid, cnt))
+                search_results = search(self.retriever, tmp_query, qid="%s-%d" % (qid, cnt))
             else:
                 search_results = ''
 
