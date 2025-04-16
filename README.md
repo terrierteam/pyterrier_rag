@@ -43,7 +43,7 @@ Queries and gold answers of common datasets can be accessed through the PyTerrie
  - WoW: `"rag:wow"`
  - PopQA: `"rag:popqa"`
 
-## Evaluation
+## Evaluation
 
 An experiment comparing multiple RAG pipelines can be expressed using PyTerrier's `pt.Experiment API`:
 ```python
