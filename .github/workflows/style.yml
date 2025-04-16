@@ -37,4 +37,4 @@ jobs:
         pip install -e .
 
     - name: Ruff
-      run: 'ruff check --exit-zero --output-format=github pyterrier_rag'
+      run: 'ruff check --output-format=github pyterrier_rag'

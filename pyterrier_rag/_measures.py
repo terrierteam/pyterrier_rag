@@ -3,6 +3,7 @@ from collections import Counter
 from typing import List
 
 import regex
+import ir_measures
 
 
 # Normalization from SQuAD evaluation script https://worksheets.codalab.org/rest/bundles/0x6b567e1cf2e041ec80d7098f031c5c9e/contents/blob/

@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyterrier-rag"
+description = "PyTerrier RAG pipelines"
+requires-python = ">=3.10"
+authors = [
+  {name = "Craig Macdonald", email = "craig.macdonald@glasgow.ac.uk"},
+]
+maintainers = [
+  {name = "Craig Macdonald", email = "craig.macdonald@glasgow.ac.uk"},
+]
+readme = "README.md"
+classifiers = [
+  "Programming Language :: Python",
+  "Operating System :: OS Independent",
+  "Topic :: Text Processing",
+  "Topic :: Text Processing :: Indexing",
+  "License :: OSI Approved :: MIT License",
+]
+dynamic = ["version", "dependencies"]
+
+[tool.setuptools.dynamic]
+version = {attr = "pyterrier_rag.__version__"}
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+exclude = ["tests"]
+
+[project.urls]
+Repository = "https://github.com/terrierteam/pyterrier_rag"
+"Bug Tracker" = "https://github.com/terrierteam/pyterrier_rag/issues"
+
+[tool.ruff]
+line-length = 120
+exclude = ["tests"]
+
+[project.entry-points."pyterrier.dataset_provider"]
+rag = "pyterrier_rag._datasets:RagDatasetProvider"

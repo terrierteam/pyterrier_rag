@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Iterable, Optional
 from warnings import warn
 
 import pandas as pd
