@@ -11,6 +11,11 @@ it easier to produce retrieval augmented generation pipelines. PyTerrier-RAG sup
 
 As well as access to all of the retrievers (sparse, learned sparse, and dense) and rerankers (from MonoT5 to RankGPT) accessible through the wider `PyTerrier ecosystem <https://pyterrier.readthedocs.io/en/latest/>`__.
 
+.. toctree::
+    :maxdepth: 1
+
+    measures
+
 Example Notebooks
 =================
 
