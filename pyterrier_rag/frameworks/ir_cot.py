@@ -78,7 +78,7 @@ class IRCOT(pt.Transformer):
 
     def _make_default_prompt_config(self):
         return PromptConfig(
-            model_name_or_path=self.reader.model_name_or_path,
+            model_name_or_path=self.backend.model_name_or_path,
             system_message=ircot_system_message,
             instruction=ircot_prompt,
             output_field="qanswer",
@@ -89,8 +89,8 @@ class IRCOT(pt.Transformer):
         return ContextConfig(
             in_fields=["text"],
             out_field="context",
-            tokenizer=self.reader.tokenizer,
-            max_length=self.reader.max_input_length,
+            tokenizer=self.backend.tokenizer,
+            max_length=self.backend.max_input_length,
             max_elements=self.max_docs,
             intermediate_format=ircot_example_format,
         )

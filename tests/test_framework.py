@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock
 import pandas as pd
 from pyterrier_rag.prompt import PromptConfig, ContextConfig
-from pyterrier_rag._frameworks import IRCOT
+from pyterrier_rag.frameworks import IRCOT
 
 @pytest.fixture
 def mock_retriever():
@@ -18,9 +18,7 @@ def mock_retriever():
 @pytest.fixture
 def mock_reader():
     mock = MagicMock()
-    mock.transform = MagicMock(return_value=pd.DataFrame({
-        "qanswer": ["Intermediate thought"]
-    }))
+    mock.generate = MagicMock(["Intermediate thought"])
     mock.model_name_or_path = "mock_model"
     mock.tokenizer = MagicMock()
     mock.max_input_length = 512
@@ -36,7 +34,7 @@ def mock_prompt():
 def ircot_instance(mock_retriever, mock_reader, mock_prompt):
     return IRCOT(
         retriever=mock_retriever,
-        reader=mock_reader,
+        backend=mock_reader,
         prompt=mock_prompt,
         max_docs=2,
         max_iterations=3,
@@ -46,7 +44,7 @@ def ircot_instance(mock_retriever, mock_reader, mock_prompt):
 def test_initialization(mock_retriever, mock_reader, mock_prompt):
     ircot = IRCOT(
         retriever=mock_retriever,
-        reader=mock_reader,
+        backend=mock_reader,
         prompt=mock_prompt,
     )
 
@@ -55,7 +53,7 @@ def test_initialization(mock_retriever, mock_reader, mock_prompt):
 
 # Test default prompt and context configurations
 def test_default_configurations(mock_retriever, mock_reader):
-    ircot = IRCOT(retriever=mock_retriever, reader=mock_reader)
+    ircot = IRCOT(retriever=mock_retriever, backend=mock_reader)
     assert isinstance(ircot.prompt_config, PromptConfig)
     assert isinstance(ircot.context_config, ContextConfig)
 
@@ -72,7 +70,7 @@ def test_transform_by_query_basic(ircot_instance, mock_retriever, mock_reader):
 
     # Check retriever and reader calls
     ircot_instance.retriever.search.assert_called()
-    ircot_instance.reader.transform.assert_called()
+    ircot_instance.backend.generate.assert_called()
 
 # Test exceeding max iterations
 def test_transform_by_query_max_iterations(ircot_instance, mock_retriever, mock_reader):
@@ -86,7 +84,7 @@ def test_transform_by_query_max_iterations(ircot_instance, mock_retriever, mock_
     assert "Intermediate thought" in result.iloc[0]["qanswer"]
 
     # Ensure iterations were limited
-    assert ircot_instance.reader.transform.call_count == 2
+    assert ircot_instance.backend.generate.call_count == 2
 
 # Test exit condition
 def test_transform_by_query_exit_condition(mock_retriever, mock_reader):
@@ -97,7 +95,7 @@ def test_transform_by_query_exit_condition(mock_retriever, mock_reader):
         ]
     )
 
-    ircot = IRCOT(retriever=mock_retriever, reader=mock_reader, max_iterations=5)
+    ircot = IRCOT(retriever=mock_retriever, backend=mock_reader, max_iterations=5)
 
     input_data = pd.DataFrame.from_records([{"qid": "q1", "query": "What is the capital of France?"}])
     result = ircot.transform(input_data)
@@ -106,4 +104,4 @@ def test_transform_by_query_exit_condition(mock_retriever, mock_reader):
     assert "So the answer is Paris." in result.iloc[0]["qanswer"]
 
     # Ensure the loop exited early
-    assert mock_reader.transform.call_count == 2
+    assert mock_reader.generate.call_count == 2
