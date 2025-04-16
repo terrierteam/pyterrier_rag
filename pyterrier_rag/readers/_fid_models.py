@@ -1,4 +1,5 @@
 import inspect
+from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import torch
@@ -16,6 +17,14 @@ from transformers.models.bart.configuration_bart import BartConfig
 from transformers.models.t5.configuration_t5 import T5Config
 
 from ._base import Reader
+
+
+@dataclass
+class FiDEncoderOuput(BaseModelOutput):
+    last_hidden_state: torch.FloatTensor = None
+    attention_mask: torch.FloatTensor = None
+    hidden_states: Optional[Tuple[torch.FloatTensor, ...]] = None
+    attentions: Optional[Tuple[torch.FloatTensor, ...]] = None
 
 
 class T5FiDReader(T5ForConditionalGeneration):
@@ -43,7 +52,7 @@ class T5FiDReader(T5ForConditionalGeneration):
             attention_mask = attention_mask,
             output_attentions = output_attentions,
             output_hidden_states = output_hidden_states,
-            return_dict = False,
+            return_dict = True,
         )
 
         hidden_states = encoder_outputs[0] # batch_size x num_passages, seq_length, hidden_size
@@ -52,10 +61,13 @@ class T5FiDReader(T5ForConditionalGeneration):
             hidden_states = hidden_states.reshape(batch_size, num_passages*seq_length, hidden_size)
             attention_mask = attention_mask.reshape(batch_size, num_passages*seq_length)
 
-        return {
-            "hidden_states": hidden_states,
-            "attention_mask": attention_mask
-        }
+        outputs = FiDEncoderOuput(
+            last_hidden_state=hidden_states,
+            attention_mask=attention_mask,
+            hidden_states=encoder_outputs.hidden_states, 
+            attentions=encoder_outputs.attentions
+        )
+        return outputs
 
     def forward(
         self,
@@ -80,8 +92,8 @@ class T5FiDReader(T5ForConditionalGeneration):
                 **kwargs
             )
 
-        encoder_hidden_states = encoder_outputs["hidden_states"]
-        encoder_attention_mask = encoder_outputs["attention_mask"]
+        encoder_hidden_states = encoder_outputs.last_hidden_state
+        encoder_attention_mask = encoder_outputs.attention_mask
 
         # for decoding
         if labels is not None:
@@ -117,6 +129,17 @@ class T5FiDReader(T5ForConditionalGeneration):
 
         return Seq2SeqLMOutput(loss=loss, logits=lm_logits)
 
+    def generate(self, **kwargs):
+
+        input_ids = kwargs.pop("input_ids")
+        attention_mask = kwargs.pop("attention_mask")
+        encoder_outputs = self.get_encoder_output(
+            input_ids=input_ids, 
+            attention_mask=attention_mask,
+        )
+        kwargs["encoder_outputs"] = encoder_outputs
+        return super().generate(**kwargs)
+    
     def _prepare_encoder_decoder_kwargs_for_generation(self, inputs_tensor: torch.Tensor, model_kwargs, model_input_name, *args, **kwargs):
 
         # 1. get encoder
@@ -224,9 +247,10 @@ class FiDBartTModel(BartModel):
         if not return_dict:
             return tuple(v for v in [hidden_states, all_hidden_states, all_attentions] if v is not None)
 
-        return BaseModelOutput(
-            last_hidden_state=hidden_states,
-            hidden_states=all_hidden_states,
+        return FiDEncoderOuput(
+            last_hidden_state=hidden_states, 
+            attention_mask=attention_mask,
+            hidden_states=all_hidden_states, 
             attentions=all_attentions
         )
 
@@ -279,19 +303,21 @@ class FiDBartTModel(BartModel):
                 return_dict=return_dict,
             )
         # If the user passed a tuple for encoder_outputs, we wrap it in a BaseModelOutput when return_dict=True
-        elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
-            encoder_outputs = BaseModelOutput(
-                last_hidden_state=encoder_outputs[0],
-                hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
-                attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
-            )
+        # elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
+        #     encoder_outputs = BaseModelOutput(
+        #         last_hidden_state=encoder_outputs[0],
+        #         hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
+        #         attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
+        #     )
+        encoder_hidden_states = encoder_outputs.last_hidden_state
+        encoder_attention_mask = encoder_outputs.attention_mask
 
         # decoder outputs consists of (dec_features, past_key_value, dec_hidden, dec_attn)
         decoder_outputs = self.decoder(
             input_ids=decoder_input_ids,
             attention_mask=decoder_attention_mask,
-            encoder_hidden_states=encoder_outputs[0],
-            encoder_attention_mask=attention_mask.reshape(attention_mask.shape[0], -1),
+            encoder_hidden_states=encoder_hidden_states, # encoder_outputs[0],
+            encoder_attention_mask=encoder_attention_mask, # attention_mask.reshape(attention_mask.shape[0], -1),
             head_mask=decoder_head_mask,
             cross_attn_head_mask=cross_attn_head_mask,
             past_key_values=past_key_values,
@@ -328,6 +354,21 @@ class BARTFiDReader(BartForConditionalGeneration):
 
         # Initialize weights and apply final processing
         self.post_init()
+
+    def get_encoder_output(self, *args, **kwargs):
+        return self.model.get_encoder_output(*args, **kwargs)
+    
+    def generate(self, **kwargs):
+
+        input_ids = kwargs.pop("input_ids")
+        attention_mask = kwargs.pop("attention_mask")
+        encoder_outputs = self.get_encoder_output(
+            input_ids=input_ids, 
+            attention_mask=attention_mask,
+            return_dict=True,
+        )
+        kwargs["encoder_outputs"] = encoder_outputs
+        return super().generate(**kwargs)
 
     def _prepare_encoder_decoder_kwargs_for_generation(self, inputs_tensor: torch.Tensor, model_kwargs, model_input_name, *args, **kwargs):
 
