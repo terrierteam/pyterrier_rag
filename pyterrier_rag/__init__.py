@@ -9,6 +9,18 @@ import pyterrier_rag.readers
 import pyterrier_rag.backend
 import pyterrier_rag.prompt
 
-from pyterrier_rag.backend import OpenAIBackend, CausalLMBackend, Seq2SeqLMBackend, VLLMBackend
+from pyterrier_rag.backend import (
+    OpenAIBackend,
+    CausalLMBackend,
+    Seq2SeqLMBackend,
+    VLLMBackend,
+)
 
-__all__ = ["readers", "prompt", "OpenAIBackend", "CausalLMBackend", "Seq2SeqLMBackend", "VLLMBackend"]
+__all__ = [
+    "readers",
+    "prompt",
+    "OpenAIBackend",
+    "CausalLMBackend",
+    "Seq2SeqLMBackend",
+    "VLLMBackend",
+]

@@ -45,7 +45,8 @@ class IRCOT(pt.Transformer):
         context_config: Optional[ContextConfig] = None,
         max_docs: int = 10,
         max_iterations: int = -1,
-        exit_condition: callable = lambda x: "so the answer is" in x["qanswer"].iloc[0].lower(),
+        exit_condition: callable = lambda x: "so the answer is"
+        in x["qanswer"].iloc[0].lower(),
     ):
         self.retriever = retriever % max_docs
         self.backend = backend
@@ -109,7 +110,7 @@ class IRCOT(pt.Transformer):
 
         prev = []
         top_k_docs = self.retriever.search(query)
-        top_k_docs['prev'] = ''
+        top_k_docs["prev"] = ""
         iter = 1
         stop = False
 
@@ -127,11 +128,11 @@ class IRCOT(pt.Transformer):
                 top_k_docs.sort_values(by="score", ascending=False, inplace=True)
                 top_k_docs.drop_duplicates(subset=["docno"], inplace=True)
                 top_k_docs = top_k_docs.head(self.max_docs)
-                top_k_docs['prev'] = '\n\n'.join(prev)
+                top_k_docs["prev"] = "\n\n".join(prev)
                 iter += 1
 
         qanswer = output[self.output_field].iloc[0]
         return [{"qid": qid, "query": query, "qanswer": qanswer}]
 
 
-__all__ = ['IRCOT']
+__all__ = ["IRCOT"]

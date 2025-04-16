@@ -5,7 +5,7 @@ from pyterrier_rag.backend._base import Backend, BackendOutput
 from pyterrier_rag._optional import is_vllm_availible
 
 
-def get_logits_from_dict(d : List[dict], tokenizer):
+def get_logits_from_dict(d: List[dict], tokenizer):
     # get ordering of vocabulary from tokenizer
     vocab = tokenizer.get_vocab()
     id2token = {k: v for k, v in vocab.items()}
@@ -60,7 +60,7 @@ class VLLMBackend(Backend):
                 "do_sample": False,
                 "num_beams": 1,
             }
-        generation_args['log_probs'] = self.model.llm_engine.model_config.vocab_size
+        generation_args["log_probs"] = self.model.llm_engine.model_config.vocab_size
         self.generation_args = generation_args
         self.to_params = lambda x: SamplingParams(**x)
 

@@ -14,7 +14,7 @@ class PromptTransformer(pt.Transformer):
         instruction: Union[callable, str] = None,
         model_name_or_path: str = None,
         system_message: Optional[str] = None,
-        text_loader : Optional[callable] = None,
+        text_loader: Optional[callable] = None,
         config: Optional[PromptConfig] = None,
         context_aggregation: Optional[callable] = None,
         context_config: Optional[ContextConfig] = None,
@@ -75,12 +75,16 @@ class PromptTransformer(pt.Transformer):
         return output
 
     def set_output_attribute(self, api_type: str = None):
-        self.output_attribute = {
-            "openai": "to_openai_api_messages",
-            "gemini": "to_gemini_api_messages",
-            "vertex": "to_vertex_api_messages",
-            "reka": "to_reka_api_messages",
-        }[api_type] if api_type else "get_prompt"
+        self.output_attribute = (
+            {
+                "openai": "to_openai_api_messages",
+                "gemini": "to_gemini_api_messages",
+                "vertex": "to_vertex_api_messages",
+                "reka": "to_reka_api_messages",
+            }[api_type]
+            if api_type
+            else "get_prompt"
+        )
 
     @property
     def prompt(self):
@@ -108,9 +112,13 @@ class PromptTransformer(pt.Transformer):
             for i in inp:
                 i["query"] = query
         fields = {k: v for k, v in inp[0].items() if k in self.relevant_fields}
-        if 'text' in self.relevant_fields and 'text' not in fields and self.text_loader is not None:
+        if (
+            "text" in self.relevant_fields
+            and "text" not in fields
+            and self.text_loader is not None
+        ):
             for i in inp:
-                fields['text'] = self.text_loader(i['docno'])
+                fields["text"] = self.text_loader(i["docno"])
         if self.use_context:
             context = self.context_aggregation.transform_by_query(inp)["context"]
             fields["context"] = context

@@ -436,7 +436,11 @@ class FiD(pt.Transformer):
         verbose: bool = False,
         device: Union[str, torch.device] = None,
     ):
-        self.device = ("cuda" if torch.cuda.is_available() else "cpu") if device is None else device
+        self.device = (
+            ("cuda" if torch.cuda.is_available() else "cpu")
+            if device is None
+            else device
+        )
         self.model = model.to(self.device)
         self.model.eval()
         self.tokenizer = tokenizer
@@ -451,9 +455,10 @@ class FiD(pt.Transformer):
         self.title_prefix = "title:"
         self.context_prefix = "context:"
 
-    def get_context_by_query(self, inp: Iterable[dict]) -> Iterable[Union[str, Tuple[str]]]:
-        """Return at most self.num_context retrieved context.
-        """
+    def get_context_by_query(
+        self, inp: Iterable[dict]
+    ) -> Iterable[Union[str, Tuple[str]]]:
+        """Return at most self.num_context retrieved context."""
         if self.num_context and inp:
             num = len(inp) if self.num_context == "auto" else self.num_context
             if "score" in inp[0]:

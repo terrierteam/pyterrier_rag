@@ -17,7 +17,9 @@ class SearchO1(pt.Transformer):
         max_iterations: int = -1,
     ):
         if not isinstance(backend, CausalLMBackend):
-            raise ValueError("The backend for Search-O1 must currently be a CausalLMBackend instance.")
+            raise ValueError(
+                "The backend for Search-O1 must currently be a CausalLMBackend instance."
+            )
         self.retriever = retriever
         self.backend = backend
         self.input_field = input_field
@@ -29,8 +31,14 @@ class SearchO1(pt.Transformer):
         self.__post_init__()
 
     def __post_init__(self):
-        self.backend.generation_config['stopping_criteria'] = [StopWordCriteria(self.tokenizer, prompt_length, [END_SEARCH_QUERY, self.tokenizer.eos_token])]
-        
+        self.backend.generation_config["stopping_criteria"] = [
+            StopWordCriteria(
+                self.tokenizer,
+                prompt_length,
+                [END_SEARCH_QUERY, self.tokenizer.eos_token],
+            )
+        ]
+
     def _make_default_context_config(self):
         return ContextConfig(
             in_fields=["text"],
@@ -40,4 +48,3 @@ class SearchO1(pt.Transformer):
             max_elements=self.max_docs,
             intermediate_format=text_format,
         )
-    

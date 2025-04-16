@@ -74,7 +74,7 @@ class Backend(pt.Transformer, ABC):
 
     def logit_generator(self):
         return LogitBackend(self)
-    
+
     def _raw_generate(self, tokenized_sequences: Iterable[dict]) -> List[str]:
         """
         Generate text from the tokenized input sequences.
@@ -90,7 +90,7 @@ class Backend(pt.Transformer, ABC):
 
 
 class TextBackend:
-    def __init__(self, Backend : Backend):
+    def __init__(self, Backend: Backend):
         self.Backend = Backend
 
     def transform_iter(self, inp: Iterable[str]) -> Iterable[str]:
@@ -100,14 +100,18 @@ class TextBackend:
             out.extend(self.Backend.generate(chunk))
         if not hasattr(out[0], "text"):
             if not out[0] is str:
-                raise ValueError("Backend must return BackendOutput or str, not {}".format(type(out[0])))
+                raise ValueError(
+                    "Backend must return BackendOutput or str, not {}".format(
+                        type(out[0])
+                    )
+                )
         for i, o in zip(inp, out):
             i[self.output_field] = o.text
         return inp
 
 
 class LogitBackend:
-    def __init__(self, Backend : Backend):
+    def __init__(self, Backend: Backend):
         if not Backend._support_logits:
             raise ValueError("Backend does not support logits")
         self.Backend = Backend
@@ -118,7 +122,11 @@ class LogitBackend:
         for chunk in chunked(queries, self.batch_size):
             out.extend(self.Backend.generate(chunk))
         if not hasattr(out[0], "logits"):
-            raise ValueError("Backend must return BackendOutput to use LogitBackend, not {}".format(type(out[0])))
+            raise ValueError(
+                "Backend must return BackendOutput to use LogitBackend, not {}".format(
+                    type(out[0])
+                )
+            )
         if out[0].logits is None:
             raise ValueError("Backend must return logits to use LogitBackend")
         for i, o in zip(inp, out):

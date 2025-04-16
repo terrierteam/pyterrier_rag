@@ -44,14 +44,17 @@ def PointwiseLLMJudgePrompt(question: str, prediction: str) -> str:
 
 backend_obj, prompt_obj = None, None
 
-def llmjudge_fn(qrels, res, backend_type: str, model_name: str, rel = 3, agg = 'max') -> int:
+
+def llmjudge_fn(
+    qrels, res, backend_type: str, model_name: str, rel=3, agg="max"
+) -> int:
     """
     LLMasJudge function to evaluate the prediction against the gold standard.
     """
 
-    pta.validate.columns(qrels, includes=['query_id', 'relevance', 'text'])
-    pta.validate.columns(res, includes=['query_id', 'qanswer'])
-    
+    pta.validate.columns(qrels, includes=["query_id", "relevance", "text"])
+    pta.validate.columns(res, includes=["query_id", "qanswer"])
+
     assert len(res), "Empty res df provided"
     assert len(qrels), "Empty qrels df provided"
     qrels = qrels[qrels.relevance >= rel]
@@ -67,19 +70,22 @@ def llmjudge_fn(qrels, res, backend_type: str, model_name: str, rel = 3, agg = '
             system_message=PointwiseLLMJudgeSystemMessage,
         )
 
-    predictions = res['qanswer'].to_list()
+    predictions = res["qanswer"].to_list()
     assert len(predictions) == 1, "Unexpected number of predictions"
-    references = qrels['text'].to_list()
-    # duplicate the prediction for the nbr of ground truths 
+    references = qrels["text"].to_list()
+    # duplicate the prediction for the nbr of ground truths
     predictions = predictions * len(references)
 
     # create the prompt
-    prompts = [prompt_obj.create_prompt(
-        {
-            'prediction': p,
-            'reference': r,
-        }
-    ) for p, r in zip(predictions, references)]
+    prompts = [
+        prompt_obj.create_prompt(
+            {
+                "prediction": p,
+                "reference": r,
+            }
+        )
+        for p, r in zip(predictions, references)
+    ]
 
     outputs = backend_obj.generate(prompts)
     parsed_ints = []
@@ -88,15 +94,15 @@ def llmjudge_fn(qrels, res, backend_type: str, model_name: str, rel = 3, agg = '
     assert len(parsed_ints) == len(outputs), "Unexpected number of parsed integers"
     assert len(parsed_ints) == len(predictions), "Unexpected number of parsed integers"
     # aggregate the scores
-    if agg == 'max':
+    if agg == "max":
         return max(parsed_ints)
-    elif agg == 'avg':
+    elif agg == "avg":
         return sum(parsed_ints) / len(parsed_ints)
-    elif agg == 'sum':
+    elif agg == "sum":
         return sum(parsed_ints)
-    elif agg == 'min':
+    elif agg == "min":
         return min(parsed_ints)
-    elif agg == 'none':
+    elif agg == "none":
         return parsed_ints
     else:
         raise ValueError(f"Unknown aggregation method: {agg}")
@@ -104,10 +110,12 @@ def llmjudge_fn(qrels, res, backend_type: str, model_name: str, rel = 3, agg = '
 
 def LLMasJudge(backend_type, model_name_or_path):
     return ir_measures.define_byquery(
-        lambda qrels, res: llmjudge_fn(qrels, res, backend_type=backend_type, model_name=model_name_or_path),
-        name='LLMasJudge',
+        lambda qrels, res: llmjudge_fn(
+            qrels, res, backend_type=backend_type, model_name=model_name_or_path
+        ),
+        name="LLMasJudge",
         support_cutoff=False,
     )
 
 
-__all__ = ['LLMasJudge']
+__all__ = ["LLMasJudge"]

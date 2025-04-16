@@ -32,7 +32,7 @@ def get_singleqa_search_o1_instruction(MAX_SEARCH_LIMIT):
         f"You can repeat the search process multiple times if necessary. The maximum number of search attempts is limited to {MAX_SEARCH_LIMIT}.\n\n"
         "Once you have all the information you need, continue your reasoning.\n\n"
         "Example:\n"
-        "Question: \"Who got the first Nobel Prize in Physics?\"\n"
+        'Question: "Who got the first Nobel Prize in Physics?"\n'
         "Assistant thinking steps:\n"
         "- I need to find out who was awarded the first Nobel Prize in Physics.\n\n"
         "Assistant:\n"
@@ -54,7 +54,7 @@ def get_multiqa_search_o1_instruction(MAX_SEARCH_LIMIT):
         f"You can repeat the search process multiple times if necessary. The maximum number of search attempts is limited to {MAX_SEARCH_LIMIT}.\n\n"
         "Once you have all the information you need, continue your reasoning.\n\n"
         "Example:\n"
-        "Question: \"Alice David is the voice of Lara Croft in a video game developed by which company?\"\n"
+        'Question: "Alice David is the voice of Lara Croft in a video game developed by which company?"\n'
         "Assistant thinking steps:\n"
         "- I need to find out who voices Lara Croft in the video game.\n"
         "- Then, I need to determine which company developed that video game.\n\n"
@@ -91,56 +91,59 @@ def generic_prompt(question: str):
 
 
 @prompt
-def get_webpage_to_reasonchain_instruction(prev_reasoning: str, search_query: str, document: str):
+def get_webpage_to_reasonchain_instruction(
+    prev_reasoning: str, search_query: str, document: str
+):
     """**Task Instruction:**
 
-You are tasked with reading and analyzing web pages based on the following inputs: **Previous Reasoning Steps**, **Current Search Query**, and **Searched Web Pages**. Your objective is to extract relevant and helpful information for **Current Search Query** from the **Searched Web Pages** and seamlessly integrate this information into the **Previous Reasoning Steps** to continue reasoning for the original question.
+    You are tasked with reading and analyzing web pages based on the following inputs: **Previous Reasoning Steps**, **Current Search Query**, and **Searched Web Pages**. Your objective is to extract relevant and helpful information for **Current Search Query** from the **Searched Web Pages** and seamlessly integrate this information into the **Previous Reasoning Steps** to continue reasoning for the original question.
 
-**Guidelines:**
+    **Guidelines:**
 
-1. **Analyze the Searched Web Pages:**
-- Carefully review the content of each searched web page.
-- Identify factual information that is relevant to the **Current Search Query** and can aid in the reasoning process for the original question.
+    1. **Analyze the Searched Web Pages:**
+    - Carefully review the content of each searched web page.
+    - Identify factual information that is relevant to the **Current Search Query** and can aid in the reasoning process for the original question.
 
-2. **Extract Relevant Information:**
-- Select the information from the Searched Web Pages that directly contributes to advancing the **Previous Reasoning Steps**.
-- Ensure that the extracted information is accurate and relevant.
+    2. **Extract Relevant Information:**
+    - Select the information from the Searched Web Pages that directly contributes to advancing the **Previous Reasoning Steps**.
+    - Ensure that the extracted information is accurate and relevant.
 
-3. **Output Format:**
-- **If the web pages provide helpful information for current search query:** Present the information beginning with `**Final Information**` as shown below.
-**Final Information**
+    3. **Output Format:**
+    - **If the web pages provide helpful information for current search query:** Present the information beginning with `**Final Information**` as shown below.
+    **Final Information**
 
-[Helpful information]
+    [Helpful information]
 
-- **If the web pages do not provide any helpful information for current search query:** Output the following text.
+    - **If the web pages do not provide any helpful information for current search query:** Output the following text.
 
-**Final Information**
+    **Final Information**
 
-No helpful information found.
+    No helpful information found.
 
-**Inputs:**
-- **Previous Reasoning Steps:**
-{{ prev_reasoning }}
+    **Inputs:**
+    - **Previous Reasoning Steps:**
+    {{ prev_reasoning }}
 
-- **Current Search Query:**
-{{ search_query }}
+    - **Current Search Query:**
+    {{ search_query }}
 
-- **Searched Web Pages:**
-{{ document }}
+    - **Searched Web Pages:**
+    {{ document }}
 
-Now you should analyze each web page and find helpful information based on the current search query "{{ search_query }}" and previous reasoning steps.
-"""
+    Now you should analyze each web page and find helpful information based on the current search query "{{ search_query }}" and previous reasoning steps.
+    """
+
 
 ### PROMPT END ###
 
 ### ANSWER EXTRACTION ###
 
 
-def make_extract_answer(mode='gen'):
+def make_extract_answer(mode="gen"):
     def codegen_extract_answer(output):
         # Extract the code between ```python and ```
-        extracted_text = ''
-        pattern = r'```python\s*(.*?)\s*```'
+        extracted_text = ""
+        pattern = r"```python\s*(.*?)\s*```"
         matches = re.findall(pattern, output, re.DOTALL | re.IGNORECASE)
         if matches:
             extracted_text = matches[-1].strip()  # Take the last match
@@ -148,11 +151,13 @@ def make_extract_answer(mode='gen'):
 
     def infogen_extract_answer(output):
         # Extract content after **Final Information** or **Modified Reasoning Steps**
-        extracted_text = ''
+        extracted_text = ""
         pattern_info = "\n**Final Information**"
         pattern_step = "\n**Modified Reasoning Steps**"
         if pattern_info in output:
-            extracted_text = output.split(pattern_info)[-1].replace("\n","").strip("```").strip()
+            extracted_text = (
+                output.split(pattern_info)[-1].replace("\n", "").strip("```").strip()
+            )
         elif pattern_step in output:
             extracted_text = output.split(pattern_step)[-1].strip("```").strip()
         else:
@@ -160,30 +165,31 @@ def make_extract_answer(mode='gen'):
         return extracted_text
 
     def gen_extract_answer(output):
-        pattern = r'\\boxed\{(.*)\}'
+        pattern = r"\\boxed\{(.*)\}"
         matches = re.findall(pattern, output)
         if matches:
             extracted_text = matches[-1]  # Take the last match
-            if mode in ['choose', 'qa']:
+            if mode in ["choose", "qa"]:
                 # Handle 'choose' mode
-                inner_pattern = r'\\text\{(.*)\}'
+                inner_pattern = r"\\text\{(.*)\}"
                 inner_matches = re.findall(inner_pattern, extracted_text)
                 if inner_matches:
                     extracted_text = inner_matches[-1]  # Take the last match
                 extracted_text = extracted_text.strip("()")
         return extracted_text
-    if mode == 'codegen':
+
+    if mode == "codegen":
         return codegen_extract_answer
-    elif mode == 'infogen':
+    elif mode == "infogen":
         return infogen_extract_answer
     else:
         return gen_extract_answer
+
 
 ### CONTEXT EDITING ###
 
 
 def replace_recent_steps(origin_str, replace_str):
-
     """
     Replaces specific steps in the original reasoning steps with new steps.
     If a replacement step contains "DELETE THIS STEP", that step is removed.
@@ -218,16 +224,16 @@ def replace_recent_steps(origin_str, replace_str):
                 if current_step_num is not None:
                     steps[current_step_num] = "\n".join(current_content).strip()
                 current_step_num = int(step_match.group(1))
-                content = line[step_match.end():].strip()
+                content = line[step_match.end() :].strip()
                 current_content = [content] if content else []
             else:
                 if current_step_num is not None:
                     current_content.append(line)
-            
+
         # Save the last step if any
         if current_step_num is not None:
             steps[current_step_num] = "\n".join(current_content).strip()
-            
+
         return steps
 
     # Parse the original and replacement steps
@@ -252,11 +258,12 @@ def replace_recent_steps(origin_str, replace_str):
 
     return new_reasoning_steps
 
+
 ### GENERAL UTILITY ###
 
 
 def extract_search_query(text: str) -> str:
-    pattern = re.escape(BEGIN_SEARCH_QUERY) + r'(.*?)' + re.escape(END_SEARCH_QUERY)
+    pattern = re.escape(BEGIN_SEARCH_QUERY) + r"(.*?)" + re.escape(END_SEARCH_QUERY)
     matches = re.findall(pattern, text, flags=re.DOTALL)
     if matches:
         return matches[-1].strip()
@@ -271,12 +278,16 @@ def format_retrieval_docs(retrieval_results: List[List[dict]]) -> List[List[str]
         else:
             return " ".join(words[:max_words])
 
-    retrieved_docs = [] 
+    retrieved_docs = []
     for retrieval_result in retrieval_results:
-        docs = [] 
+        docs = []
         for item in retrieval_result:
             title = item["title"] if "title" in item else None
-            text = item["text"] if "text" in item else " ".join(sent.strip() for sent in item["sentences"])
+            text = (
+                item["text"]
+                if "text" in item
+                else " ".join(sent.strip() for sent in item["sentences"])
+            )
             text = truncate_text(text)
             if title:
                 docs.append(f"Title: {title}\nText: {text}")

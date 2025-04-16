@@ -1,6 +1,12 @@
 from typing import Iterable, List
 
-from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, StoppingCriteria, AutoModel
+from transformers import (
+    AutoModelForCausalLM,
+    AutoModelForSeq2SeqLM,
+    AutoTokenizer,
+    StoppingCriteria,
+    AutoModel,
+)
 import torch
 
 from pyterrier_rag.backend._base import Backend, BackendOutput
@@ -42,10 +48,10 @@ class HuggingFaceBackend(Backend):
         )
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
 
-        max_position_embeddings = getattr(self._model.config, "max_position_embeddings", None)
-        self.max_input_length = (
-            max_input_length or max_position_embeddings
+        max_position_embeddings = getattr(
+            self._model.config, "max_position_embeddings", None
         )
+        self.max_input_length = max_input_length or max_position_embeddings
 
         if generation_args is None:
             generation_args = {
@@ -74,9 +80,15 @@ class HuggingFaceBackend(Backend):
         logits = [output.logits.numpy() for output in outputs]
         prompt_lengths = [x.shape[1] for x in inputs["input_ids"]]
         if self._remove_prompt:
-            logits = [logit[:, prompt_length:] for logit, prompt_length in zip(logits, prompt_lengths)]
+            logits = [
+                logit[:, prompt_length:]
+                for logit, prompt_length in zip(logits, prompt_lengths)
+            ]
         texts = self.tokenizer.batch_decode(logits, skip_special_tokens=True)
-        return [BackendOutput(text=text, logits=logit, prompt_length=length) for text, logit, length in zip(texts, logits, prompt_lengths)]
+        return [
+            BackendOutput(text=text, logits=logit, prompt_length=length)
+            for text, logit, length in zip(texts, logits, prompt_lengths)
+        ]
 
 
 class CausalLMBackend(HuggingFaceBackend):
@@ -89,7 +101,13 @@ class Seq2SeqLMBackend(HuggingFaceBackend):
 
 
 class StopWordCriteria(StoppingCriteria):
-    def __init__(self, tokenizer: AutoTokenizer, prompt_size: int, stop_words: List[str] = [], check_every: int = 1):
+    def __init__(
+        self,
+        tokenizer: AutoTokenizer,
+        prompt_size: int,
+        stop_words: List[str] = [],
+        check_every: int = 1,
+    ):
         """
         Initializes the StopWordCriteria with the necessary parameters for checking stop words during text generation.
 
@@ -105,10 +123,18 @@ class StopWordCriteria(StoppingCriteria):
         self.prompt_size = prompt_size
 
         self.stop_words = stop_words
-        self.max_stop_word_size = max((self.tokenizer.encode(word, return_tensors="pt").size(-1) for word in stop_words), default=0)
+        self.max_stop_word_size = max(
+            (
+                self.tokenizer.encode(word, return_tensors="pt").size(-1)
+                for word in stop_words
+            ),
+            default=0,
+        )
         self.check_every = check_every
 
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+    def __call__(
+        self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
+    ) -> bool:
         """
         Determines whether to stop generation based on the presence of stop words.
 
@@ -136,10 +162,21 @@ class StopWordCriteria(StoppingCriteria):
             prompt_size = self.prompt_size
             max_new_tokens = (2 * self.max_stop_word_size) + self.check_every
             latest_tokens = input_ids[i, prompt_size:][-max_new_tokens:]
-            if any([word in self.tokenizer.decode(latest_tokens, skip_special_tokens=True) for word in self.stop_words]):
+            if any(
+                [
+                    word
+                    in self.tokenizer.decode(latest_tokens, skip_special_tokens=True)
+                    for word in self.stop_words
+                ]
+            ):
                 results[i] = True
 
         return results
 
 
-__all__ = ['HuggingFaceBackend', 'CausalLMBackend', 'Seq2SeqLMBackend', 'StopWordCriteria']
+__all__ = [
+    "HuggingFaceBackend",
+    "CausalLMBackend",
+    "Seq2SeqLMBackend",
+    "StopWordCriteria",
+]
