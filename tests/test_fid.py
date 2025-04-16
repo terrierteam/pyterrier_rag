@@ -29,8 +29,7 @@ class TestPyterrier_rag(unittest.TestCase):
                 },
                 {
                     "qid": "0", 
-                    "query": 
-                    "where is Beijing?", 
+                    "query": "where is Beijing?", 
                     "docno": "d2", 
                     "text": "Beijing is the capital city of China.", 
                     "score": 0.98
