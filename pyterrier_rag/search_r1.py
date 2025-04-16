@@ -3,9 +3,6 @@ import torch
 import pyterrier as pt, pyterrier_alpha as pta
 import pyterrier.model
 
-# we'll need this to load the model using device_map, so best check its installed.
-import accelerate
-
 # Define the custom stopping criterion
 class StopOnSequence(transformers.StoppingCriteria):
     def __init__(self, target_sequences, tokenizer):
@@ -99,6 +96,9 @@ class SearchR1(pt.Transformer):
          - model_id(str): Which HGF model. Defaults to  'PeterJinGo/SearchR1-nq_hotpotqa_train-qwen2.5-7b-em-ppo'
          - retrieval_top_k3(int): How many documents. Defaults to 3. Use None for as many as the retriever will provide.
         """
+        # we'll need this to load the model using device_map, so best check its installed.
+        import accelerate
+
         self.retriever = retriever
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
         # Initialize the tokenizer and model
