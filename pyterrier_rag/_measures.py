@@ -86,7 +86,7 @@ def _bertscore(qrels, res, rel = 3, submeasure='f1', agg='max'):
 def BERTScore(rel=3, submeasure : str = 'f1', agg : str = 'max'):
     '''
     Implements BERTScore, a semantic measure of equivalence. This is defined to take a qrels dataframe with an additional text attribute,
-    and compare with the generated qanswers. 
+    and compare with the generated qanswers. NB: This is a function that returns a measure - it needs to be called.
 
     Arguments:
      - rel(int): Minimum label value for relevant qrels. Defaults to 3, which is the highest label in MSMARCO.

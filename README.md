@@ -13,6 +13,7 @@ Installation is as easy as `pip install git+https://github.com/terrierteam/pyter
 ## Example Notebooks
 Try it out here on Google Colab now by clicking the "Open in Colab" button!
 - Sparse Retrieval with FiD and FlanT5 readers: [sparse_retrieval_FiD_FlanT5.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/stable/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/stable/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb)
+- SearchR1 with Sparse Retrieval and MonoT5: [examples/search-r1.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/stable/examples/search-r1.ipyn) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/stable/examples/search-r1.ipyn) 
 
 ## RAG Readers
 
@@ -27,9 +28,23 @@ bm25 = pt.terrier.Retriever()
 fid = pyterrier_rag.readers.T5FiD()
 bm25_rag = bm25 % 10 >> fid 
 monoT5_rag = bm25 % 10 >> MonoT5() >> fid 
+monoT5_rag.search("What are chemical reactions?")
 ```
 
-See also the example notebooks...
+Try it out now with the example notebook: [sparse_retrieval_FiD_FlanT5.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/stable/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/stable/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb).
+
+## Agentic RAG
+
+ - Search-R1: `pyterrier_rag.SearchR1`
+
+```python
+bm25 = pt.terrier.Retriever()
+monoT5 = pyterrier_t5.MonoT5()
+r1_monoT5 = pyterrier_rag.SearchR1(bm25 % 20 >> monoT5)
+r1_monoT5.search("What are chemical reactions?")
+```
+
+Try Search-R1 out now with the example notebook: [examples/search-r1.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/stable/examples/search-r1.ipyn) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/stable/examples/search-r1.ipyn)
 
 ## Datasets
 
@@ -43,9 +58,17 @@ Queries and gold answers of common datasets can be accessed through the PyTerrie
  - WoW: `"rag:wow"`
  - PopQA: `"rag:popqa"`
 
-## Evaluation
+We also provide pre-built indices for standard RAG corpora. For instance, a BM25 retriever for the Wikipedia corpus for NQ can be obtained from an pre-existing index autoamticallty downloaded from HuggingFace:
 
-An experiment comparing multiple RAG pipelines can be expressed using PyTerrier's `pt.Experiment API`:
+```python
+sparse_index = pt.Artifact.from_hf('pyterrier/ragwiki-terrier')
+bm25 = pt.rewrite.tokenise() >> sparse_index.bm25(include_fields=['docno', 'text', 'title']) >> pt.rewrite.reset()
+```
+
+## Evaluation
+
+An experiment comparing multiple RAG pipelines can be expressed using PyTerrier's pt.Experiment() API:
+
 ```python
 pt.Experiment(
     [pipe1, pipe2],
@@ -58,13 +81,15 @@ pt.Experiment(
 Available measures include:
  - Exact match percentage: `pyterrier_rag.measures.EM`
  - F1: `pyterrier_rag.measures.F1`
- - BERTScore
+ - BERTScore (measures similarity of answer with relevant documents): `pyterrier_rag.measures.BERTScore`
+
+Use the `baseline` kwarg to conduct significance testing in your experiment - see the [pt.Experiment() documentation](https://pyterrier.readthedocs.io/en/latest/experiments.html) for more examples.
 
 ## Citations
 
 If you use PyTerrier-RAG for you research, please cite our work:
 
-_Constructing and Evaluating Declarative RAG Pipelines in PyTerrier. Craig Macdonald, Jinyuan Fang, Andrew Parry and Zaiqiao Meng. In Proceedings of SIGIER 2025._
+_Constructing and Evaluating Declarative RAG Pipelines in PyTerrier. Craig Macdonald, Jinyuan Fang, Andrew Parry and Zaiqiao Meng. In Proceedings of SIGIR 2025._
 
 
 ## Credits
