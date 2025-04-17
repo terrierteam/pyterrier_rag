@@ -3,5 +3,6 @@ pytest-cov
 pytest-subtests
 pytest-json-report
 ruff
+pyterrier-dr # used by Generic
 bert_score
 evaluate # used by bertscore
