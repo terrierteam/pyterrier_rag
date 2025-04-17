@@ -1,6 +1,7 @@
 import transformers
 import torch
-import pyterrier as pt, pyterrier_alpha as pta
+import pyterrier as pt
+import pyterrier_alpha as pta
 import pyterrier.model
 
 # Define the custom stopping criterion
@@ -97,7 +98,7 @@ class SearchR1(pt.Transformer):
          - retrieval_top_k3(int): How many documents. Defaults to 3. Use None for as many as the retriever will provide.
         """
         # we'll need this to load the model using device_map, so best check its installed.
-        import accelerate
+        import accelerate # noqa: F401
 
         self.retriever = retriever
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
@@ -120,7 +121,7 @@ class SearchR1(pt.Transformer):
             retriever = retriever.compile()
         self.retriever = retriever
 
-    def clone_for_retriever(self, new_retriever) -> 'Self':
+    def clone_for_retriever(self, new_retriever) -> 'SearchR1':
         """
         Make a copy of this model with a new retiever. This ensures that the model doesnt need to be loaded multiple times for 
         experiments that vary the retriever 
