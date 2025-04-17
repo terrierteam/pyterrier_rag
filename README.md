@@ -89,6 +89,8 @@ pt.Experiment(
 ```
 
 Available measures include:
+ - Answer length: `pyterrier_rag.measures.AnswerLen`
+ - Answers of 0 length: `pyterrier_rag.measures.AnswerZeroLen`
  - Exact match percentage: `pyterrier_rag.measures.EM`
  - F1: `pyterrier_rag.measures.F1`
  - BERTScore (measures similarity of answer with relevant documents): `pyterrier_rag.measures.BERTScore`
