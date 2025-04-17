@@ -7,7 +7,9 @@ from pyterrier_rag import measures
 from pyterrier_rag import model
 from pyterrier_rag import readers
 from pyterrier_rag._frameworks import Iterative
+from pyterrier_rag.search_o1 import SearchO1
 
 __all__ = [
     'Iterative', 'model', 'readers', 'measures', '_datasets',
+    'SearchO1'
 ]
