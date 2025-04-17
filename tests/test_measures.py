@@ -5,6 +5,13 @@ import pyterrier_rag
 
 class TestPyterrier_rag(unittest.TestCase):
 
+    def test_length(self):
+        run = pd.DataFrame([{'qid' : 'q1', 'qanswer' : 'aaa' }, {'qid' : 'q2', 'qanswer' : '' }])
+        qrels = pd.DataFrame([{'qid' : 'q1', 'docno' : 'd1', 'text' : 'chemical reactions occur when chemical are combined', 'label' : 2}])
+        eval = pt.Evaluate(run, qrels, [pyterrier_rag.measures.AnswerLen, pyterrier_rag.measures.AnswerZeroLen ])
+        self.assertEqual(1.5, eval["AnswerLen"])
+        self.assertEqual(0.5, eval["AnswerZeroLen"])
+
     def test_bertscore(self):
         run1 = pd.DataFrame([{'qid' : 'q1', 'qanswer' : 'chemical reactions happen when chemicals are mixed' }])
         run2 = pd.DataFrame([{'qid' : 'q1', 'qanswer' : 'chemical reactions were created by professor proton' }])
