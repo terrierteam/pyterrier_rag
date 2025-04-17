@@ -46,11 +46,11 @@ def f1_score(prediction : str, ground_truth : List[str]) -> float:
     return f1
 
 AnswerLen = ir_measures.define_byquery(
-    lambda qrels, res: res.iloc[0]['qanswer'].str.len(),
+    lambda qrels, res: len(res.iloc[0]['qanswer']),
     name='AnswerLen', support_cutoff=False)
 
 AnswerZeroLen = ir_measures.define_byquery(
-    lambda qrels, res: 1 if res.iloc[0]['qanswer'].str.len() == 0 else 0,
+    lambda qrels, res: 1 if len(res.iloc[0]['qanswer']) == 0 else 0,
     name='AnswerZeroLen', support_cutoff=False)
 
 # we aggregate across multiple gold_answer values using max().
