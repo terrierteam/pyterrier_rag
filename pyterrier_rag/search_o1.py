@@ -168,7 +168,7 @@ def replace_recent_steps(origin_str, replace_str):
     - str: The updated reasoning steps after applying replacements.
     """
 
-    def parse_steps(text):
+    def parse_steps(text) -> Dict[int,str]:
         """
         Parses the reasoning steps from a given text.
 
