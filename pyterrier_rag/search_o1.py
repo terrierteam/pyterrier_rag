@@ -391,11 +391,11 @@ class SearchO1(pt.Transformer):
 
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
-        questions = [row ['query'] for row in inp]
         sequences = [
             {
-                "question": question, 
-                "prompt": self.get_init_prompt(question, self.multihop_qa), 
+                "qid" : row['qid'],
+                "question": row['query'], 
+                "prompt": self.get_init_prompt(row['query'], self.multihop_qa), 
                 "output": "", 
                 "finished": False,
                 "history": [], 
@@ -403,7 +403,7 @@ class SearchO1(pt.Transformer):
                 "search_queries": set(), 
                 "retrieval_results": {}
             }
-            for question in questions
+            for row in inp
         ]
         
         turn = 0 
