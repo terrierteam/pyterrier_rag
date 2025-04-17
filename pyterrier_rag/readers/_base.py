@@ -4,7 +4,7 @@ import pyterrier as pt
 import torch
 from typing import Union, Optional
 
-from pyterrier_rag.backend import Backend
+from pyterrier_rag.llm import LLM
 from pyterrier_rag.prompt import (
     PromptTransformer,
     PromptConfig,
@@ -16,7 +16,7 @@ from pyterrier_rag.prompt import (
 class Reader(pt.Transformer):
     def __init__(
         self,
-        backend: Union[Backend, str],
+        LLM: Union[LLM, str],
         prompt: Union[PromptTransformer, str] = None,
         context_aggregation: Optional[callable] = None,
         prompt_config: Optional[PromptConfig] = None,
@@ -24,7 +24,7 @@ class Reader(pt.Transformer):
         output_field: str = "qanswer",
     ):
         self.prompt = prompt
-        self.backend = backend
+        self.LLM = LLM
         self.context_aggregation = context_aggregation
         self.prompt_config = prompt_config
         self.context_config = context_config
@@ -44,23 +44,23 @@ class Reader(pt.Transformer):
         if isinstance(self.prompt, str):
             self.prompt = PromptTransformer(
                 instruction=self.prompt,
-                model_name_or_path=self.backend._model_name_or_path,
+                model_name_or_path=self.LLM._model_name_or_path,
                 config=self.prompt_config,
                 context_aggregation=self.context_aggregation,
                 context_config=self.context_config,
             )
 
-        self.prompt.set_output_attribute(self.backend._api_type)
-        if self.prompt.expect_logits and not self.backend._support_logits:
-            raise ValueError("The backend does not support logits")
-        elif self.prompt.expect_logits and self.backend._support_logits:
-            self.backend = self.backend.logit_generator()
+        self.prompt.set_output_attribute(self.LLM._api_type)
+        if self.prompt.expect_logits and not self.LLM._support_logits:
+            raise ValueError("The LLM does not support logits")
+        elif self.prompt.expect_logits and self.LLM._support_logits:
+            self.LLM = self.LLM.logit_generator()
         else:
-            self.backend = self.backend.text_generator()
+            self.LLM = self.LLM.text_generator()
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         prompts = self.prompt(inp)
-        outputs = self.backend(prompts)
+        outputs = self.LLM(prompts)
         answers = self.prompt.answer_extraction(outputs)
 
         prompts[self.output_field] = answers

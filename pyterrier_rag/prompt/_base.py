@@ -51,6 +51,7 @@ class PromptTransformer(pt.Transformer):
             or self.config.conversation_template
         )
         if self.config.system_message is not None:
+            # TODO: Set flag for if model supports system message
             self.conversation_template.set_system_message(self.config.system_message)
         self.instruction = self.config.instruction
 

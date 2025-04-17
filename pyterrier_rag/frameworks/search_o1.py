@@ -2,26 +2,26 @@
 # Changes made by Jinyuan on 2025-04-14
 
 import pyterrier as pt
-from pyterrier_rag.backend import CausalLMBackend, Backend
+from pyterrier_rag.llm import CausalLMLLM, LLM
 
 
 class SearchO1(pt.Transformer):
     def __init__(
         self,
         retriever: pt.Transformer,
-        backend: Backend,
+        LLM: LLM,
         input_field: str = "query",
         output_field: str = "qanswer",
         mode: str = "gen",
         max_search_limit: int = 5,
         max_iterations: int = -1,
     ):
-        if not isinstance(backend, CausalLMBackend):
+        if not isinstance(LLM, CausalLMLLM):
             raise ValueError(
-                "The backend for Search-O1 must currently be a CausalLMBackend instance."
+                "The LLM for Search-O1 must currently be a CausalLMLLM instance."
             )
         self.retriever = retriever
-        self.backend = backend
+        self.LLM = LLM
         self.input_field = input_field
         self.output_field = output_field
         self.mode = mode
@@ -31,7 +31,7 @@ class SearchO1(pt.Transformer):
         self.__post_init__()
 
     def __post_init__(self):
-        self.backend.generation_config["stopping_criteria"] = [
+        self.LLM.generation_config["stopping_criteria"] = [
             StopWordCriteria(
                 self.tokenizer,
                 prompt_length,

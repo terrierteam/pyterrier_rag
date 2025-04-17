@@ -4,7 +4,7 @@ from outlines import prompt
 import pyterrier as pt
 import pyterrier_alpha as pta
 
-from pyterrier_rag.backend import Backend
+from pyterrier_rag.llm import LLM
 from pyterrier_rag.readers import Reader
 from pyterrier_rag.prompt import PromptTransformer, PromptConfig, ContextConfig
 
@@ -37,7 +37,7 @@ class IRCOT(pt.Transformer):
     def __init__(
         self,
         retriever: pt.Transformer,
-        backend: Backend,
+        LLM: LLM,
         input_field: str = "query",
         output_field: str = "qanswer",
         prompt: Optional[pt.Transformer] = None,
@@ -49,7 +49,7 @@ class IRCOT(pt.Transformer):
         in x["qanswer"].iloc[0].lower(),
     ):
         self.retriever = retriever % max_docs
-        self.backend = backend
+        self.LLM = LLM
         self.input_field = input_field
         self.output_field = output_field
         self.exit_condition = exit_condition
@@ -71,14 +71,14 @@ class IRCOT(pt.Transformer):
             self.prompt = PromptTransformer(
                 config=self.prompt_config, context_config=self.context_config
             )
-        self.reader = Reader(backend=self.backend, prompt=self.prompt)
+        self.reader = Reader(LLM=self.LLM, prompt=self.prompt)
 
     def _exceeded_max_iterations(self, iter):
         return self.max_iterations > 0 and iter >= self.max_iterations
 
     def _make_default_prompt_config(self):
         return PromptConfig(
-            model_name_or_path=self.backend.model_name_or_path,
+            model_name_or_path=self.LLM.model_name_or_path,
             system_message=ircot_system_message,
             instruction=ircot_prompt,
             output_field="qanswer",
@@ -89,8 +89,8 @@ class IRCOT(pt.Transformer):
         return ContextConfig(
             in_fields=["text"],
             out_field="context",
-            tokenizer=self.backend.tokenizer,
-            max_length=self.backend.max_input_length,
+            tokenizer=self.LLM.tokenizer,
+            max_length=self.LLM.max_input_length,
             max_elements=self.max_docs,
             intermediate_format=ircot_example_format,
         )
