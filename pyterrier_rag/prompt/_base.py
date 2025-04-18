@@ -15,6 +15,8 @@ class PromptTransformer(pt.Transformer):
         model_name_or_path: str = None,
         system_message: Optional[str] = None,
         text_loader: Optional[callable] = None,
+        output_field: str = "prompt",
+        input_fields: List[str] = ["query", "context"],
         config: Optional[PromptConfig] = None,
         context_aggregation: Optional[callable] = None,
         context_config: Optional[ContextConfig] = None,
@@ -27,6 +29,8 @@ class PromptTransformer(pt.Transformer):
                 instruction=instruction,
                 model_name_or_path=model_name_or_path,
                 system_message=system_message,
+                output_field=output_field,
+                input_fields=input_fields,
             )
         if context_aggregation is None and context_config is None:
             self.use_context = False
@@ -38,7 +42,7 @@ class PromptTransformer(pt.Transformer):
         self.config = config
         self.context_config = context_config
         self.output_field = config.output_field
-        self.relevant_fields = config.input_fields
+        self.config.input_fields = input_fields
         self.api_type = config.api_type
         self.expect_logits = expects_logits
         self.answer_extraction = answer_extraction or self.answer_extraction

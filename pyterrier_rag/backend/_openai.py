@@ -3,10 +3,10 @@ import time
 from typing import List
 
 from pyterrier_rag._optional import is_openai_availible, is_tiktoken_availible
-from pyterrier_rag.llm._base import LLM, LLMOutput
+from pyterrier_rag.backend._base import Backend, BackendOutput
 
 
-class OpenAILLM(LLM):
+class OpenAIBackend(Backend):
     _api_type = "openai"
 
     def __init__(
@@ -29,7 +29,7 @@ class OpenAILLM(LLM):
             **kwargs,
         )
         if not is_openai_availible():
-            raise ImportError("Please install openai to use OpenAILLM")
+            raise ImportError("Please install openai to use OpenAIBackend")
         import openai
 
         self._key = api_key or os.environ.get("OPENAI_API_KEY")
@@ -86,7 +86,7 @@ class OpenAILLM(LLM):
             return_text=True,
             **{"model": self._model_name_or_path, **self._generation_args, **kwargs},
         )
-        return [LLMOutput(text=r) for r in response]
+        return [BackendOutput(text=r) for r in response]
 
 
-__all__ = ["OpenAILLM"]
+__all__ = ["OpenAIBackend"]

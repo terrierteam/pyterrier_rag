@@ -10,13 +10,13 @@ from dataclasses import dataclass
 
 
 @dataclass
-class LLMOutput:
+class BackendOutput:
     text: str = None
     logits: np.array = None
     prompt_length: int = None
 
 
-class LLM(pt.Transformer, ABC):
+class Backend(pt.Transformer, ABC):
     _model_name_or_path = None
     _support_logits = False
     _logit_type = None

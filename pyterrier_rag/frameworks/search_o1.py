@@ -2,7 +2,7 @@
 # Changes made by Jinyuan on 2025-04-14
 
 import pyterrier as pt
-from pyterrier_rag.llm import CausalLMLLM, LLM
+from pyterrier_rag.backend import CausalLMLLM, LLM
 
 
 class SearchO1(pt.Transformer):

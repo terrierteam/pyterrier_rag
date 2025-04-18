@@ -8,14 +8,14 @@ from transformers import (
 )
 import torch
 
-from pyterrier_rag.llm._base import LLM, LLMOutput
+from pyterrier_rag.backend._base import Backend, BackendOutput
 
 
-class HuggingFaceLLM(LLM):
+class HuggingFaceBackend(Backend):
     _model_class = AutoModelForCausalLM
     _support_logits = True
     _logit_type = "dense"
-    _remove_prompt = False
+    _remove_prompt = True
 
     def __init__(
         self,
@@ -85,18 +85,13 @@ class HuggingFaceLLM(LLM):
             ]
         texts = self.tokenizer.batch_decode(logits, skip_special_tokens=True)
         return [
-            LLMOutput(text=text, logits=logit, prompt_length=length)
+            BackendOutput(text=text, logits=logit, prompt_length=length)
             for text, logit, length in zip(texts, logits, prompt_lengths)
         ]
 
-
-class CausalLMLLM(HuggingFaceLLM):
-    _model_class = AutoModelForCausalLM
-    _remove_prompt = True
-
-
-class Seq2SeqLMLLM(HuggingFaceLLM):
+class Seq2SeqLMBackend(HuggingFaceBackend):
     _model_class = AutoModelForSeq2SeqLM
+    _remove_prompt = False
 
 
 class StopWordCriteria(StoppingCriteria):
@@ -174,8 +169,8 @@ class StopWordCriteria(StoppingCriteria):
 
 
 __all__ = [
-    "HuggingFaceLLM",
-    "CausalLMLLM",
-    "Seq2SeqLMLLM",
+    "HuggingFaceBackend",
+    "CausaBackendBackend",
+    "Seq2SeqLMBackend",
     "StopWordCriteria",
 ]

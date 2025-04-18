@@ -2,7 +2,7 @@ from outlines import prompt
 import ir_measures
 import pyterrier_alpha as pta
 
-from pyterrier_rag.llm import get_LLM
+from pyterrier_rag.backend import get_LLM
 from pyterrier_rag.prompt import PromptTransformer
 
 PairwiseLLMJudgeSystemMessage = 'Please act as an impartial judge and evaluate the quality of the responses provided by two AI assistants to the user question displayed below. You should choose the assistant that follows the user\'s instructions and answers the user\'s question better. Your evaluation should consider factors such as the helpfulness, relevance, accuracy, depth, creativity, and level of detail of their responses. Begin your evaluation by comparing the two responses and provide a short explanation. Avoid any position biases and ensure that the order in which the responses were presented does not influence your decision. Do not allow the length of the responses to influence your evaluation. Do not favor certain names of the assistants. Be as objective as possible. After providing your explanation, output your final verdict by strictly following this format: "[[A]]" if assistant A is better, "[[B]]" if assistant B is better, and "[[C]]" for a tie.'
@@ -42,11 +42,11 @@ def PointwiseLLMJudgePrompt(question: str, prediction: str) -> str:
     """
 
 
-LLM_obj, prompt_obj = None, None
+backend_obj, prompt_obj = None, None
 
 
 def llmjudge_fn(
-    qrels, res, LLM_type: str, model_name: str, rel=3, agg="max"
+    qrels, res, backend_type: str, model_name: str, rel=3, agg="max"
 ) -> int:
     """
     LLMasJudge function to evaluate the prediction against the gold standard.
@@ -60,13 +60,13 @@ def llmjudge_fn(
     qrels = qrels[qrels.relevance >= rel]
     assert len(qrels), "No qrels found with minimum label of %d" % rel
 
-    global LLM_obj
+    global backend_obj
     global prompt_obj
-    if LLM_obj is None:
-        LLM_obj = get_LLM(LLM_type, model_name)
+    if backend_obj is None:
+        backend_obj = get_backend(backend_type, model_name)
         prompt_obj = PromptTransformer(
             PointwiseLLMJudgePrompt,
-            LLM_obj.model_name_or_path,
+            backend_obj.model_name_or_path,
             system_message=PointwiseLLMJudgeSystemMessage,
         )
 
@@ -87,7 +87,7 @@ def llmjudge_fn(
         for p, r in zip(predictions, references)
     ]
 
-    outputs = LLM_obj.generate(prompts)
+    outputs = backend_obj.generate(prompts)
     parsed_ints = []
     for output in outputs:
         parsed_ints.append(int(output.split()[0]))
@@ -108,10 +108,10 @@ def llmjudge_fn(
         raise ValueError(f"Unknown aggregation method: {agg}")
 
 
-def LLMasJudge(LLM_type, model_name_or_path):
+def LLMasJudge(backend_type, model_name_or_path):
     return ir_measures.define_byquery(
         lambda qrels, res: llmjudge_fn(
-            qrels, res, LLM_type=LLM_type, model_name=model_name_or_path
+            qrels, res, backend_type=backend_type, model_name=model_name_or_path
         ),
         name="LLMasJudge",
         support_cutoff=False,

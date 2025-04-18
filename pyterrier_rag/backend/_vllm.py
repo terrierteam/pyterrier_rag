@@ -1,7 +1,7 @@
 from typing import Iterable, List
 import numpy as np
 
-from pyterrier_rag.llm._base import LLM, LLMOutput
+from pyterrier_rag.backend._base import Backend as ragBackend, BackendOutput
 from pyterrier_rag._optional import is_vllm_availible
 
 
@@ -20,7 +20,7 @@ def get_logits_from_dict(d: List[dict], tokenizer):
     return output
 
 
-class VLLMLLM(LLM):
+class VLLMBackend(ragBackend):
     _logit_type = "sparse"
     _support_logits = True
     _remove_prompt = True
@@ -47,11 +47,11 @@ class VLLMLLM(LLM):
             **kwargs,
         )
         if not is_vllm_availible():
-            raise ImportError("Please install vllm to use VLLMLLM")
-        from vllm import LLM, SamplingParams
+            raise ImportError("Please install vllm to use VLLMBackend")
+        from vllm import Backend, SamplingParams
 
         self._model_name_or_path = model_name_or_path
-        self.model = LLM(model=model_name_or_path, **model_args)
+        self.model = Backend(model=model_name_or_path, **model_args)
 
         if generation_args is None:
             generation_args = {
@@ -70,4 +70,4 @@ class VLLMLLM(LLM):
         logits = map(lambda x: x[0].log_probs, responses)
         text = map(lambda x: x[0].text, responses)
 
-        return [LLMOutput(text=t, logits=l) for t, l in zip(text, logits)]
+        return [BackendOutput(text=t, logits=l) for t, l in zip(text, logits)]

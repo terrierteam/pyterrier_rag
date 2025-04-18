@@ -4,7 +4,7 @@ import pyterrier as pt
 import torch
 from typing import Union, Optional
 
-from pyterrier_rag.llm import LLM
+from pyterrier_rag.backend import Backend
 from pyterrier_rag.prompt import (
     PromptTransformer,
     PromptConfig,
@@ -16,7 +16,7 @@ from pyterrier_rag.prompt import (
 class Reader(pt.Transformer):
     def __init__(
         self,
-        LLM: Union[LLM, str],
+        backend: Union[Backend, str],
         prompt: Union[PromptTransformer, str] = None,
         context_aggregation: Optional[callable] = None,
         prompt_config: Optional[PromptConfig] = None,
@@ -24,7 +24,7 @@ class Reader(pt.Transformer):
         output_field: str = "qanswer",
     ):
         self.prompt = prompt
-        self.LLM = LLM
+        self.backend = backend
         self.context_aggregation = context_aggregation
         self.prompt_config = prompt_config
         self.context_config = context_config
@@ -50,17 +50,17 @@ class Reader(pt.Transformer):
                 context_config=self.context_config,
             )
 
-        self.prompt.set_output_attribute(self.LLM._api_type)
-        if self.prompt.expect_logits and not self.LLM._support_logits:
+        self.prompt.set_output_attribute(self.backend._api_type)
+        if self.prompt.expect_logits and not self.backend._support_logits:
             raise ValueError("The LLM does not support logits")
         elif self.prompt.expect_logits and self.LLM._support_logits:
-            self.LLM = self.LLM.logit_generator()
+            self.backend = self.backend.logit_generator()
         else:
-            self.LLM = self.LLM.text_generator()
+            self.backend = self.backend.text_generator()
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         prompts = self.prompt(inp)
-        outputs = self.LLM(prompts)
+        outputs = self.backend(prompts)
         answers = self.prompt.answer_extraction(outputs)
 
         prompts[self.output_field] = answers
