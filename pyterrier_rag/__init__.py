@@ -12,7 +12,7 @@ import pyterrier_rag.prompt
 
 from pyterrier_rag.backend import (
     OpenAIBackend,
-    CausalLMBackend,
+    HuggingFaceBackend,
     Seq2SeqLMBackend,
     VLLMBackend,
 )
@@ -22,7 +22,7 @@ __all__ = [
     "prompt",
     "measures",
     "OpenAIBackend",
-    "CausalLMBackend",
+    "HuggingFaceBackend",
     "Seq2SeqLMBackend",
     "VLLMBackend",
 ]
