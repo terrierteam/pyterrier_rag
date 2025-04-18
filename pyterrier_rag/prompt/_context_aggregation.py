@@ -1,39 +1,35 @@
-from typing import List, Optional, Iterable
+from typing import List, Optional, Iterable, Any
 
 import pyterrier as pt
 import pyterrier_alpha as pta
 
-from pyterrier_rag.prompt._config import ContextConfig
 from pyterrier_rag._util import concat
 
 
 class ContextAggregationTransformer(pt.Transformer):
     def __init__(
         self,
-        config: Optional[ContextConfig] = None,
         in_fields: Optional[List[str]] = ["text"],
         out_field: Optional[str] = "context",
+        intermediate_format: Optional[callable] = None,
+        tokenizer: Optional[Any] = None,
+        max_length: Optional[int] = -1,
+        max_elements: Optional[int] = -1,
+        max_per_context: Optional[int] = -1,
+        truncation_rate: Optional[int] = 50,
         aggregate_func: Optional[callable] = None,
     ):
         super().__init__()
-        self.config = config
-        assert (
-            config is not None or aggregate_func is not None
-        ), "Either a config or an aggregate function must be provided"
-        if config is not None:
-            self.in_fields = in_fields or config.in_fields
-            self.out_field = out_field or config.out_field
-            self.aggregate_func = aggregate_func or config.aggregate_func
-            self.intermediate_format = config.intermediate_format
-            self.tokenizer = config.tokenizer
-            self.max_length = config.max_length
-            self.max_elements = config.max_elements
-            self.max_per_context = config.max_per_context
-            self.truncation_rate = config.truncation_rate
-        else:
-            self.in_fields = in_fields
-            self.out_field = out_field
-            self.aggregate_func = aggregate_func
+
+        self.in_fields = in_fields
+        self.out_field = out_field
+        self.aggregate_func = aggregate_func
+        self.intermediate_format = intermediate_format
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        self.max_elements = max_elements
+        self.max_per_context = max_per_context
+        self.truncation_rate = truncation_rate
 
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:

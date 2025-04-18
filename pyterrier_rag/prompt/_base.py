@@ -1,11 +1,8 @@
-from typing import Optional, Union, Iterable, List
+from typing import Optional, Union, Iterable, List, Any
 
 import pyterrier as pt
 import pyterrier_alpha as pta
 from fastchat.model import get_conversation_template
-
-from pyterrier_rag.prompt._config import PromptConfig, ContextConfig
-from pyterrier_rag.prompt._context_aggregation import ContextAggregationTransformer
 
 
 class PromptTransformer(pt.Transformer):
@@ -15,35 +12,21 @@ class PromptTransformer(pt.Transformer):
         model_name_or_path: str = None,
         system_message: Optional[str] = None,
         text_loader: Optional[callable] = None,
+        conversation_template: Optional[Any] = None,
+        api_type: Optional[str] = None,
         output_field: str = "prompt",
         input_fields: List[str] = ["query", "context"],
-        config: Optional[PromptConfig] = None,
-        context_aggregation: Optional[callable] = None,
-        context_config: Optional[ContextConfig] = None,
         expects_logits: bool = False,
         answer_extraction: Optional[callable] = None,
     ):
+        self.instruction = instruction
+        self.model_name_or_path = model_name_or_path
+        self.system_message = system_message
         self.text_loader = text_loader
-        if config is None:
-            config = PromptConfig(
-                instruction=instruction,
-                model_name_or_path=model_name_or_path,
-                system_message=system_message,
-                output_field=output_field,
-                input_fields=input_fields,
-            )
-        if context_aggregation is None and context_config is None:
-            self.use_context = False
-        elif context_config is None and context_aggregation is not None:
-            context_config = ContextConfig(aggregate_func=context_aggregation)
-            self.use_context = True
-        elif context_config is not None:
-            self.use_context = True
-        self.config = config
-        self.context_config = context_config
-        self.output_field = config.output_field
-        self.config.input_fields = input_fields
-        self.api_type = config.api_type
+        self.output_field = output_field
+        self.input_fields = input_fields
+        self.conversation_template = conversation_template
+        self.api_type = api_type
         self.expect_logits = expects_logits
         self.answer_extraction = answer_extraction or self.answer_extraction
 
@@ -51,13 +34,12 @@ class PromptTransformer(pt.Transformer):
 
     def __post_init__(self):
         self.conversation_template = (
-            get_conversation_template(self.config.model_name_or_path)
-            or self.config.conversation_template
+            get_conversation_template(self.model_name_or_path)
+            or self.conversation_template
         )
-        if self.config.system_message is not None:
+        if self.system_message is not None:
             # TODO: Set flag for if model supports system message
-            self.conversation_template.set_system_message(self.config.system_message)
-        self.instruction = self.config.instruction
+            self.conversation_template.set_system_message(self.system_message)
 
         self.output_attribute = (
             {
@@ -68,12 +50,6 @@ class PromptTransformer(pt.Transformer):
             }[self.api_type]
             if self.api_type
             else "get_prompt"
-        )
-
-        self.context_aggregation = (
-            ContextAggregationTransformer(config=self.context_config)
-            if self.use_context
-            else None
         )
 
     def answer_extraction(self, output):
@@ -116,17 +92,14 @@ class PromptTransformer(pt.Transformer):
             query = self.text_loader(qid)
             for i in inp:
                 i["query"] = query
-        fields = {k: v for k, v in inp[0].items() if k in self.relevant_fields}
+        fields = {k: v for k, v in inp[0].items() if k in self.input_fields}
         if (
-            "text" in self.relevant_fields
+            "text" in self.input_fields
             and "text" not in fields
             and self.text_loader is not None
         ):
             for i in inp:
                 fields["text"] = self.text_loader(i["docno"])
-        if self.use_context:
-            context = self.context_aggregation.transform_by_query(inp)["context"]
-            fields["context"] = context
         prompt = self.create_prompt(fields)
 
         return [{self.output_field: prompt, "qid": qid, "query_0": query}]
