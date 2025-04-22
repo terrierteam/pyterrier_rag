@@ -50,7 +50,7 @@ def patch_reader(monkeypatch):
         # will be overridden per‑test by setting Reader.outputs_list
         return DummyReader(backend, prompt, factory.outputs_list)
     factory.outputs_list = []
-    monkeypatch.setattr("your_module.Reader", factory)
+    monkeypatch.setattr("pyterrier_rag.readers.Reader", factory)
     return factory
 
 def test_transform_by_query_exit_condition_immediate(patch_reader):
