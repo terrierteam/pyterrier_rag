@@ -66,7 +66,7 @@ def _hotspot_files(dataset: Dataset, components: str, variant: str, **kwargs):
     file = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         "etc",
-        "rag:hotpotqa_wiki.files.txt")
+        "rag_hotpotqa_wiki.files.txt")
     with open(file, "rt") as f:
         all_files = [ (name.strip().replace("/", "_"), tar_name + '#' + name.strip()) for name in f ]
     return all_files
