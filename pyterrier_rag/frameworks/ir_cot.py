@@ -6,7 +6,7 @@ import pyterrier_alpha as pta
 
 from pyterrier_rag.backend import Backend
 from pyterrier_rag.readers import Reader
-from pyterrier_rag.prompt import PromptTransformer, PromptConfig, ContextConfig
+from pyterrier_rag.prompt import PromptTransformer, ContextAggregationTransformer
 
 """
 Interleaving Retrieval with Chain-of-Thought Reasoning for Knowledge-Intensive Multi-Step Questions (IRCOT) ACL 2023
@@ -41,8 +41,6 @@ class IRCOT(pt.Transformer):
         input_field: str = "query",
         output_field: str = "qanswer",
         prompt: Optional[pt.Transformer] = None,
-        prompt_config: Optional[PromptConfig] = None,
-        context_config: Optional[ContextConfig] = None,
         max_docs: int = 10,
         max_iterations: int = -1,
         exit_condition: callable = lambda x: "so the answer is"
@@ -53,8 +51,6 @@ class IRCOT(pt.Transformer):
         self.input_field = input_field
         self.output_field = output_field
         self.exit_condition = exit_condition
-        self.prompt_config = prompt_config
-        self.context_config = context_config
         self.prompt = prompt
 
         self.max_docs = max_docs
@@ -68,32 +64,30 @@ class IRCOT(pt.Transformer):
         if self.context_config is None:
             self.context_config = self._make_default_context_config()
         if self.prompt is None:
-            self.prompt = PromptTransformer(
-                config=self.prompt_config, context_config=self.context_config
-            )
+            self.prompt = ContextAggregationTransformer(**self.context_config) >> PromptTransformer(**self.prompt_config)
         self.reader = Reader(backend=self.backend, prompt=self.prompt)
 
     def _exceeded_max_iterations(self, iter):
         return self.max_iterations > 0 and iter >= self.max_iterations
 
     def _make_default_prompt_config(self):
-        return PromptConfig(
-            model_name_or_path=self.backend.model_name_or_path,
-            system_message=ircot_system_message,
-            instruction=ircot_prompt,
-            output_field="qanswer",
-            input_fields=["query", "context", "prev"],
-        )
+        return {
+            'model_name_or_path': self.backend.model_name_or_path,
+            'system_message': ircot_system_message,
+            'instruction': ircot_prompt,
+            'output_field': "qanswer",
+            'input_fields': ["query", "context", "prev"],
+        }
 
     def _make_default_context_config(self):
-        return ContextConfig(
-            in_fields=["text"],
-            out_field="context",
-            tokenizer=self.backend.tokenizer,
-            max_length=self.backend.max_input_length,
-            max_elements=self.max_docs,
-            intermediate_format=ircot_example_format,
-        )
+        return {
+            'in_fields': ["text"],
+            'out_field': "context",
+            'tokenizer': self.backend.tokenizer,
+            'max_length': self.backend.max_input_length,
+            'max_elements': self.max_docs,
+            'intermediate_format': ircot_example_format,
+        }
 
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
