@@ -5,6 +5,15 @@ import pyterrier_rag
 
 class TestPyterrier_rag(unittest.TestCase):
 
+    def test_rouge(self):
+        run1 = pd.DataFrame([{'qid' : 'q1', 'qanswer' : 'chemical reactions happen when chemicals are mixed' }])
+        run2 = pd.DataFrame([{'qid' : 'q1', 'qanswer' : 'chemical reactions were created by professor proton' }])
+        qrels = pd.DataFrame([{'qid' : 'q1', 'gold_answer' : ['chemical reactions occur when chemical are combined']}])
+
+        eval1 = pt.Evaluate(run1, qrels, [pyterrier_rag.measures.ROUGE1P])
+        eval2 = pt.Evaluate(run2, qrels, [pyterrier_rag.measures.ROUGE1P])
+        self.assertTrue(eval1['ROUGE1P'] > eval2['ROUGE1P'])
+
     def test_bertscore(self):
         run1 = pd.DataFrame([{'qid' : 'q1', 'qanswer' : 'chemical reactions happen when chemicals are mixed' }])
         run2 = pd.DataFrame([{'qid' : 'q1', 'qanswer' : 'chemical reactions were created by professor proton' }])
