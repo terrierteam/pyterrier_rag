@@ -1,7 +1,7 @@
 RAG Measures
 ============
 
-PyTerrier-RAG offers a number of commonly used evaluation measures:
+PyTerrier-RAG offers a number of commonly used evaluation measures as `ir_measures <https://ir-measur.es/en/latest/>`_ objects that can be used via pt.Experiment() and pt.Evaluate().
 
 For comparison with gold-truth answers:
  - Exact match percentage: ``pyterrier_rag.measures.EM``
@@ -37,4 +37,18 @@ Example::
         dataset.get_topics('test-2019'),
         text_loader(dataset.get_qrels()),
         [pyterrier_rag.measures.BERTScore(rel=3)]
+    )
+
+Using ir_measures, custom measures can easily be implemented using as functions that take a dataframe of answers and of gold-truth answers::
+
+    import ir_measures
+    # measures counts how many words in the answer
+    AnswerWords = ir_measures.define_byquery(
+        lambda qrels, res: len(res.iloc[0]['qanswer'].split(" ")),
+        name='AnswerWords', support_cutoff=False)
+    pt.Experiment(
+        [ragpipe1, ragpipe2],
+        dataset.get_topics(),
+        dataset.get_answers(),
+        [AnswerWords]
     )
