@@ -59,6 +59,7 @@ Available measures include:
  - Exact match percentage: `pyterrier_rag.measures.EM`
  - F1: `pyterrier_rag.measures.F1`
  - BERTScore (measures similarity of answer with relevant documents): `pyterrier_rag.measures.BERTScore`
+ - ROUGE, e.g. `pyterrier_rag.measures.ROUGE1F`
 
 ## Citations
 
