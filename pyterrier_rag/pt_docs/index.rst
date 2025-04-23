@@ -14,6 +14,7 @@ As well as access to all of the retrievers (sparse, learned sparse, and dense) a
 .. toctree::
     :maxdepth: 1
 
+    datamodel
     measures
 
 Example Notebooks
