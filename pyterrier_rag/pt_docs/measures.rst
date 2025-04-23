@@ -39,7 +39,7 @@ Example::
         [pyterrier_rag.measures.BERTScore(rel=3)]
     )
 
-Using ir_measures, custom measures can easily be implemented using as functions that take a dataframe of answers and of gold-truth answers::
+Using ir_measures, custom measures can easily be implemented using functions that take a dataframe of answers and of gold-truth answers::
 
     import ir_measures
     # measures counts how many words in the answer
