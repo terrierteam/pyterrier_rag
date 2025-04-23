@@ -8,7 +8,8 @@ from pyterrier_rag import model
 from pyterrier_rag import readers
 from pyterrier_rag._frameworks import Iterative
 from pyterrier_rag.search_r1 import SearchR1
+from pyterrier_rag.r1_searcher import R1Searcher
 
 __all__ = [
-    'Iterative', 'model', 'readers', 'measures', '_datasets', 'SearchR1'
+    'Iterative', 'model', 'readers', 'measures', '_datasets', 'SearchR1', 'R1Searcher'
 ]
