@@ -91,12 +91,27 @@ class R1Searcher(pt.Transformer):
         self.retriever = retriever
         stop_tokens = ["<|im_end|>", "<|endoftext|>", "<|end_of_query|>", "</answer>"]
         self.sampling_params = SamplingParams(temperature=temp, top_p=0.95, max_tokens=512, stop=stop_tokens)
-        self.llm = LLM(model=model_path, trust_remote_code=True, **model_kw_args)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        if model_path is not None:
+            self.llm = LLM(model=model_path, trust_remote_code=True, **model_kw_args)
+            self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.max_iterations = 16
         self.top_k = top_k
         self.prompt_type = prompt_type
         self.verbose = verbose
+
+    def clone_for_retriever(self, new_retriever) -> 'R1Searcher':
+        """
+        Make a copy of this model with a new retiever. This ensures that the model doesnt need to be loaded multiple times for 
+        experiments that vary the retriever 
+        """
+        rtr = R1Searcher(new_retriever, model_id = None)
+        rtr.model = self.model
+        rtr.tokenizer = self.tokenizer
+        rtr.max_iterations = self.max_iterations
+        rtr.top_k = self.top_k
+        rtr.prompt_type = self.prompt_type
+        rtr.verbose = self.verbose
+        return rtr
 
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp):
