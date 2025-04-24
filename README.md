@@ -38,9 +38,10 @@ Try it out now with the example notebook: [sparse_retrieval_FiD_FlanT5.ipynb](ht
 These frameworks use search as a tool - the reasoning model decides when to search, and then integrates the retrieved results into the input for the next invocation of the model:
  - Search-R1: `pyterrier_rag.SearchR1` https://arxiv.org/pdf/2503.09516
  - Search-O1: `pyterrier_rag.SearchO1` https://arxiv.org/abs/2501.05366
+ - R1-Searcher: `pyterrier_rag.R1Searcher` https://arxiv.org/abs/2503.05592
 
 ```python
-bm25 = pt.terrier.Retriever()
+bm25 = pt.Artifact.from_hf('pyterrier/ragwiki-terrier').bm25(include_fields=['docno', 'text', 'title'])
 monoT5 = pyterrier_t5.MonoT5()
 r1_monoT5 = pyterrier_rag.SearchR1(bm25 % 20 >> monoT5)
 r1_monoT5.search("What are chemical reactions?")
@@ -51,9 +52,10 @@ o1_monoT5 = pyterrier_rag.SearchO1(
 o1_monoT5.search("What are chemical reactions?")
 ```
 
-Try Search-R1 and Search-O1 out now with our example notebooks: 
+Try these frameworks out now with our example notebooks: 
  - [examples/search-r1.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipyn) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipynb)
- - [examples/search-o1.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipyn)
+ - [examples/search-o1.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipynb)
+ - [examples/r1-searcher.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/r1-searcher.ipynb)
 
 
 ## Datasets
