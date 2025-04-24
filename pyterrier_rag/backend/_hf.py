@@ -64,9 +64,9 @@ class HuggingFaceBackend(Backend):
 
     @torch.no_grad()
     def generate(self, inps: Iterable[str], **kwargs) -> List[str]:
-        assert (
-            self.model is not None
-        ), "Model is not loaded, you should instantiate a subclass of HFModel"
+        assert self.model is not None, "Model is not loaded, instantiate a subclass of HFModel"
+        
+        # Tokenize inputs
         inputs = self.tokenizer(
             inps,
             return_tensors="pt",
@@ -75,19 +75,35 @@ class HuggingFaceBackend(Backend):
             max_length=self.max_input_length,
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
-        outputs = self.model.generate(**inputs, **self._generation_args, **kwargs)
-        logits = [output.logits.numpy() for output in outputs]
-        prompt_lengths = [x.shape[1] for x in inputs["input_ids"]]
+        
+        # Generate outputs
+        outputs = self.model.generate(
+            **inputs,
+            **self._generation_args,
+            **kwargs
+        )
+        
+        # Compute prompt lengths (non-padding tokens per input)
+        pad_token_id = self.tokenizer.pad_token_id
+        input_ids = inputs['input_ids']
+        prompt_lengths = (input_ids != pad_token_id).sum(dim=1).tolist()  # Count non-pad tokens
+        
+        # Remove prompt tokens from generated outputs if needed
         if self._remove_prompt:
-            logits = [
-                logit[:, prompt_length:]
-                for logit, prompt_length in zip(logits, prompt_lengths)
-            ]
-        texts = self.tokenizer.batch_decode(logits, skip_special_tokens=True)
+            # Only keep tokens generated beyond the prompt length
+            sliced_outputs = []
+            for output, prompt_length in zip(outputs, prompt_lengths):
+                sliced_outputs.append(output[prompt_length:])
+            outputs = sliced_outputs
+
+        # Decode outputs
+        texts = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
+
         return [
-            BackendOutput(text=text, logits=logit, prompt_length=length)
-            for text, logit, length in zip(texts, logits, prompt_lengths)
+            BackendOutput(text=text, logits=outputs, prompt_length=length)
+            for text, length in zip(texts, prompt_lengths)
         ]
+
 
 class Seq2SeqLMBackend(HuggingFaceBackend):
     _model_class = AutoModelForSeq2SeqLM

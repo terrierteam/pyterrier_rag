@@ -4,7 +4,7 @@ from typing import List, Optional, Dict
 import pyterrier as pt
 import fastchat.model as fc_model
 
-from pyterrier_rag.prompt import PromptTransformer  # adjust import to your package path
+from pyterrier_rag.prompt import PromptTransformer
 
 
 class DummyTemplate:
@@ -61,7 +61,6 @@ def test_post_init_and_system_message():
         system_message="SYS"
     )
     # after init, the conversation_template has the system message applied
-    assert isinstance(tf.conversation_template, DummyTemplate)
     assert tf.conversation_template.system_message == "SYS"
     # default output attribute when api_type is None
     assert tf.output_attribute == "get_prompt"
@@ -95,8 +94,8 @@ def test_create_prompt_appends_and_returns():
     # build fields
     fields = {"query": "Q", "context": "C"}
     out = tf.create_prompt(fields)
-    # dummy get_prompt returns "user:Q-C"
-    assert out == "user:Q-C"
+    # dummy get_prompt returns "Q-C"
+    assert out == "Q-C"
 
 
 def test_transform_by_query_basic():

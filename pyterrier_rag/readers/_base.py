@@ -8,12 +8,11 @@ from pyterrier_rag.backend import Backend
 from pyterrier_rag.prompt import PromptTransformer
 
 
-
 class Reader(pt.Transformer):
     def __init__(
         self,
         backend: Union[Backend, str],
-        prompt: Union[PromptTransformer, str] = None,
+        prompt: Union[PromptTransformer, str],
         context_aggregation: Optional[callable] = None,
         output_field: str = "qanswer",
     ):
@@ -29,7 +28,7 @@ class Reader(pt.Transformer):
                 instruction=self.prompt,
                 model_name_or_path=self.backend._model_name_or_path,
             )
-
+        assert isinstance(self.prompt, PromptTransformer)
         self.prompt.set_output_attribute(self.backend._api_type)
         if self.prompt.expect_logits and not self.backend._support_logits:
             raise ValueError("The LLM does not support logits")
@@ -43,5 +42,5 @@ class Reader(pt.Transformer):
         outputs = self.backend(prompts)
         answers = self.prompt.answer_extraction(outputs)
 
-        prompts[self.output_field] = answers
+        prompts[self.output_field] = answers[self.output_field]
         return prompts

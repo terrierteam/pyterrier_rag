@@ -33,6 +33,7 @@ class IRCOT(pt.Transformer):
         input_field: str = "query",
         output_field: str = "qanswer",
         prompt: Optional[pt.Transformer] = None,
+        context_aggregation: Optional[pt.Transformer] = None,
         max_docs: int = 10,
         max_iterations: int = -1,
         exit_condition: callable = lambda x: "so the answer is"
@@ -44,6 +45,7 @@ class IRCOT(pt.Transformer):
         self.output_field = output_field
         self.exit_condition = exit_condition
         self.prompt = prompt
+        self.context_aggregation = context_aggregation
 
         self.max_docs = max_docs
         self.max_iterations = max_iterations
@@ -51,12 +53,14 @@ class IRCOT(pt.Transformer):
         self.__post_init__()
 
     def __post_init__(self):
-        if self.prompt_config is None:
-            self.prompt_config = self._make_default_prompt_config()
-        if self.context_config is None:
-            self.context_config = self._make_default_context_config()
+
         if self.prompt is None:
-            self.prompt = ContextAggregationTransformer(**self.context_config) >> PromptTransformer(**self.prompt_config)
+            self.prompt = PromptTransformer(**self._make_default_prompt_config())
+
+            if self.context_aggregation is None:
+                self.context_aggregation = ContextAggregationTransformer(**self._make_default_context_config())
+        
+        self.prompt = self.context_aggregation >> self.prompt
         self.reader = Reader(backend=self.backend, prompt=self.prompt)
 
     def _exceeded_max_iterations(self, iter):

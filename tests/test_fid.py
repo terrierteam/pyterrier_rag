@@ -17,7 +17,7 @@ class TestPyterrier_rag(unittest.TestCase):
         from pyterrier_rag.readers import Reader
         from pyterrier_rag.backend import Seq2SeqLMBackend
         model = Seq2SeqLMBackend(model_name_or_path='google/flan-t5-base')
-        reader = Reader(model)
+        reader = Reader(model, prompt='context: {context} question: {query} answer:')
         self._test_fid(reader)
 
     def _test_fid(self, model):
@@ -40,10 +40,10 @@ class TestPyterrier_rag(unittest.TestCase):
 
         # now check without titles
         result = model(data)
-        self.assertTrue("China" in result[0]['qanswer'])
+        self.assertIn("China", result[0]['qanswer'])
 
         # test with titles
         data[0]['title'] = "USA"
         data[1]['title'] = "China"
         result = model(data)
-        self.assertTrue("China" in result[0]['qanswer'])
+        self.assertIn("China", result[0]['qanswer'])

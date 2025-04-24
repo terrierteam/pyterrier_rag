@@ -26,7 +26,7 @@ class Backend(pt.Transformer, ABC):
     def __init__(
         self,
         *,
-        input_field: str = "query",
+        input_field: str = "prompt",
         output_field: str = "qanswer",
         output_format: str = "text",
         batch_size: int = 4,
@@ -89,15 +89,18 @@ class Backend(pt.Transformer, ABC):
         return self.text_generator(self).transform_iter(inp)
 
 
-class TextBackend:
-    def __init__(self, Backend: Backend):
-        self.Backend = Backend
+class TextBackend(pt.Transformer):
+    def __init__(self, backend: Backend):
+        self.backend = backend
+        self.batch_size = self.backend.batch_size
+        self.input_field = self.backend.input_field
+        self.output_field = self.backend.output_field
 
     def transform_iter(self, inp: Iterable[str]) -> Iterable[str]:
         queries = [i[self.input_field] for i in inp]
         out = []
         for chunk in chunked(queries, self.batch_size):
-            out.extend(self.Backend.generate(chunk))
+            out.extend(self.backend.generate(chunk))
         if not hasattr(out[0], "text"):
             if not out[0] is str:
                 raise ValueError(
@@ -110,17 +113,20 @@ class TextBackend:
         return inp
 
 
-class LogitBackend:
-    def __init__(self, Backend: Backend):
-        if not Backend._support_logits:
+class LogitBackend(pt.Transformer):
+    def __init__(self, backend: Backend):
+        if not backend._support_logits:
             raise ValueError("Backend does not support logits")
-        self.Backend = Backend
+        self.backend = backend
+        self.batch_size = self.backend.batch_size
+        self.input_field = self.backend.input_field
+        self.output_field = self.backend.output_field
 
     def transform_iter(self, inp: Iterable[str]) -> Iterable[str]:
         queries = [i[self.input_field] for i in inp]
         out = []
         for chunk in chunked(queries, self.batch_size):
-            out.extend(self.Backend.generate(chunk))
+            out.extend(self.backend.generate(chunk))
         if not hasattr(out[0], "logits"):
             raise ValueError(
                 "Backend must return BackendOutput to use LogitBackend, not {}".format(

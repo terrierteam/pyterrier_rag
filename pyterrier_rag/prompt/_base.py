@@ -2,7 +2,9 @@ from typing import Optional, Union, Iterable, List, Any
 
 import pyterrier as pt
 import pyterrier_alpha as pta
+from pyterrier_rag.prompt.wrapper import prompt
 from fastchat.model import get_conversation_template
+from fastchat.conversation import get_conv_template
 
 
 class PromptTransformer(pt.Transformer):
@@ -18,6 +20,7 @@ class PromptTransformer(pt.Transformer):
         input_fields: List[str] = ["query", "context"],
         expects_logits: bool = False,
         answer_extraction: Optional[callable] = None,
+        raw_instruction: bool = False,
     ):
         self.instruction = instruction
         self.model_name_or_path = model_name_or_path
@@ -29,18 +32,22 @@ class PromptTransformer(pt.Transformer):
         self.api_type = api_type
         self.expect_logits = expects_logits
         self.answer_extraction = answer_extraction or self.answer_extraction
+        self.raw_instruction = raw_instruction
 
         self.__post_init__()
 
     def __post_init__(self):
-        self.conversation_template = (
-            get_conversation_template(self.model_name_or_path)
-            or self.conversation_template
-        )
+        if type(self.instruction) is str:
+            self.instruction = prompt(self.instruction)
+        if self.model_name_or_path is not None:
+            self.conversation_template = get_conversation_template(self.model_name_or_path) or self.conversation_template
+        if self.conversation_template is None:
+            self.conversation_template = get_conv_template("raw")
+            self.raw_instruction = True
         if self.system_message is not None:
             # TODO: Set flag for if model supports system message
             self.conversation_template.set_system_message(self.system_message)
-
+        
         self.output_attribute = (
             {
                 "openai": "to_openai_api_messages",
@@ -77,6 +84,8 @@ class PromptTransformer(pt.Transformer):
     def create_prompt(self, fields: dict) -> Union[str, List[dict]]:
         current_prompt = self.prompt
         instruction = self.instruction(**fields)
+        if self.raw_instruction:
+            return instruction
         current_prompt.append_message("user", instruction)
         return self.to_output(current_prompt)
 
