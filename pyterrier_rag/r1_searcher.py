@@ -2,6 +2,7 @@ import pyterrier as pt
 import pyterrier_alpha as pta
 from vllm import LLM, SamplingParams
 from transformers import AutoTokenizer
+from typing import Dict, Any
 import copy
 
 def process_text(examples,tokenizer,type=None):
@@ -59,11 +60,16 @@ class R1Searcher(pt.Transformer):
     parallel processing.
     """
 
-    def __init__(self, retriever : pt.Transformer, model_path : str = "XXsongLALA/Qwen-2.5-7B-base-RAG-RL", temp=0, gpu_memory_rate=0.95, top_k=5):
+    def __init__(self, 
+                 retriever : pt.Transformer, 
+                 model_path : str = "XXsongLALA/Qwen-2.5-7B-base-RAG-RL", 
+                 model_kw_args : Dict[str,Any] = {'tensor_parallel_size' : 1, 'gpu_memory_utilization' : 0.95},
+                 temp=0, 
+                 top_k=5):
         self.retriever = retriever
         stop_tokens = ["<|im_end|>", "<|endoftext|>", "<|end_of_query|>", "</answer>"]
         self.sampling_params = SamplingParams(temperature=temp, top_p=0.95, max_tokens=512, stop=stop_tokens)
-        self.llm = LLM(model=model_path, tensor_parallel_size=1, gpu_memory_utilization=gpu_memory_rate, trust_remote_code=True)
+        self.llm = LLM(model=model_path, trust_remote_code=True, **model_kw_args)
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.max_iterations = 16
         self.top_k = top_k
