@@ -84,13 +84,14 @@ class R1Searcher(pt.Transformer):
                  model_kw_args : Dict[str,Any] = {'tensor_parallel_size' : 1, 'gpu_memory_utilization' : 0.95},
                  temp : float = 0, 
                  top_k : int = 5, 
+                 verbose : bool = False,
                  prompt_type : str ='v3'):
         # delay importing vllm until needed
         from vllm import LLM, SamplingParams
         self.retriever = retriever
         stop_tokens = ["<|im_end|>", "<|endoftext|>", "<|end_of_query|>", "</answer>"]
         self.sampling_params = SamplingParams(temperature=temp, top_p=0.95, max_tokens=512, stop=stop_tokens)
-        self.llm = LLM(model=model_path, trust_remote_code=True, **model_kw_args)
+        self.llm = LLM(model=model_path, trust_remote_code=True, use_tqdm = verbose, **model_kw_args)
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.max_iterations = 16
         self.top_k = top_k
