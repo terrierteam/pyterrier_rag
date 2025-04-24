@@ -91,11 +91,12 @@ class R1Searcher(pt.Transformer):
         self.retriever = retriever
         stop_tokens = ["<|im_end|>", "<|endoftext|>", "<|end_of_query|>", "</answer>"]
         self.sampling_params = SamplingParams(temperature=temp, top_p=0.95, max_tokens=512, stop=stop_tokens)
-        self.llm = LLM(model=model_path, trust_remote_code=True, use_tqdm = verbose, **model_kw_args)
+        self.llm = LLM(model=model_path, trust_remote_code=True, **model_kw_args)
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.max_iterations = 16
         self.top_k = top_k
         self.prompt_type = prompt_type
+        self.verbose = verbose
 
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp):
@@ -109,7 +110,7 @@ class R1Searcher(pt.Transformer):
         queries = []
 
         for k in range(self.max_iterations):
-            output = self.llm.generate([continued_answer['chat_prompt']], self.sampling_params)[0]
+            output = self.llm.generate([continued_answer['chat_prompt']], self.sampling_params, use_tqdm = self.verbose)[0]
             prompt = output.prompt
             gen_text_store = continued_answer["gen_text_store"]
             stop_reason = output.outputs[0].stop_reason
