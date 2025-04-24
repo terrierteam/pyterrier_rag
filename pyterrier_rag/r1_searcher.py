@@ -55,8 +55,27 @@ Assistant: <think>"""
 
 class R1Searcher(pt.Transformer):
     """
+    Another Agentic RAG model.
+
     Code framework comes from https://github.com/RUCAIBox/R1-Searcher/blob/main/evaluation/eval_search_loacl.py, but it simplified to avoid
     parallel processing.
+
+    Input columns:
+     - qid
+     - query
+    
+    Output columns:
+     - qid
+     - query
+     - output (output of the model)
+     - qanswer (extracted from the output)
+     - iteration (how many thought iterations)
+     - all_queries (what was sent to the retriever)
+     - stop_reason_final (why did the generation stop?): "finished", "many_retrieve", "query_inst_error", "shot_down"
+
+    R1-Searcher: Incentivizing the Search Capability in LLMs via Reinforcement Learning
+    Huatong Song, Jinhao Jiang, Yingqian Min, Jie Chen, Zhipeng Chen, Wayne Xin Zhao, Lei Fang, Ji-Rong Wen
+    https://arxiv.org/abs/2503.05592
     """
 
     def __init__(self, 
@@ -66,7 +85,7 @@ class R1Searcher(pt.Transformer):
                  temp : float = 0, 
                  top_k : int = 5, 
                  prompt_type : str ='v3'):
-        # delay import until class is needed
+        # delay importing vllm until needed
         from vllm import LLM, SamplingParams
         self.retriever = retriever
         stop_tokens = ["<|im_end|>", "<|endoftext|>", "<|end_of_query|>", "</answer>"]
@@ -86,6 +105,7 @@ class R1Searcher(pt.Transformer):
         ds = process_text({'question' : question}, self.tokenizer, type=self.prompt_type)
         continued_answer = dict(ds) #copy.deepcopy?
         continued_answer["gen_text_store"] = ""
+        queries = []
 
         for k in range(self.max_iterations):
             output = self.llm.generate([continued_answer['chat_prompt']], self.sampling_params)[0]
@@ -98,9 +118,11 @@ class R1Searcher(pt.Transformer):
                 original_data = {
                         "qid" : qid,
                         "query":question,
-                        "generated_text":generated_text,
+                        "all_queries" : queries,
+                        'iteration' : k,
+                        "output":generated_text,
                         "stop_reason_final": "many_retrieve",
-                        "pred_ans": "I don't know."
+                        "qanswer": "I don't know."
                 }
 
                 return [original_data]
@@ -109,9 +131,11 @@ class R1Searcher(pt.Transformer):
                 original_data = {
                     "qid" : qid,
                     "query":question,
-                    "pred_ans": generated_text.split("<answer>")[-1].split("</answer>")[0],
+                    'iteration' : k,
+                    "all_queries" : queries,
+                    "qanswer": generated_text.split("<answer>")[-1].split("</answer>")[0],
                     "stop_reason_final": "finished",
-                    "gen_text_store": gen_text_store + generated_text + "</answer>",
+                    "output": gen_text_store + generated_text + "</answer>",
                 }
                 return [original_data]
         
@@ -119,10 +143,9 @@ class R1Searcher(pt.Transformer):
                 query = generated_text.split("<|begin_of_query|>")[-1].split("<|end_of_query|>")[0]
                 query = query.replace('"',"").replace("'","").replace("\t"," ").replace("...","")
                 if query:
-                        
+                        queries.append((k, query))
                         original_data = {
                             "chat_prompt":prompt + generated_text.strip(), #+ "<|end_of_query|> "+ "\n\nThe retrieved content are:\n<tool_call>\n"  +  doc_content + "\n</tool_call>\n\n",
-                            "question":question,
                             "stop_reason": stop_reason,
                             "gen_text_store": gen_text_store + generated_text.strip() #+ "<|end_of_query|> "+ "\n\nThe retrieved content are:\n<tool_call>\n"  +  doc_content + "\n</tool_call>\n\n",
                             }
@@ -139,22 +162,26 @@ class R1Searcher(pt.Transformer):
                         
                         continued_answer = continued_text_now
                         continue
-                else:
+                else: # we saw begin_of_query and end_of_query, but no valid query found.
                     original_data = {
                         "qid" : qid,
                         "query":question,
-                        "gen_text_store": gen_text_store + generated_text.strip(),
-                        "generated_text":generated_text,
+                        "output": gen_text_store + generated_text.strip(),
+                        'iteration' : k,
+                        "all_queries" : queries,
                         "stop_reason_final": "query_inst_error",
-                        "pred_ans": "I don't know."
+                        "qanswer": "I don't know."
                     }
                     return [original_data]
             else:
                 original_data = {
                     "qid" : qid,
-                    "query":question,
+                    "query": question,
+                    'iteration' : k,
+                    "all_queries" : queries,
+                    'output' : gen_text_store + generated_text.strip(),
                     "stop_reason_final": "shot_down",
-                    "pred_ans": "I don't know."
+                    "qanswer": "I don't know."
                 }
                 return [original_data]
         
