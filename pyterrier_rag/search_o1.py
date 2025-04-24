@@ -388,6 +388,22 @@ class SearchO1(pt.Transformer):
             )
         return outputs 
 
+    def get_answer(self, sequence: str) -> str:
+        """
+        get the answer from the LLM generated sequence.
+        """
+        extracted_answer = extract_answer(sequence, mode="qa")
+        if extracted_answer.strip():
+            return extracted_answer
+        
+        if "</think>" in sequence:
+            # try use the content after </think> as the answer
+            extracted_answer = sequence.split("</think>")[1].strip()
+            if extracted_answer.strip():
+                return extracted_answer
+        
+        return sequence.strip()
+        
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
         sequences = [
@@ -495,8 +511,8 @@ class SearchO1(pt.Transformer):
             
         # extract answer
         for seq in sequences:
-            seq["qanswer"] = extract_answer(seq["output"], mode="qa")
-        
+            # seq["qanswer"] = extract_answer(seq["output"], mode="qa")
+            seq["qanswer"] = self.get_answer(seq["output"])
         return sequences
 
 
