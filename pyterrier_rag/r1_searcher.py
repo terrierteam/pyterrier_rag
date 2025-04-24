@@ -150,7 +150,7 @@ class R1Searcher(pt.Transformer):
                             "gen_text_store": gen_text_store + generated_text.strip() #+ "<|end_of_query|> "+ "\n\nThe retrieved content are:\n<tool_call>\n"  +  doc_content + "\n</tool_call>\n\n",
                             }
                         
-                        results = (self.retriever % self.topk).search(query, qid="%s-%d" % (qid, k))
+                        results = (self.retriever % self.top_k).search(query, qid="%s-%d" % (qid, k))
                         if len(results) > 0:                
                             doc_content_list = [f"({j+1}){doc_content}\n" for j, doc_content in enumerate(results["text"])]
                             doc_content = ''.join(doc_content_list)
