@@ -1,6 +1,6 @@
 import string
 from collections import Counter
-from typing import List
+from typing import List, Literal
 
 import regex
 import ir_measures
@@ -59,6 +59,54 @@ F1 = ir_measures.define_byquery(
 # ems function handles the max()
 EM = ir_measures.define_byquery(
     lambda qrels, res: ems(res.iloc[0]['qanswer'], qrels['gold_answer']), support_cutoff=False, name="EM")
+
+def _rouge(measure : Literal['precision', 'recall', 'fmeaure'], type : Literal['rouge1', 'rouge2', 'rougeL'] ='rouge1', use_stemmer : bool = True):
+    from rouge_score import rouge_scorer
+    scorer = rouge_scorer.RougeScorer([type], use_stemmer=use_stemmer)
+
+    name = "ROUGE"
+    match type:
+        case "rouge1":
+            name += '1'
+        case "rouge2":
+            name += '2'
+        case "rougeL":
+            name += 'L'
+        case _:
+            raise ValueError("Unkown type %s" % type)
+
+    match measure:
+        case "precision":
+            name += "P"
+        case "recall":
+            name += "R"
+        case "fmeasure":
+            name += "F"
+        case _:
+            raise ValueError("Unkown measure %s" % type)
+
+    def _measure(qrels, res):
+        assert len(qrels) == 1
+        assert len(res) == 1        
+        res = scorer.score(
+            res.iloc[0]['qanswer'], 
+            qrels['gold_answer'].iloc[0][0] # [0] for the first answer in the array of gold_answer
+        )
+        return getattr(res[type], measure)
+    
+    return ir_measures.define_byquery(_measure, name=name, support_cutoff=False)
+
+ROUGE1P = _rouge('precision', 'rouge1')
+ROUGE1R = _rouge('recall', 'rouge1')
+ROUGE1F = _rouge('fmeasure', 'rouge1')
+
+ROUGE2P = _rouge('precision', 'rouge2')
+ROUGE2R = _rouge('recall', 'rouge2')
+ROUGE2F = _rouge('fmeasure', 'rouge2')
+
+ROUGELP = _rouge('precision', 'rougeL')
+ROUGELR = _rouge('recall', 'rougeL')
+ROUGELF = _rouge('fmeasure', 'rougeL')
 
 _bertscore_model = None
 def _bertscore(qrels, res, rel = 3, submeasure='f1', agg='max'):

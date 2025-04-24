@@ -5,3 +5,4 @@ regex
 transformers
 torch
 outlines
+rouge_score
