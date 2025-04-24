@@ -3,6 +3,10 @@ RAG Measures
 
 PyTerrier-RAG offers a number of commonly used evaluation measures as `ir_measures <https://ir-measur.es/en/latest/>`_ objects that can be used via pt.Experiment() and pt.Evaluate().
 
+For analysis of the generated answers:
+ - Answer length (in characters): ``pyterrier_rag.measures.AnswerLen``
+ - Answer zero length (number of questions with an empty answer) : ``pyterrier_rag.measures.AnswerZeroLen``
+
 For comparison with gold-truth answers:
  - Exact match percentage: ``pyterrier_rag.measures.EM``
  - F1: ``pyterrier_rag.measures.F1``
@@ -15,7 +19,7 @@ Example::
         [ragpipe1, ragpipe2],
         dataset.get_topics(),
         dataset.get_answers(),
-        [pyterrier_rag.measures.EM, pyterrier_rag.measures.F1, pyterrier_rag.measures.ROUGE1F]
+        [pyterrier_rag.measures.EM, pyterrier_rag.measures.F1, pyterrier_rag.measures.ROUGE1F, pyterrier_rag.measures.AnswerLen]
     )
 
 Various ROUGE measures are available:
