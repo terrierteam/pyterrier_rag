@@ -2,7 +2,6 @@ import pyterrier as pt
 import pyterrier_alpha as pta
 from transformers import AutoTokenizer
 from typing import Dict, Any
-import copy
 
 def process_text(examples,tokenizer,type=None):
 
