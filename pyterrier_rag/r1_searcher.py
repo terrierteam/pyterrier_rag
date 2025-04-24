@@ -64,8 +64,9 @@ class R1Searcher(pt.Transformer):
                  retriever : pt.Transformer, 
                  model_path : str = "XXsongLALA/Qwen-2.5-7B-base-RAG-RL", 
                  model_kw_args : Dict[str,Any] = {'tensor_parallel_size' : 1, 'gpu_memory_utilization' : 0.95},
-                 temp=0, 
-                 top_k=5):
+                 temp : float = 0, 
+                 top_k : int = 5, 
+                 prompt_type : str ='v3'):
         self.retriever = retriever
         stop_tokens = ["<|im_end|>", "<|endoftext|>", "<|end_of_query|>", "</answer>"]
         self.sampling_params = SamplingParams(temperature=temp, top_p=0.95, max_tokens=512, stop=stop_tokens)
@@ -73,6 +74,7 @@ class R1Searcher(pt.Transformer):
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.max_iterations = 16
         self.top_k = top_k
+        self.prompt_type = prompt_type
 
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp):
@@ -80,7 +82,7 @@ class R1Searcher(pt.Transformer):
         question = inp["query"]
         qid = inp["qid"]
         
-        ds = process_text({'question' : question})
+        ds = process_text({'question' : question}, self.tokenizer, type=self.prompt_type)
         continued_answer = dict(ds) #copy.deepcopy?
 
         for k in range(self.max_iterations):
