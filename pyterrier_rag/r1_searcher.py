@@ -1,6 +1,5 @@
 import pyterrier as pt
 import pyterrier_alpha as pta
-from vllm import LLM, SamplingParams
 from transformers import AutoTokenizer
 from typing import Dict, Any
 import copy
@@ -67,6 +66,8 @@ class R1Searcher(pt.Transformer):
                  temp : float = 0, 
                  top_k : int = 5, 
                  prompt_type : str ='v3'):
+        # delay import until class is needed
+        from vllm import LLM, SamplingParams
         self.retriever = retriever
         stop_tokens = ["<|im_end|>", "<|endoftext|>", "<|end_of_query|>", "</answer>"]
         self.sampling_params = SamplingParams(temperature=temp, top_p=0.95, max_tokens=512, stop=stop_tokens)
@@ -84,20 +85,19 @@ class R1Searcher(pt.Transformer):
         
         ds = process_text({'question' : question}, self.tokenizer, type=self.prompt_type)
         continued_answer = dict(ds) #copy.deepcopy?
+        continued_answer["gen_text_store"] = ""
 
         for k in range(self.max_iterations):
             output = self.llm.generate([continued_answer['chat_prompt']], self.sampling_params)[0]
             prompt = output.prompt
-            answer = continued_answer["answer"]
-            quesiton = continued_answer["question"]
             gen_text_store = continued_answer["gen_text_store"]
             stop_reason = output.outputs[0].stop_reason
             generated_text = output.outputs[0].text
             
             if k == 9: # original code breaks out here. 
                 original_data = {
-                        "question":quesiton,
-                        "answer": answer,
+                        "qid" : qid,
+                        "query":question,
                         "generated_text":generated_text,
                         "stop_reason_final": "many_retrieve",
                         "pred_ans": "I don't know."
@@ -107,8 +107,8 @@ class R1Searcher(pt.Transformer):
 
             if "<answer>" in generated_text and stop_reason=="</answer>":
                 original_data = {
-                    "question":quesiton,
-                    "answer": answer,
+                    "qid" : qid,
+                    "query":question,
                     "pred_ans": generated_text.split("<answer>")[-1].split("</answer>")[0],
                     "stop_reason_final": "finished",
                     "gen_text_store": gen_text_store + generated_text + "</answer>",
@@ -122,8 +122,7 @@ class R1Searcher(pt.Transformer):
                         
                         original_data = {
                             "chat_prompt":prompt + generated_text.strip(), #+ "<|end_of_query|> "+ "\n\nThe retrieved content are:\n<tool_call>\n"  +  doc_content + "\n</tool_call>\n\n",
-                            "answer": answer,
-                            "question":quesiton,
+                            "question":question,
                             "stop_reason": stop_reason,
                             "gen_text_store": gen_text_store + generated_text.strip() #+ "<|end_of_query|> "+ "\n\nThe retrieved content are:\n<tool_call>\n"  +  doc_content + "\n</tool_call>\n\n",
                             }
@@ -142,8 +141,8 @@ class R1Searcher(pt.Transformer):
                         continue
                 else:
                     original_data = {
-                        "question":quesiton,
-                        "answer": answer,
+                        "qid" : qid,
+                        "query":question,
                         "gen_text_store": gen_text_store + generated_text.strip(),
                         "generated_text":generated_text,
                         "stop_reason_final": "query_inst_error",
@@ -152,8 +151,8 @@ class R1Searcher(pt.Transformer):
                     return [original_data]
             else:
                 original_data = {
-                    "question":quesiton,
-                    "answer": answer,
+                    "qid" : qid,
+                    "query":question,
                     "stop_reason_final": "shot_down",
                     "pred_ans": "I don't know."
                 }
