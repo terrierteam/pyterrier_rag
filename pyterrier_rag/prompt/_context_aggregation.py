@@ -53,7 +53,7 @@ class ContextAggregationTransformer(pt.Transformer):
                 max_per_context=self.max_per_context,
                 truncation_rate=self.truncation_rate,
             )
-        return {self.out_field: context, "qid": qid, "query": query}
+        return [{self.out_field: context, "qid": qid, "query": query}]
 
 
 __all__ = ["ContextAggregationTransformer"]
