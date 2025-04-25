@@ -59,8 +59,6 @@ class IRCOT(pt.Transformer):
 
             if self.context_aggregation is None:
                 self.context_aggregation = ContextAggregationTransformer(**self._make_default_context_config())
-        
-        self.prompt = self.context_aggregation >> self.prompt
         self.reader = Reader(backend=self.backend, prompt=self.prompt)
 
     def _exceeded_max_iterations(self, iter):
@@ -105,7 +103,8 @@ class IRCOT(pt.Transformer):
         stop = False
 
         while not stop:
-            output = self.reader.transform(top_k_docs)
+            context = self.context_aggregation(top_k_docs)
+            output = self.reader(top_k_docs)
 
             if self.exit_condition(output) or self._exceeded_max_iterations(iter):
                 stop = True

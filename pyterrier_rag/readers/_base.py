@@ -2,7 +2,7 @@ from typing import Union
 import pandas as pd
 import pyterrier as pt
 import torch
-from typing import Union, Optional
+from typing import Union
 
 from pyterrier_rag.backend import Backend
 from pyterrier_rag.prompt import PromptTransformer
@@ -13,12 +13,10 @@ class Reader(pt.Transformer):
         self,
         backend: Union[Backend, str],
         prompt: Union[PromptTransformer, str],
-        context_aggregation: Optional[callable] = None,
         output_field: str = "qanswer",
     ):
         self.prompt = prompt
         self.backend = backend
-        self.context_aggregation = context_aggregation
         self.output_field = output_field
         self.__post_init__()
 
@@ -28,7 +26,7 @@ class Reader(pt.Transformer):
                 instruction=self.prompt,
                 model_name_or_path=self.backend._model_name_or_path,
             )
-        assert isinstance(self.prompt, PromptTransformer)
+        assert isinstance(self.prompt, pt.Transformer), f"Prompt should be a transformer, got {type(self.prompt)}"
         self.prompt.set_output_attribute(self.backend._api_type)
         if self.prompt.expect_logits and not self.backend._support_logits:
             raise ValueError("The LLM does not support logits")

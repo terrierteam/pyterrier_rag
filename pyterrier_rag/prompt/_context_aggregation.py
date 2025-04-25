@@ -36,6 +36,7 @@ class ContextAggregationTransformer(pt.Transformer):
         return self.transform_by_query(inp)
 
     def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
+        inp = list(inp)
         qid = inp[0].get("qid", None)
         query = inp[0].get("query", None)
 

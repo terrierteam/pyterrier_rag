@@ -1,6 +1,6 @@
 import unittest
 import pandas as pd
-
+from pyterrier_rag.prompt import ContextAggregationTransformer
 class TestPyterrier_rag(unittest.TestCase):
 
     def test_T5(self):
@@ -18,7 +18,9 @@ class TestPyterrier_rag(unittest.TestCase):
         from pyterrier_rag.backend import Seq2SeqLMBackend
         model = Seq2SeqLMBackend(model_name_or_path='google/flan-t5-base')
         reader = Reader(model, prompt='context: {context} question: {query} answer:')
-        self._test_fid(reader)
+        context_transformer = ContextAggregationTransformer()
+        pipe = context_transformer >> reader
+        self._test_fid(pipe)
 
     def _test_fid(self, model):
         data = [
