@@ -48,10 +48,10 @@ class VLLMBackend(ragBackend):
         )
         if not is_vllm_availible():
             raise ImportError("Please install vllm to use VLLMBackend")
-        from vllm import Backend, SamplingParams
+        from vllm import LLM, SamplingParams
 
         self._model_name_or_path = model_name_or_path
-        self.model = Backend(model=model_name_or_path, **model_args)
+        self.model = LLM(model=model_name_or_path, **model_args)
 
         if generation_args is None:
             generation_args = {
