@@ -17,6 +17,7 @@ class OpenAIBackend(Backend):
         batch_size: int = 4,
         max_input_length: int = 512,
         max_new_tokens: int = 32,
+        max_trials: int = 10,
         verbose: bool = False,
         **kwargs,
     ):
@@ -42,7 +43,7 @@ class OpenAIBackend(Backend):
         if is_tiktoken_availible():
             import tiktoken
 
-            self._tokenizer = tiktoken.get_encoding(self.model)
+            self._tokenizer = tiktoken.encoding_for_model(self._model_name_or_path)
         else:
             self._tokenizer = None
 
@@ -54,6 +55,7 @@ class OpenAIBackend(Backend):
                 "num_beams": 1,
             }
         self._generation_args = generation_args
+        self.max_trials = max_trials
 
     def _call_completion(
         self,
@@ -62,8 +64,13 @@ class OpenAIBackend(Backend):
         **kwargs,
     ) -> List[int]:
         import openai
-
+        trials = self.max_trials
         while True:
+            if trials <= 0:
+                print(f"Exceeded {self.max_trials}, exiting")
+                if return_text:
+                    return ""
+                return {}
             try:
                 completion = openai.ChatCompletion.create(*args, **kwargs, timeout=30)
                 break
@@ -76,6 +83,7 @@ class OpenAIBackend(Backend):
                     print("The response was filtered")
                     return "ERROR::The response was filtered"
                 time.sleep(0.1)
+                trials -= 1
         if return_text:
             completion = completion["choices"][0]["message"]["content"]
         return completion
