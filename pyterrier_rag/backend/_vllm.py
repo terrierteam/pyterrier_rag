@@ -55,7 +55,7 @@ class VLLMBackend(ragBackend):
 
         if generation_args is None:
             generation_args = {
-                "max_new_tokens": self.max_new_tokens,
+                "max_tokens": self.max_new_tokens,
                 "temperature": 1.0,
                 "do_sample": False,
                 "num_beams": 1,
