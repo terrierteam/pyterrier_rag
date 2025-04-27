@@ -62,7 +62,7 @@ class VLLMBackend(ragBackend):
             }
         generation_args["log_probs"] = self.model.get_tokenizer().vocab_size
         self.generation_args = generation_args
-        self.to_params = lambda x: SamplingParams(**x)
+        self.to_params = SamplingParams
 
     def generate(self, inps: Iterable[str], **kwargs) -> Iterable[str]:
         args = self.to_params(**self.generation_args, **kwargs)
