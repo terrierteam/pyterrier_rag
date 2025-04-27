@@ -60,7 +60,7 @@ class VLLMBackend(ragBackend):
                 "do_sample": False,
                 "num_beams": 1,
             }
-        generation_args["log_probs"] = self.model.llm_engine.model_config.vocab_size
+        generation_args["log_probs"] = llm.get_tokenizer().vocab_size
         self.generation_args = generation_args
         self.to_params = lambda x: SamplingParams(**x)
 
