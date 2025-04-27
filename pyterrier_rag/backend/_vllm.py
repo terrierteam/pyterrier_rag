@@ -48,26 +48,24 @@ class VLLMBackend(ragBackend):
         )
         if not is_vllm_availible():
             raise ImportError("Please install vllm to use VLLMBackend")
-        from vllm import Backend, SamplingParams
+        from vllm import LLM, SamplingParams
 
         self._model_name_or_path = model_name_or_path
-        self.model = Backend(model=model_name_or_path, **model_args)
+        self.model = LLM(model=model_name_or_path, **model_args)
 
         if generation_args is None:
             generation_args = {
-                "max_new_tokens": self.max_new_tokens,
+                "max_tokens": self.max_new_tokens,
                 "temperature": 1.0,
-                "do_sample": False,
-                "num_beams": 1,
             }
-        generation_args["log_probs"] = self.model.llm_engine.model_config.vocab_size
+        generation_args["logprobs"] = 20
         self.generation_args = generation_args
-        self.to_params = lambda x: SamplingParams(**x)
+        self.to_params = SamplingParams
 
     def generate(self, inps: Iterable[str], **kwargs) -> Iterable[str]:
         args = self.to_params(**self.generation_args, **kwargs)
         responses = self.model.generate(inps, args)
-        logits = map(lambda x: x[0].log_probs, responses)
-        text = map(lambda x: x[0].text, responses)
+        logits = map(lambda x: x.outputs[0].logprobs, responses)
+        text = map(lambda x: x.outputs[0].text, responses)
 
         return [BackendOutput(text=t, logits=l) for t, l in zip(text, logits)]
