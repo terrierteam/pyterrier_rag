@@ -58,13 +58,14 @@ class VLLMBackend(ragBackend):
                 "max_tokens": self.max_new_tokens,
                 "temperature": 1.0,
             }
+        generation_args["logprobs"] = self.model.get_tokenizer().vocab_size
         self.generation_args = generation_args
         self.to_params = SamplingParams
 
     def generate(self, inps: Iterable[str], **kwargs) -> Iterable[str]:
         args = self.to_params(**self.generation_args, **kwargs)
         responses = self.model.generate(inps, args)
-        logits = map(lambda x: x.outputs[0].log_probs, responses)
+        logits = map(lambda x: x.outputs[0].logprobs, responses)
         text = map(lambda x: x.outputs[0].text, responses)
 
         return [BackendOutput(text=t, logits=l) for t, l in zip(text, logits)]
