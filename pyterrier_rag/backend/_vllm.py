@@ -57,8 +57,6 @@ class VLLMBackend(ragBackend):
             generation_args = {
                 "max_tokens": self.max_new_tokens,
                 "temperature": 1.0,
-                "do_sample": False,
-                "num_beams": 1,
             }
         generation_args["log_probs"] = self.model.get_tokenizer().vocab_size
         self.generation_args = generation_args
