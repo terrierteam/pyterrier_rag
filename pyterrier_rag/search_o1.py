@@ -7,8 +7,7 @@ from typing import List, Dict, Iterable
 
 import pyterrier as pt
 import pyterrier_alpha as pta
-from pyterrier_rag.readers import CausalLMReader, StopWordCriteria
-
+from pyterrier_rag.backend import HuggingFaceBackend, StopWordCriteria
 
 # Define special tokens
 BEGIN_SEARCH_QUERY = "<|begin_search_query|>"
@@ -229,7 +228,7 @@ class SearchO1(pt.Transformer):
     def __init__(
         self, 
         retriever : pt.Transformer, 
-        generator: CausalLMReader,
+        generator: HuggingFaceBackend,
         max_turn: int=10, 
         max_retrieval_step: int=5,
         topk: int=10, 
@@ -289,7 +288,7 @@ class SearchO1(pt.Transformer):
         # generation with stop words 
         prompt_length = input_ids.shape[-1] 
         token_ids = self.generator.model.generate(
-            input_ids, 
+            input_ids,
             attention_mask=attention_mask,
             do_sample=True, 
             temperature=self.temperature, 
@@ -608,4 +607,3 @@ class SearchO1ForceRetrieval(SearchO1):
         for text, first_step_text in zip(generated_texts, first_step_generated_texts):
             final_generated_texts.append(first_step_text + text)
         return final_generated_texts
-

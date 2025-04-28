@@ -189,7 +189,6 @@ class StopWordCriteria(StoppingCriteria):
 
 __all__ = [
     "HuggingFaceBackend",
-    "CausaBackendBackend",
     "Seq2SeqLMBackend",
     "StopWordCriteria",
 ]
