@@ -77,6 +77,12 @@ sparse_index = pt.Artifact.from_hf('pyterrier/ragwiki-terrier')
 bm25 = pt.rewrite.tokenise() >> sparse_index.bm25(include_fields=['docno', 'text', 'title']) >> pt.rewrite.reset()
 ```
 
+Dense indices are also provided, e.g. E5 on Wikipedia:
+```python
+import pyterrier_dr
+e5 = pyterrier_dr.E5() >> pt.Artifact.from_hf("pyterrier/ragwiki-e5.flex") >> sparse_index.text_loader(['docno', 'title', 'text'])
+```
+
 ## Evaluation
 
 An experiment comparing multiple RAG pipelines can be expressed using PyTerrier's pt.Experiment() API:
