@@ -1,6 +1,7 @@
 import string
 from collections import Counter
-from typing import List
+from typing import List, Literal
+import ir_measures
 
 import regex
 import ir_measures
@@ -57,8 +58,13 @@ def f1_score(prediction: str, ground_truth: List[str]) -> float:
     # return f1, precision, recall
     return f1
 
+AnswerLen = ir_measures.define_byquery(
+    lambda qrels, res: len(res.iloc[0]['qanswer']),
+    name='AnswerLen', support_cutoff=False)
 
-import ir_measures
+AnswerZeroLen = ir_measures.define_byquery(
+    lambda qrels, res: 1 if len(res.iloc[0]['qanswer']) == 0 else 0,
+    name='AnswerZeroLen', support_cutoff=False)
 
 # we aggregate across multiple gold_answer values using max().
 F1 = ir_measures.define_byquery(
@@ -75,6 +81,54 @@ EM = ir_measures.define_byquery(
     name="EM",
 )
 
+
+def _rouge(measure : Literal['precision', 'recall', 'fmeaure'], type : Literal['rouge1', 'rouge2', 'rougeL'] ='rouge1', use_stemmer : bool = True):
+    from rouge_score import rouge_scorer
+    scorer = rouge_scorer.RougeScorer([type], use_stemmer=use_stemmer)
+
+    name = "ROUGE"
+    match type:
+        case "rouge1":
+            name += '1'
+        case "rouge2":
+            name += '2'
+        case "rougeL":
+            name += 'L'
+        case _:
+            raise ValueError("Unkown type %s" % type)
+
+    match measure:
+        case "precision":
+            name += "P"
+        case "recall":
+            name += "R"
+        case "fmeasure":
+            name += "F"
+        case _:
+            raise ValueError("Unkown measure %s" % type)
+
+    def _measure(qrels, res):
+        assert len(qrels) == 1
+        assert len(res) == 1        
+        res = scorer.score(
+            res.iloc[0]['qanswer'], 
+            qrels['gold_answer'].iloc[0][0] # [0] for the first answer in the array of gold_answer
+        )
+        return getattr(res[type], measure)
+    
+    return ir_measures.define_byquery(_measure, name=name, support_cutoff=False)
+
+ROUGE1P = _rouge('precision', 'rouge1')
+ROUGE1R = _rouge('recall', 'rouge1')
+ROUGE1F = _rouge('fmeasure', 'rouge1')
+
+ROUGE2P = _rouge('precision', 'rouge2')
+ROUGE2R = _rouge('recall', 'rouge2')
+ROUGE2F = _rouge('fmeasure', 'rouge2')
+
+ROUGELP = _rouge('precision', 'rougeL')
+ROUGELR = _rouge('recall', 'rougeL')
+ROUGELF = _rouge('fmeasure', 'rougeL')
 
 _bertscore_model = None
 def _bertscore(qrels, res, rel = 3, submeasure='f1', agg='max'):
@@ -110,7 +164,7 @@ def _bertscore(qrels, res, rel = 3, submeasure='f1', agg='max'):
 def BERTScore(rel=3, submeasure : str = 'f1', agg : str = 'max'):
     '''
     Implements BERTScore, a semantic measure of equivalence. This is defined to take a qrels dataframe with an additional text attribute,
-    and compare with the generated qanswers. 
+    and compare with the generated qanswers. NB: This is a function that returns a measure - it needs to be called.
 
     Arguments:
      - rel(int): Minimum label value for relevant qrels. Defaults to 3, which is the highest label in MSMARCO.

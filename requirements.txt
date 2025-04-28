@@ -7,3 +7,4 @@ accelerate
 torch
 fastchat
 psutil
+rouge_score
