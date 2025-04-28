@@ -46,6 +46,9 @@ class HuggingFaceBackend(Backend):
             .eval()
         )
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+            self._model.generation_config.pad_token_id = self.tokenizer.pad_token_id
 
         max_position_embeddings = getattr(
             self._model.config, "max_position_embeddings", None
