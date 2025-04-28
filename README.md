@@ -53,7 +53,7 @@ o1_monoT5.search("What are chemical reactions?")
 ```
 
 Try these frameworks out now with our example notebooks: 
- - [examples/search-r1.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipyn) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipynb)
+ - [examples/search-r1.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipynb)
  - [examples/search-o1.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipynb)
  - [examples/r1searcher.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/r1searcher.ipynb)
 
