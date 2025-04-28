@@ -102,7 +102,7 @@ class TextBackend(pt.Transformer):
         for chunk in chunked(queries, self.batch_size):
             out.extend(self.backend.generate(chunk))
         if not hasattr(out[0], "text"):
-            if not out[0] is str:
+            if out[0] is not str:
                 raise ValueError("Backend must return BackendOutput or str, not {}".format(type(out[0])))
         for i, o in zip(inp, out):
             i[self.output_field] = o.text
