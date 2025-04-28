@@ -4,7 +4,7 @@ from pyterrier_rag.backend._base import Backend
 
 class Backends(Enum):
     HF = "hf"
-    VBackend = "vBackend"
+    VBackend = "vllm"
     OPENAI = "openai"
 
 
@@ -28,4 +28,4 @@ def get_backend(backend_type: str, model_name: str, **Backend_kwargs) -> Backend
         raise ValueError(f"Unknown Backend type: {backend_type}")
 
 
-__all__ = ["BackendS", "get_Backend"]
+__all__ = ["Backends", "get_backend"]
