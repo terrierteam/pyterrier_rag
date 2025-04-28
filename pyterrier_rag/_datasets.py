@@ -59,9 +59,7 @@ pt.datasets.DATASET_MAP["rag:triviaqa"] = FlashRAGDataset(
         "test": "triviaqa/test.jsonl",
     }
 )
-pt.datasets.DATASET_MAP["rag:musique"] = FlashRAGDataset(
-    {"train": "musique/train.jsonl", "dev": "musique/dev.jsonl"}
-)
+pt.datasets.DATASET_MAP["rag:musique"] = FlashRAGDataset({"train": "musique/train.jsonl", "dev": "musique/dev.jsonl"})
 
 
 def _hotspot_files(dataset: Dataset, components: str, variant: str, **kwargs):
@@ -77,26 +75,18 @@ def _hotspot_files(dataset: Dataset, components: str, variant: str, **kwargs):
 
     import os
 
-    file = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "etc",
-        "rag_hotpotqa_wiki.files.txt")
+    file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "etc", "rag_hotpotqa_wiki.files.txt")
     with open(file, "rt") as f:
-        all_files = [
-            (name.strip().replace("/", "_"), tar_name + "#" + name.strip())
-            for name in f
-        ]
+        all_files = [(name.strip().replace("/", "_"), tar_name + "#" + name.strip()) for name in f]
     return all_files
 
 
 def _hotpotread_iterator(dataset):
-
     del_keys = ["charoffset_with_links", "text_with_links", "charoffset"]
     import bz2
     import json
 
     for filename in dataset.get_corpus():
-
         with bz2.open(filename, "rt") as f:
             for lineno, line in enumerate(f):
                 try:
@@ -129,9 +119,7 @@ HOTPOTQA_WIKI = {
     "corpus_iter": _hotpotread_iterator,
 }
 
-pt.datasets.DATASET_MAP["rag:hotpotqa_wiki"] = RemoteDataset(
-    "rag:hotpotqa_wiki", HOTPOTQA_WIKI
-)
+pt.datasets.DATASET_MAP["rag:hotpotqa_wiki"] = RemoteDataset("rag:hotpotqa_wiki", HOTPOTQA_WIKI)
 
 
 def _nq_read_iterator(dataset):
@@ -160,8 +148,7 @@ def _nq_read_iterator(dataset):
                         )
                     else:
                         raise RuntimeError(
-                            "Early JSON decoding error in file %s on line number %d, line %s"
-                            % (filename, lineno, line)
+                            "Early JSON decoding error in file %s on line number %d, line %s" % (filename, lineno, line)
                         ) from jse
 
 
@@ -184,9 +171,7 @@ def _2WikiMultihopQA_topics(self, component, variant):
     json_file, _ = self._get_one_file("raw_files", variant)
     all_data = pd.read_json(json_file)
     if component == "answers":
-        answers = all_data.rename(columns={"_id": "qid", "answer": "gold_answer"})[
-            ["qid", "type", "gold_answer"]
-        ]
+        answers = all_data.rename(columns={"_id": "qid", "answer": "gold_answer"})[["qid", "type", "gold_answer"]]
         return answers, "direct"
     rtr = []
     for id, idgroup in pt.tqdm(
@@ -200,9 +185,7 @@ def _2WikiMultihopQA_topics(self, component, variant):
                     "query": doc.question,
                     "docno": "%s_%02d" % (id, docpos),
                     "title": doc.context[0],
-                    "text": " ".join(
-                        doc.context[1]
-                    ),  # join the sentences into a single passage
+                    "text": " ".join(doc.context[1]),  # join the sentences into a single passage
                 }
             )
 
@@ -232,6 +215,4 @@ DROPBOX_2WikiMultihopQA = {
         # no answers in the test set
     },
 }
-pt.datasets.DATASET_MAP["rag:2wikimultihopqa"] = RemoteRAGDataset(
-    "rag:2wikimultihopqa", DROPBOX_2WikiMultihopQA
-)
+pt.datasets.DATASET_MAP["rag:2wikimultihopqa"] = RemoteRAGDataset("rag:2wikimultihopqa", DROPBOX_2WikiMultihopQA)

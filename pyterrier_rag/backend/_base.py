@@ -35,7 +35,7 @@ class Backend(pt.Transformer, ABC):
         generation_config: GenerationConfig = None,
         verbose: bool = False,
         device: Union[str, torch.device] = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__()
 
@@ -103,11 +103,7 @@ class TextBackend(pt.Transformer):
             out.extend(self.backend.generate(chunk))
         if not hasattr(out[0], "text"):
             if not out[0] is str:
-                raise ValueError(
-                    "Backend must return BackendOutput or str, not {}".format(
-                        type(out[0])
-                    )
-                )
+                raise ValueError("Backend must return BackendOutput or str, not {}".format(type(out[0])))
         for i, o in zip(inp, out):
             i[self.output_field] = o.text
         return inp
@@ -128,11 +124,7 @@ class LogitBackend(pt.Transformer):
         for chunk in chunked(queries, self.batch_size):
             out.extend(self.backend.generate(chunk))
         if not hasattr(out[0], "logits"):
-            raise ValueError(
-                "Backend must return BackendOutput to use LogitBackend, not {}".format(
-                    type(out[0])
-                )
-            )
+            raise ValueError("Backend must return BackendOutput to use LogitBackend, not {}".format(type(out[0])))
         if out[0].logits is None:
             raise ValueError("Backend must return logits to use LogitBackend")
         for i, o in zip(inp, out):

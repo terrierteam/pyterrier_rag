@@ -10,8 +10,7 @@ __all__ = [
     "TextBackend",
     "LogitBackend",
     "HuggingFaceBackend",
-    "StopWordCriteria"
-    "Seq2SeqLMBackend",
+    "StopWordCriteriaSeq2SeqLMBackend",
     "OpenAIBackend",
     "VLLMBackend",
     "get_Backend",

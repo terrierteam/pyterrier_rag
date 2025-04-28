@@ -35,9 +35,7 @@ class OpenAIBackend(Backend):
 
         self._key = api_key or os.environ.get("OPENAI_API_KEY")
         if self._key is None:
-            raise ValueError(
-                "api_key must be provided or set as an environment variable OPENAI_API_KEY"
-            )
+            raise ValueError("api_key must be provided or set as an environment variable OPENAI_API_KEY")
         openai.api_key = self._key
         self._model_name_or_path = model_name_or_path
         if is_tiktoken_availible():
@@ -64,6 +62,7 @@ class OpenAIBackend(Backend):
         **kwargs,
     ) -> List[int]:
         import openai
+
         trials = self.max_trials
         while True:
             if trials <= 0:

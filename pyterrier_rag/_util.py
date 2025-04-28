@@ -31,9 +31,7 @@ def push_queries(
     for query_idx in itertools.count():
         next_col = f"{base_column}_{query_idx}"
         if prev_col in cols:
-            rename_cols[prev_col] = (
-                next_col  # map e.g., query_0 to be renamed to query_1
-            )
+            rename_cols[prev_col] = next_col  # map e.g., query_0 to be renamed to query_1
             prev_col = next_col
         else:
             break
@@ -92,9 +90,7 @@ def find_maximum_push(inp: pd.DataFrame, base_column: str = "query") -> Tuple[st
     return maxcol, maxval
 
 
-def find_maximum_push_dict(
-    inp: Union[Iterable[dict], dict], base_column: str = "query"
-) -> Tuple[str, int]:
+def find_maximum_push_dict(inp: Union[Iterable[dict], dict], base_column: str = "query") -> Tuple[str, int]:
     def per_element(i: dict):
         cols = i.keys()
         maxcol = None
@@ -114,9 +110,9 @@ def find_maximum_push_dict(
 
 from typing import List, Union, Tuple, Optional, Callable, Any
 
+
 def intermediate_formatting(
-    inp: Union[str, Tuple, List, dict],
-    intermediate_format: Optional[Callable[..., str]] = None
+    inp: Union[str, Tuple, List, dict], intermediate_format: Optional[Callable[..., str]] = None
 ) -> str:
     """
     If an intermediate_format is provided, apply it:
@@ -181,6 +177,7 @@ def concat(
     texts = [to_text(x) for x in input_texts]
     return "\n".join(texts)
 
+
 def dataframe_concat(
     input_frame: pd.DataFrame = None,
     tokenizer: Any = None,
@@ -192,7 +189,6 @@ def dataframe_concat(
     relevant_fields: Optional[list] = ["text"],
     by_query: bool = False,
 ) -> Union[str, pd.DataFrame, callable]:
-
     def _concat(inp: pd.DataFrame) -> str:
         if max_elements > 0:
             inp = inp.iloc[:max_elements]
@@ -202,16 +198,9 @@ def dataframe_concat(
                 total_context = ""
                 for c in inp.itertuples():
                     if intermediate_format is not None:
-                        c = intermediate_format(
-                            {
-                                field: getattr(c, field, None)
-                                for field in relevant_fields
-                            }
-                        )
+                        c = intermediate_format({field: getattr(c, field, None) for field in relevant_fields})
                     else:
-                        c = " ".join(
-                            [getattr(c, field, None) for field in relevant_fields]
-                        )
+                        c = " ".join([getattr(c, field, None) for field in relevant_fields])
                     tokens = tokenizer.encode(c)
                     if len(tokens) > max_per_context:
                         tokens = tokens[:max_per_context]

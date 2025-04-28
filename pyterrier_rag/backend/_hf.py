@@ -41,18 +41,14 @@ class HuggingFaceBackend(Backend):
         self._model = (
             None
             if self._model_class is None
-            else self._model_class.from_pretrained(model_name_or_path, **model_args)
-            .to(self.device)
-            .eval()
+            else self._model_class.from_pretrained(model_name_or_path, **model_args).to(self.device).eval()
         )
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
             self._model.generation_config.pad_token_id = self.tokenizer.pad_token_id
 
-        max_position_embeddings = getattr(
-            self._model.config, "max_position_embeddings", None
-        )
+        max_position_embeddings = getattr(self._model.config, "max_position_embeddings", None)
         self.max_input_length = max_input_length or max_position_embeddings
 
         if generation_args is None:
@@ -68,7 +64,7 @@ class HuggingFaceBackend(Backend):
     @torch.no_grad()
     def generate(self, inps: Iterable[str], **kwargs) -> List[str]:
         assert self.model is not None, "Model is not loaded, instantiate a subclass of HFModel"
-        
+
         # Tokenize inputs
         inputs = self.tokenizer(
             inps,
@@ -78,19 +74,15 @@ class HuggingFaceBackend(Backend):
             max_length=self.max_input_length,
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
-        
+
         # Generate outputs
-        outputs = self.model.generate(
-            **inputs,
-            **self._generation_args,
-            **kwargs
-        )
-        
+        outputs = self.model.generate(**inputs, **self._generation_args, **kwargs)
+
         # Compute prompt lengths (non-padding tokens per input)
         pad_token_id = self.tokenizer.pad_token_id
-        input_ids = inputs['input_ids']
+        input_ids = inputs["input_ids"]
         prompt_lengths = (input_ids != pad_token_id).sum(dim=1).tolist()  # Count non-pad tokens
-        
+
         # Remove prompt tokens from generated outputs if needed
         if self._remove_prompt:
             # Only keep tokens generated beyond the prompt length
@@ -137,17 +129,12 @@ class StopWordCriteria(StoppingCriteria):
 
         self.stop_words = stop_words
         self.max_stop_word_size = max(
-            (
-                self.tokenizer.encode(word, return_tensors="pt").size(-1)
-                for word in stop_words
-            ),
+            (self.tokenizer.encode(word, return_tensors="pt").size(-1) for word in stop_words),
             default=0,
         )
         self.check_every = check_every
 
-    def __call__(
-        self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
-    ) -> bool:
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
         """
         Determines whether to stop generation based on the presence of stop words.
 
@@ -176,11 +163,7 @@ class StopWordCriteria(StoppingCriteria):
             max_new_tokens = (2 * self.max_stop_word_size) + self.check_every
             latest_tokens = input_ids[i, prompt_size:][-max_new_tokens:]
             if any(
-                [
-                    word
-                    in self.tokenizer.decode(latest_tokens, skip_special_tokens=True)
-                    for word in self.stop_words
-                ]
+                [word in self.tokenizer.decode(latest_tokens, skip_special_tokens=True) for word in self.stop_words]
             ):
                 results[i] = True
 

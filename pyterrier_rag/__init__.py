@@ -18,10 +18,14 @@ from pyterrier_rag.backend import (
 )
 
 __all__ = [
-    'Iterative', 'model', 'readers', 'measures', '_datasets',
-    'SearchO1',
-    'SearchR1',
-    'R1Searcher',
+    "Iterative",
+    "model",
+    "readers",
+    "measures",
+    "_datasets",
+    "SearchO1",
+    "SearchR1",
+    "R1Searcher",
     "OpenAIBackend",
     "HuggingFaceBackend",
     "Seq2SeqLMBackend",

@@ -38,9 +38,7 @@ PointwiseLLMJudgePrompt = prompt("""
 backend_obj, prompt_obj = None, None
 
 
-def llmjudge_fn(
-    qrels, res, backend_type: str, model_name: str, rel=3, agg="max"
-) -> int:
+def llmjudge_fn(qrels, res, backend_type: str, model_name: str, rel=3, agg="max") -> int:
     """
     LLMasJudge function to evaluate the prediction against the gold standard.
     """
@@ -103,9 +101,7 @@ def llmjudge_fn(
 
 def LLMasJudge(backend_type, model_name_or_path):
     return ir_measures.define_byquery(
-        lambda qrels, res: llmjudge_fn(
-            qrels, res, backend_type=backend_type, model_name=model_name_or_path
-        ),
+        lambda qrels, res: llmjudge_fn(qrels, res, backend_type=backend_type, model_name=model_name_or_path),
         name="LLMasJudge",
         support_cutoff=False,
     )

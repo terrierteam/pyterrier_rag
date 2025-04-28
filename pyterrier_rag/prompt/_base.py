@@ -38,21 +38,23 @@ class PromptTransformer(pt.Transformer):
         if type(self.instruction) is str:
             self.instruction = prompt(self.instruction)
         if self.model_name_or_path is not None:
-            self.conversation_template = get_conversation_template(self.model_name_or_path) or self.conversation_template
+            self.conversation_template = (
+                get_conversation_template(self.model_name_or_path) or self.conversation_template
+            )
         if self.conversation_template is None:
             self.conversation_template = get_conv_template("raw")
             self.raw_instruction = True
         if self.system_message is not None:
             # TODO: Set flag for if model supports system message
             self.conversation_template.set_system_message(self.system_message)
-        
+
         roles = self.conversation_template.roles
         if len(roles) < 2:
             self.user_role, self.llm_role = "user", "assistant"
         else:
             self.user_role = roles[0]
             self.llm_role = roles[1]
-        
+
         self.output_attribute = (
             {
                 "openai": "to_openai_api_messages",
@@ -104,7 +106,7 @@ class PromptTransformer(pt.Transformer):
         query = inp[0].get("query", None)
         fields = {k: v for k, v in inp[0].items() if k in self.input_fields}
         if any([f not in fields for f in self.input_fields]):
-            message = f'Expected {self.input_fields} but recieved {fields}'
+            message = f"Expected {self.input_fields} but recieved {fields}"
             raise ValueError(message)
         prompt = self.create_prompt(fields)
         return [{self.output_field: prompt, "qid": qid, "query_0": query}]

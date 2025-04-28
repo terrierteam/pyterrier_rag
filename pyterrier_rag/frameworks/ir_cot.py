@@ -36,8 +36,7 @@ class IRCOT(pt.Transformer):
         context_aggregation: Optional[pt.Transformer] = None,
         max_docs: int = 10,
         max_iterations: int = -1,
-        exit_condition: callable = lambda x: "so the answer is"
-        in x["qanswer"].iloc[0].lower(),
+        exit_condition: callable = lambda x: "so the answer is" in x["qanswer"].iloc[0].lower(),
     ):
         self.retriever = retriever % max_docs
         self.backend = backend
@@ -53,7 +52,6 @@ class IRCOT(pt.Transformer):
         self.__post_init__()
 
     def __post_init__(self):
-
         if self.prompt is None:
             self.prompt = PromptTransformer(**self._make_default_prompt_config())
 
@@ -66,21 +64,21 @@ class IRCOT(pt.Transformer):
 
     def _make_default_prompt_config(self):
         return {
-            'model_name_or_path': self.backend.model_name_or_path,
-            'system_message': ircot_system_message,
-            'instruction': ircot_prompt,
-            'output_field': "qanswer",
-            'input_fields': ["query", "context", "prev"],
+            "model_name_or_path": self.backend.model_name_or_path,
+            "system_message": ircot_system_message,
+            "instruction": ircot_prompt,
+            "output_field": "qanswer",
+            "input_fields": ["query", "context", "prev"],
         }
 
     def _make_default_context_config(self):
         return {
-            'in_fields': ["text"],
-            'out_field': "context",
-            'tokenizer': self.backend.tokenizer,
-            'max_length': self.backend.max_input_length,
-            'max_elements': self.max_docs,
-            'intermediate_format': ircot_example_format,
+            "in_fields": ["text"],
+            "out_field": "context",
+            "tokenizer": self.backend.tokenizer,
+            "max_length": self.backend.max_input_length,
+            "max_elements": self.max_docs,
+            "intermediate_format": ircot_example_format,
         }
 
     @pta.transform.by_query(add_ranks=False)
@@ -92,9 +90,7 @@ class IRCOT(pt.Transformer):
         qid = inp[0]["qid"]
         query = inp[0]["query"]
         for row in inp:
-            assert (
-                row["query"] == query
-            ), "All rows must have the same query for `transform_by_query`"
+            assert row["query"] == query, "All rows must have the same query for `transform_by_query`"
 
         prev = []
         top_k_docs = self.retriever.search(query)
@@ -111,9 +107,7 @@ class IRCOT(pt.Transformer):
                 break
             else:
                 prev.append(output[self.output_field].iloc[0])
-                top_k_docs.append(
-                    self.retriever.search(output[self.output_field].iloc[0])
-                )
+                top_k_docs.append(self.retriever.search(output[self.output_field].iloc[0]))
                 top_k_docs.sort_values(by="score", ascending=False, inplace=True)
                 top_k_docs.drop_duplicates(subset=["docno"], inplace=True)
                 top_k_docs = top_k_docs.head(self.max_docs)

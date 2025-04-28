@@ -5,11 +5,13 @@ import pyterrier_alpha as pta
 
 from pyterrier_rag._util import concat
 
+
 def score_sort(inp: List[dict]):
     if "score" in inp[0]:
         return sorted(inp, key=lambda x: x["score"], reverse=True)
     else:
         return inp
+
 
 class ContextAggregationTransformer(pt.Transformer):
     def __init__(
@@ -56,7 +58,7 @@ class ContextAggregationTransformer(pt.Transformer):
                 raise ValueError("Cannot retrieve text without a text loader")
             else:
                 for d, t in zip(relevant, inp):
-                    d["text"] = self.text_loader(t['docno'])
+                    d["text"] = self.text_loader(t["docno"])
 
         if self.aggregate_func is not None:
             context = self.aggregate_func(relevant)
