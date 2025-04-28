@@ -112,59 +112,74 @@ def find_maximum_push_dict(
     return map(per_element, inp)
 
 
+from typing import List, Union, Tuple, Optional, Callable, Any
+
 def intermediate_formatting(
-    inp: Union[str, Tuple, List, dict], intermediate_format: Optional[callable] = None
+    inp: Union[str, Tuple, List, dict],
+    intermediate_format: Optional[Callable[..., str]] = None
 ) -> str:
+    """
+    If an intermediate_format is provided, apply it:
+      - For dict inputs, unpack as keyword args.
+      - For tuple/list inputs, unpack as positional args.
+      - For other inputs, pass directly.
+    If no intermediate_format, and inp is a dict, return its 'text' field or empty string.
+    Otherwise return inp unmodified (as string).
+    """
     if intermediate_format is not None:
         if isinstance(inp, dict):
             return intermediate_format(**inp)
-        elif isinstance(inp, list) or isinstance(inp, tuple):
+        if isinstance(inp, (list, tuple)):
             return intermediate_format(*inp)
-        else:
-            return intermediate_format(inp)
-    return inp
+        return intermediate_format(inp)
+
+    # Default behavior when no formatter:
+    if isinstance(inp, dict):
+        return str(inp.get("text", ""))
+    return str(inp)
 
 
 def concat(
     input_texts: List[Union[str, Tuple, List, dict]],
-    intermediate_format: Optional[callable] = None,
+    intermediate_format: Optional[Callable[..., str]] = None,
     tokenizer: Any = None,
     max_length: int = -1,
     max_elements: int = -1,
     max_per_context: int = 512,
     truncation_rate: int = 50,
 ) -> str:
+    """
+    Concatenate input_texts into a single string, applying optional formatting and token-based truncation.
+
+    - If intermediate_format is None, dicts default to their 'text' field.
+    - Tokenizer-based path enforces per-context and overall token limits via truncation.
+    """
     if max_elements > 0:
         input_texts = input_texts[:max_elements]
+
+    def to_text(element: Union[str, Tuple, List, dict]) -> str:
+        return intermediate_formatting(element, intermediate_format)
+
+    # When a tokenizer is provided, enforce token limits
     if tokenizer is not None:
         while True:
-            total_context = ""
-            for c in input_texts:
-                c = intermediate_formatting(c, intermediate_format)
-                tokens = tokenizer.encode(c)
-                if len(tokens) > max_per_context:
+            segments: List[str] = []
+            for elem in input_texts:
+                text = to_text(elem)
+                tokens = tokenizer.encode(text)
+                if max_per_context > 0 and len(tokens) > max_per_context:
                     tokens = tokens[:max_per_context]
                     text = tokenizer.decode(tokens)
-                total_context += text + "\n"
-            if len(tokenizer.encode(total_context)) <= max_length:
-                break
-            else:
-                max_per_context -= truncation_rate
-    else:
-        if intermediate_format is not None:
-            total_context = "\n".join(
-                map(
-                    lambda x: intermediate_formatting(x, intermediate_format),
-                    input_texts,
-                )
-            )
-        else:
-            if not isinstance(input_texts[0], str):
-                input_texts = ["\n".join(list(t)) for t in input_texts]
-            total_context = "\n".join(input_texts)
+                segments.append(text)
+            combined = "\n".join(segments)
+            if max_length < 0 or len(tokenizer.encode(combined)) <= max_length:
+                return combined
+            # reduce per-context limit and retry
+            max_per_context = max(0, max_per_context - truncation_rate)
 
-    return total_context
-
+    # No tokenizer: simple join
+    texts = [to_text(x) for x in input_texts]
+    return "\n".join(texts)
 
 def dataframe_concat(
     input_frame: pd.DataFrame = None,

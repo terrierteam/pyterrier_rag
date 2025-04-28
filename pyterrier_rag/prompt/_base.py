@@ -13,7 +13,6 @@ class PromptTransformer(pt.Transformer):
         instruction: Union[callable, str] = None,
         model_name_or_path: str = None,
         system_message: Optional[str] = None,
-        text_loader: Optional[callable] = None,
         conversation_template: Optional[Any] = None,
         api_type: Optional[str] = None,
         output_field: str = "prompt",
@@ -25,7 +24,6 @@ class PromptTransformer(pt.Transformer):
         self.instruction = instruction
         self.model_name_or_path = model_name_or_path
         self.system_message = system_message
-        self.text_loader = text_loader
         self.output_field = output_field
         self.input_fields = input_fields
         self.conversation_template = conversation_template
@@ -47,6 +45,13 @@ class PromptTransformer(pt.Transformer):
         if self.system_message is not None:
             # TODO: Set flag for if model supports system message
             self.conversation_template.set_system_message(self.system_message)
+        
+        roles = self.conversation_template.roles
+        if len(roles) < 2:
+            self.user_role, self.llm_role = "user", "assistant"
+        else:
+            self.user_role = roles[0]
+            self.llm_role = roles[1]
         
         self.output_attribute = (
             {
@@ -86,7 +91,7 @@ class PromptTransformer(pt.Transformer):
         instruction = self.instruction(**fields)
         if self.raw_instruction:
             return instruction
-        current_prompt.append_message("user", instruction)
+        current_prompt.append_message(self.user_role, instruction)
         return self.to_output(current_prompt)
 
     @pta.transform.by_query(add_ranks=False)
@@ -97,20 +102,11 @@ class PromptTransformer(pt.Transformer):
         inp = list(inp)
         qid = inp[0].get("qid", None)
         query = inp[0].get("query", None)
-        if query is None and self.text_loader is not None:
-            query = self.text_loader(qid)
-            for i in inp:
-                i["query"] = query
         fields = {k: v for k, v in inp[0].items() if k in self.input_fields}
-        if (
-            "text" in self.input_fields
-            and "text" not in fields
-            and self.text_loader is not None
-        ):
-            for i in inp:
-                fields["text"] = self.text_loader(i["docno"])
+        if any([f not in fields for f in self.input_fields]):
+            message = f'Expected {self.input_fields} but recieved {fields}'
+            raise ValueError(message)
         prompt = self.create_prompt(fields)
-
         return [{self.output_field: prompt, "qid": qid, "query_0": query}]
 
 

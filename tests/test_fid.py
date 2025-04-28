@@ -19,10 +19,9 @@ class TestPyterrier_rag(unittest.TestCase):
         model = Seq2SeqLMBackend(model_name_or_path='google/flan-t5-base')
         reader = Reader(model)
         context_transformer = ContextAggregationTransformer()
-        pipe = context_transformer >> reader
-        self._test_fid(pipe)
+        self._test_fid(reader, context=context_transformer)
 
-    def _test_fid(self, model):
+    def _test_fid(self, model, context=None):
         data = [
                 {
                     "qid": "0",
@@ -41,11 +40,18 @@ class TestPyterrier_rag(unittest.TestCase):
             ]
 
         # now check without titles
-        result = model(data)
-        self.assertIn("China", result[0]['qanswer'])
+        if context is None:
+            result = model(data)
+            self.assertIn("China", result[0]['qanswer'])
 
-        # test with titles
-        data[0]['title'] = "USA"
-        data[1]['title'] = "China"
-        result = model(data)
-        self.assertIn("China", result[0]['qanswer'])
+            # test with titles
+            data[0]['title'] = "USA"
+            data[1]['title'] = "China"
+            result = model(data)
+            self.assertIn("China", result[0]['qanswer'])
+        else:
+            aggregate = context(data)
+            self.assertIn("Beijing", aggregate[0]['context'])
+            result = model(aggregate)
+            self.assertIn("Beijing", result[0]['prompt'])
+            self.assertIn("China", result[0]['qanswer'])

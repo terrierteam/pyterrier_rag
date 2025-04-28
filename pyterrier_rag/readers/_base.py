@@ -8,7 +8,7 @@ from pyterrier_rag.backend import Backend
 from pyterrier_rag.prompt import PromptTransformer
 
 
-GENERIC_PROMPT = "Use the context information to answer the Question: \n Context: {context} \n Question: {query} \n Answer:"
+GENERIC_PROMPT = "Use the context information to answer the Question: \n Context: {{ context }} \n Question: {{ query }} \n Answer:"
 
 
 class Reader(pt.Transformer):

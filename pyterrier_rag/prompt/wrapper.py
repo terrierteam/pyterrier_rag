@@ -6,5 +6,5 @@ def prompt(template: str):
 
     def render(**kwargs):
         return obj.render(**kwargs)
-    
+
     return render
