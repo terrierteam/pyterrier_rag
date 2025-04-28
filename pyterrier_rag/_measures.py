@@ -4,7 +4,6 @@ from typing import List, Literal
 import ir_measures
 
 import regex
-import ir_measures
 import pyterrier_alpha as pta
 
 

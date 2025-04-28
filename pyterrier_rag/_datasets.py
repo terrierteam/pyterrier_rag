@@ -1,8 +1,9 @@
-from typing import Dict, Iterable, Optional
+from typing import Dict, Optional
 from warnings import warn
 
 import pandas as pd
 import pyterrier as pt
+
 from pyterrier.datasets import Dataset, RemoteDataset
 
 # TODO requires transformers to be installed

@@ -1,5 +1,6 @@
-from typing import Union, Iterable, Tuple, List, Optional, Any
+from typing import Union, Iterable, Tuple, List, Optional, Any, Callable
 import pandas as pd
+import pyterrier_alpha as pta
 import itertools
 
 
@@ -106,9 +107,6 @@ def find_maximum_push_dict(inp: Union[Iterable[dict], dict], base_column: str = 
     if isinstance(inp, dict):
         return per_element(inp)
     return map(per_element, inp)
-
-
-from typing import List, Union, Tuple, Optional, Callable, Any
 
 
 def intermediate_formatting(
