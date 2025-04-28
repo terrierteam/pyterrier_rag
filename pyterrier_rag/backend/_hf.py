@@ -62,7 +62,7 @@ class HuggingFaceBackend(Backend):
         self.model = self._model
 
     @torch.no_grad()
-    def generate(self, inps: Iterable[str], **kwargs) -> List[str]:
+    def generate(self, inps: Iterable[str], **kwargs) -> List[BackendOutput]:
         assert self.model is not None, "Model is not loaded, instantiate a subclass of HFModel"
 
         # Tokenize inputs

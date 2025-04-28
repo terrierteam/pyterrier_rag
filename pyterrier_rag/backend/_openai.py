@@ -87,7 +87,7 @@ class OpenAIBackend(Backend):
             completion = completion["choices"][0]["message"]["content"]
         return completion
 
-    def generate(self, prompt: List[dict], **kwargs) -> List[str]:
+    def generate(self, prompt: List[dict], **kwargs) -> List[BackendOutput]:
         response = self._call_completion(
             messages=prompt,
             return_text=True,

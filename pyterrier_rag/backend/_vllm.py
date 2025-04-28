@@ -62,7 +62,7 @@ class VLLMBackend(ragBackend):
         self.generation_args = generation_args
         self.to_params = SamplingParams
 
-    def generate(self, inps: Iterable[str], **kwargs) -> Iterable[str]:
+    def generate(self, inps: Iterable[str], **kwargs) -> List[BackendOutput]:
         args = self.to_params(**self.generation_args, **kwargs)
         responses = self.model.generate(inps, args)
         logits = map(lambda x: x.outputs[0].logprobs, responses)
