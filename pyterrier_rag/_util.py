@@ -4,7 +4,7 @@ import pyterrier_alpha as pta
 import itertools
 
 
-def push_queries(
+def push_column(
     df: pd.DataFrame,
     *,
     keep_original: bool = False,
@@ -12,12 +12,12 @@ def push_queries(
     base_column: str = "query",
 ) -> pd.DataFrame:
     """
-    Changes a dataframe such that the "query" column becomes "query_0", and any
-    "query_0" columns becames "query_1" etc.
+    Changes a dataframe such that the selected column becomes "<column>_0", and any
+    "<column>_0" columns becames "<column>_1" etc.
 
     Arguments:
-        df: Dataframe with a "query" column
-        keep_original: if True, the query column is also left unchanged. Useful for client code.
+        df: Dataframe with a "<column>" column
+        keep_original: if True, the <column> column is also left unchanged. Useful for client code.
             Defaults to False.
         inplace: if False, a copy of the dataframe is returned. If True, changes are made to the
             supplied dataframe. Defaults to False.
@@ -42,7 +42,7 @@ def push_queries(
     return df
 
 
-def push_queries_dict(
+def push_columns_dict(
     inp: Union[Iterable[dict], dict],
     keep_original: bool = False,
     base_column: str = "query",
