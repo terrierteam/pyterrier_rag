@@ -8,6 +8,21 @@ from fastchat.conversation import get_conv_template
 
 
 class PromptTransformer(pt.Transformer):
+    """
+    Transformer that constructs and formats prompts for conversational LLMs.
+
+    Parameters:
+        instruction (callable|str): Template or function returning the instruction segment.
+        model_name_or_path (str, optional): Model identifier for selecting conversation template.
+        system_message (str, optional): System context message for the conversation.
+        conversation_template (Any, optional): Preconfigured conversation template.
+        api_type (str, optional): API format: 'openai','gemini','vertex','reka'.
+        output_field (str): Field name to store the generated prompt.
+        input_fields (List[str]): Input record fields required to build the prompt.
+        expects_logits (bool): Indicator for logit-based backends.
+        answer_extraction (callable, optional): Function to parse model outputs.
+        raw_instruction (bool): If True, returns raw instruction without template.
+    """
     def __init__(
         self,
         instruction: Union[callable, str] = None,

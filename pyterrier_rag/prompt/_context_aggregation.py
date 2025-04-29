@@ -14,6 +14,27 @@ def score_sort(inp: List[dict]):
 
 
 class Concatenator(pt.Transformer):
+    """
+    Transformer that concatenates specified fields from document records into a context string.
+
+    At query time, orders, loads text (if needed), and aggregates records into a single context.
+
+    Parameters:
+        in_fields (List[str]): Fields to extract from each record.
+        out_field (str): Name of the output context field.
+        text_loader (callable, optional): Function to load document text by doc ID.
+        intermediate_format (callable, optional): Formatter for individual records.
+        tokenizer (Any, optional): Tokenizer used for length-based truncation.
+        max_length (int): Max total token length of the context.
+        max_elements (int): Max number of records to include.
+        max_per_context (int): Max tokens per record.
+        truncation_rate (int): Token drop rate during truncation.
+        aggregate_func (callable, optional): Custom aggregation function.
+        ordering_func (callable): Record ordering function before aggregation.
+
+    Raises:
+        ValueError: If 'text' is in in_fields but no text_loader is set.
+    """
     def __init__(
         self,
         in_fields: Optional[List[str]] = ["text"],

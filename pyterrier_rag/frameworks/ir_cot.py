@@ -26,6 +26,23 @@ ircot_example_format = prompt("""
 
 
 class IRCOT(pt.Transformer):
+    """
+    Transformer that interleaves retrieval and chain-of-thought reasoning.
+
+    At each iteration, retrieves context documents, generates a single reasoning "thought",
+    and appends it until the exit condition is satisfied or max_iterations is reached.
+
+    Parameters:
+        retriever (pt.Transformer): Base retriever for fetching top-k documents.
+        backend (Backend): Language model backend for generating reasoning steps.
+        input_field (str): Field name for input queries (default 'query').
+        output_field (str): Field name for generated answers (default 'qanswer').
+        prompt (Optional[pt.Transformer]): Custom prompt transformer; uses default if None.
+        context_aggregation (Optional[pt.Transformer]): Processor to aggregate document texts; uses default if None.
+        max_docs (int): Number of documents to retrieve per iteration (default 10).
+        max_iterations (int): Maximum reasoning steps; -1 for unlimited (default -1).
+        exit_condition (callable): Function that takes the current output DataFrame and returns True to stop.
+    """
     def __init__(
         self,
         retriever: pt.Transformer,

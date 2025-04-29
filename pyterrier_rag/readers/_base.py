@@ -14,6 +14,20 @@ GENERIC_PROMPT = (
 
 
 class Reader(pt.Transformer):
+    """
+    Transformer that generates answers from context and queries using an LLM backend.
+
+    Combines a PromptTransformer with a Backend to produce text or logits,
+    then applies answer extraction to return final responses.
+
+    Parameters:
+        backend (Backend or str): A Backend instance or model identifier string.
+        prompt (PromptTransformer or str): Prompt template or raw instruction.
+        output_field (str): Field name in the output DataFrame for answers.
+
+    Raises:
+        ValueError: If the prompt expects logits but the backend does not support logits.
+    """
     def __init__(
         self,
         backend: Union[Backend, str],

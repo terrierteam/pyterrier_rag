@@ -12,6 +12,20 @@ from pyterrier_rag.backend._base import Backend, BackendOutput
 
 
 class HuggingFaceBackend(Backend):
+    """
+        Backend implementation using HuggingFace Transformer models for text and logit generation.
+        
+        Parameters:
+            model_name_or_path (str): Identifier or path of the pretrained model.
+            model_args (dict): Arguments passed to `from_pretrained` for model instantiation.
+            output_format (str): Format for text output (e.g., 'text').
+            generation_args (dict): Parameters controlling text generation.
+            batch_size (int): Number of inputs to process per batch.
+            max_input_length (int): Maximum token length for inputs (defaults to model config).
+            max_new_tokens (int): Maximum number of tokens to generate per input.
+            verbose (bool): Flag to enable verbose logging.
+            **kwargs: Additional keyword arguments passed to `Backend` base class.
+        """
     _model_class = AutoModelForCausalLM
     _support_logits = True
     _logit_type = "dense"

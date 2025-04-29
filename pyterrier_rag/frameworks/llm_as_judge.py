@@ -40,7 +40,24 @@ backend_obj, prompt_obj = None, None
 
 def llmjudge_fn(qrels, res, backend_type: str, model_name: str, rel=3, agg="max") -> int:
     """
-    LLMasJudge function to evaluate the prediction against the gold standard.
+    Evaluate system output against references using an LLM as judge.
+
+    Creates evaluation prompts, invokes the backend model, parses integer ratings, and aggregates.
+
+    Parameters:
+        qrels (DataFrame): Contains columns 'query_id', 'relevance', and 'text' for references.
+        res (DataFrame): Contains columns 'query_id' and 'qanswer' for predictions.
+        backend_type (str): Identifier of the backend (e.g., 'openai', 'hf').
+        model_name (str): Model name or path for the backend.
+        rel (int): Minimum relevance threshold for references (default 3).
+        agg (str): Aggregation method: 'max', 'min', 'avg', 'sum', or 'none'.
+
+    Returns:
+        int or List[int]: Aggregated score or list of scores if agg='none'.
+
+    Raises:
+        AssertionError: If required columns are missing or inputs are empty.
+        ValueError: If an unknown aggregation method is specified.
     """
 
     pta.validate.columns(qrels, includes=["query_id", "relevance", "text"])
@@ -100,6 +117,16 @@ def llmjudge_fn(qrels, res, backend_type: str, model_name: str, rel=3, agg="max"
 
 
 def LLMasJudge(backend_type, model_name_or_path):
+    """
+    Create an `ir_measures` by-query measure using an LLM as the judge.
+
+    Parameters:
+        backend_type (str): Identifier of the backend.
+        model_name_or_path (str): Model name or path.
+
+    Returns:
+        Measure: An `ir_measures` by-query measure invoking `llmjudge_fn`.
+    """
     return ir_measures.define_byquery(
         lambda qrels, res: llmjudge_fn(qrels, res, backend_type=backend_type, model_name=model_name_or_path),
         name="LLMasJudge",

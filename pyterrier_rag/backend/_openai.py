@@ -7,6 +7,20 @@ from pyterrier_rag.backend._base import Backend, BackendOutput
 
 
 class OpenAIBackend(Backend):
+    """
+    Backend using OpenAI ChatCompletion.
+
+    Parameters:
+        model_name_or_path (str): OpenAI model identifier.
+        api_key (str, optional): API key or set via OPENAI_API_KEY env var.
+        generation_args (dict, optional): Params for ChatCompletion.create.
+        batch_size (int): Prompts per batch.
+        max_input_length (int): Max prompt tokens.
+        max_new_tokens (int): Max tokens to generate.
+        max_trials (int): Retry attempts for API errors.
+        verbose (bool): Enable verbose logging.
+        **kwargs: Passed to Backend base class.
+    """
     _api_type = "openai"
 
     def __init__(

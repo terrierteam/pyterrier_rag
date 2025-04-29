@@ -21,6 +21,23 @@ def get_logits_from_dict(d: List[dict], tokenizer):
 
 
 class VLLMBackend(ragBackend):
+    """
+    Backend implementation using the vLLM library for text generation and sparse logits.
+
+    Parameters:
+        model_name_or_path (str): Identifier or path of the vLLM model.
+        model_args (dict, optional): Keyword arguments for LLM instantiation.
+        output_format (str): Desired output format (default 'text').
+        generation_args (dict, optional): Parameters for sampling (e.g., max_tokens, temperature).
+        batch_size (int): Prompts to process per batch (inherited).
+        max_input_length (int): Maximum tokens per input prompt (inherited).
+        max_new_tokens (int): Tokens to generate per prompt (inherited).
+        verbose (bool): Enable verbose output.
+        **kwargs: Additional parameters forwarded to the base Backend class.
+
+    Raises:
+        ImportError: If the vllm library is unavailable.
+    """
     _logit_type = "sparse"
     _support_logits = True
     _remove_prompt = True

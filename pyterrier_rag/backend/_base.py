@@ -17,6 +17,31 @@ class BackendOutput:
 
 
 class Backend(pt.Transformer, ABC):
+    """
+    Abstract base class for model-backed Transformers in PyTerrier.
+
+    Subclasses must implement the raw generation logic (_raw_generate) and the
+    high-level generate method. Supports optional logit extraction and prompt
+    trimming.
+
+    Parameters:
+        input_field (str): Name of the input field carrying the prompt text.
+        output_field (str): Name of the output field to populate with results.
+        output_format (str): Desired format for text outputs (e.g., 'text').
+        batch_size (int): Number of prompts to process per batch.
+        max_input_length (int): Maximum token length for each input prompt.
+        max_new_tokens (int): Maximum number of tokens to generate.
+        generation_config (GenerationConfig): HuggingFace generation settings.
+        verbose (bool): Flag to enable detailed logging.
+        device (Union[str, torch.device]): Device for model execution.
+    Attributes:
+        _model_name_or_path: model name or checkpoint directory
+        _support_logits (bool): Flag indicating logit support.
+        _logit_type (str): Type of logits produced.
+        _api_type (str): If using API do not return string
+        _remove_prompt (bool): Whether to strip prompt tokens from decoded output.
+    """
+    
     _model_name_or_path = None
     _support_logits = False
     _logit_type = None
