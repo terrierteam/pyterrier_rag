@@ -102,7 +102,7 @@ class Backend(pt.Transformer, ABC):
     def logit_generator(self):
         if not self.return_logits:
             raise ValueError("Cannot return logits as it is disabled")
-        if self._logit_type is None:
+        if not self._support_logits:
             raise ValueError("This model cannot return logits")
         return LogitBackend(self)
 
