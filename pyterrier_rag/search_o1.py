@@ -7,8 +7,7 @@ from typing import List, Dict, Iterable
 
 import pyterrier as pt
 import pyterrier_alpha as pta
-from pyterrier_rag.readers import CausalLMReader, StopWordCriteria
-
+from pyterrier_rag.backend import HuggingFaceBackend, StopWordCriteria
 
 # Define special tokens
 BEGIN_SEARCH_QUERY = "<|begin_search_query|>"
@@ -229,7 +228,7 @@ class SearchO1(pt.Transformer):
     def __init__(
         self, 
         retriever : pt.Transformer, 
-        generator: CausalLMReader,
+        generator: HuggingFaceBackend,
         max_turn: int=10, 
         max_retrieval_step: int=5,
         topk: int=10, 

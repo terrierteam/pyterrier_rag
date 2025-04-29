@@ -4,7 +4,7 @@ import pyterrier_alpha as pta
 import itertools
 
 
-def push_column(
+def push_columns(
     df: pd.DataFrame,
     *,
     keep_original: bool = False,
