@@ -14,7 +14,7 @@ from pyterrier_rag.backend._base import Backend, BackendOutput
 class HuggingFaceBackend(Backend):
     """
         Backend implementation using HuggingFace Transformer models for text and logit generation.
-        
+
         Parameters:
             model_name_or_path (str): Identifier or path of the pretrained model.
             model_args (dict): Arguments passed to `from_pretrained` for model instantiation.
@@ -40,6 +40,7 @@ class HuggingFaceBackend(Backend):
         batch_size: int = 4,
         max_input_length: int = None,
         max_new_tokens: int = 32,
+        return_logits: bool = False,
         verbose: bool = False,
         **kwargs,
     ):
@@ -47,6 +48,7 @@ class HuggingFaceBackend(Backend):
             output_format=output_format,
             batch_size=batch_size,
             max_new_tokens=max_new_tokens,
+            return_logits=return_logits,
             generation_config=None,
             verbose=verbose,
             **kwargs,
@@ -90,7 +92,7 @@ class HuggingFaceBackend(Backend):
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         # Generate outputs
-        outputs = self.model.generate(**inputs, **self._generation_args, **kwargs)
+        outputs = self.model.generate(**inputs, return_dict_in_generate=True, output_scores=self.return_logits, **self._generation_args, **kwargs)
 
         # Compute prompt lengths (non-padding tokens per input)
         pad_token_id = self.tokenizer.pad_token_id
@@ -107,10 +109,10 @@ class HuggingFaceBackend(Backend):
 
         # Decode outputs
         texts = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
-
+        logits = output['logits']
         return [
-            BackendOutput(text=text, logits=outputs, prompt_length=length)
-            for text, length in zip(texts, prompt_lengths)
+            BackendOutput(text=text, logits=logits[i], prompt_length=length)
+            for i, text, length in enumerate(zip(texts, prompt_lengths))
         ]
 
 

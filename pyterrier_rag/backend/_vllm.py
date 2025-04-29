@@ -51,6 +51,7 @@ class VLLMBackend(ragBackend):
         batch_size: int = 4,
         max_input_length: int = 512,
         max_new_tokens: int = 32,
+        return_logits: bool = True,
         verbose: bool = False,
         **kwargs,
     ):
@@ -59,6 +60,7 @@ class VLLMBackend(ragBackend):
             batch_size=batch_size,
             max_input_length=max_input_length,
             max_new_tokens=max_new_tokens,
+            return_logits=return_logits,
             generation_config=None,
             verbose=verbose,
             **kwargs,
@@ -75,14 +77,18 @@ class VLLMBackend(ragBackend):
                 "max_tokens": self.max_new_tokens,
                 "temperature": 1.0,
             }
-        generation_args["logprobs"] = 20
+        if self.return_logits:
+            generation_args["logprobs"] = 20
         self.generation_args = generation_args
         self.to_params = SamplingParams
 
     def generate(self, inps: Iterable[str], **kwargs) -> List[BackendOutput]:
         args = self.to_params(**self.generation_args, **kwargs)
         responses = self.model.generate(inps, args)
-        logits = map(lambda x: x.outputs[0].logprobs, responses)
         text = map(lambda x: x.outputs[0].text, responses)
 
-        return [BackendOutput(text=t, logits=l) for t, l in zip(text, logits)]
+        if self.return_logits
+            logits = map(lambda x: x.outputs[0].logprobs, responses)
+
+            return [BackendOutput(text=t, logits=l) for t, l in zip(text, logits)]
+        return [BackendOutput(text=t) for t in text]

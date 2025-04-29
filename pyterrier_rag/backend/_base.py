@@ -57,6 +57,7 @@ class Backend(pt.Transformer, ABC):
         batch_size: int = 4,
         max_input_length: int = 512,
         max_new_tokens: int = 32,
+        return_logits: bool = False,
         generation_config: GenerationConfig = None,
         verbose: bool = False,
         device: Union[str, torch.device] = None,
@@ -76,6 +77,7 @@ class Backend(pt.Transformer, ABC):
         self.batch_size = batch_size
         self.max_input_length = max_input_length
         self.max_new_tokens = max_new_tokens
+        self.return_logits = return_logits
         self.verbose = verbose
         self.kwargs = kwargs
 
@@ -98,6 +100,10 @@ class Backend(pt.Transformer, ABC):
         return TextBackend(self)
 
     def logit_generator(self):
+        if not self.return_logits:
+            raise ValueError("Cannot return logits as it is disabled")
+        if self._logit_type is None:
+            raise ValueError("This model cannot return logits")
         return LogitBackend(self)
 
     def _raw_generate(self, tokenized_sequences: Iterable[dict]) -> List[str]:

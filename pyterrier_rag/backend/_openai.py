@@ -31,6 +31,7 @@ class OpenAIBackend(Backend):
         batch_size: int = 4,
         max_input_length: int = 512,
         max_new_tokens: int = 32,
+        return_logits: bool = False,
         max_trials: int = 10,
         verbose: bool = False,
         **kwargs,
@@ -40,6 +41,7 @@ class OpenAIBackend(Backend):
             max_input_length=max_input_length,
             max_new_tokens=max_new_tokens,
             generation_config=None,
+            return_logits=return_logits,
             verbose=verbose,
             **kwargs,
         )
