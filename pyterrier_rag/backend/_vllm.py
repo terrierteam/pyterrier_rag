@@ -87,7 +87,7 @@ class VLLMBackend(ragBackend):
         responses = self.model.generate(inps, args)
         text = map(lambda x: x.outputs[0].text, responses)
 
-        if self.return_logits
+        if self.return_logits:
             logits = map(lambda x: x.outputs[0].logprobs, responses)
 
             return [BackendOutput(text=txt, logits=logit) for txt, logit in zip(text, logits)]

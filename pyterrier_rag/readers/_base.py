@@ -1,8 +1,6 @@
 from typing import Union
 import pandas as pd
 import pyterrier as pt
-import torch
-from typing import Union
 
 from pyterrier_rag.backend import Backend
 from pyterrier_rag.prompt import PromptTransformer
