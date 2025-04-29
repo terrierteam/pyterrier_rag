@@ -109,7 +109,7 @@ class HuggingFaceBackend(Backend):
 
         # Decode outputs
         texts = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        logits = output['logits']
+        logits = output['scores']
         return [
             BackendOutput(text=text, logits=logits[i], prompt_length=length)
             for i, text, length in enumerate(zip(texts, prompt_lengths))
