@@ -95,6 +95,10 @@ class Backend(pt.Transformer, ABC):
     @property
     def model_name_or_path(self):
         return self._model_name_or_path
+    
+    @classmethod
+    def from_model(self):
+        raise NotImplementedError
 
     def text_generator(self):
         return TextBackend(self)
