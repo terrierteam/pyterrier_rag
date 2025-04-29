@@ -5,6 +5,7 @@ regex
 transformers==4.44.2
 accelerate
 torch
+openai
 fastchat
 psutil
 rouge_score
