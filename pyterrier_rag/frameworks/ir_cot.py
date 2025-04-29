@@ -5,7 +5,7 @@ import pyterrier_alpha as pta
 
 from pyterrier_rag.backend import Backend
 from pyterrier_rag.readers import Reader
-from pyterrier_rag.prompt import PromptTransformer, ContextAggregationTransformer, prompt
+from pyterrier_rag.prompt import PromptTransformer, Concatenator, prompt
 
 """
 Interleaving Retrieval with Chain-of-Thought Reasoning for Knowledge-Intensive Multi-Step Questions (IRCOT) ACL 2023
@@ -56,7 +56,7 @@ class IRCOT(pt.Transformer):
             self.prompt = PromptTransformer(**self._make_default_prompt_config())
 
             if self.context_aggregation is None:
-                self.context_aggregation = ContextAggregationTransformer(**self._make_default_context_config())
+                self.context_aggregation = Concatenator(**self._make_default_context_config())
         self.reader = Reader(backend=self.backend, prompt=self.prompt)
 
     def _exceeded_max_iterations(self, iter):

@@ -13,7 +13,7 @@ def score_sort(inp: List[dict]):
         return inp
 
 
-class ContextAggregationTransformer(pt.Transformer):
+class Concatenator(pt.Transformer):
     def __init__(
         self,
         in_fields: Optional[List[str]] = ["text"],
@@ -75,4 +75,4 @@ class ContextAggregationTransformer(pt.Transformer):
         return [{self.out_field: context, "qid": qid, "query": query}]
 
 
-__all__ = ["ContextAggregationTransformer"]
+__all__ = ["Concatenator"]
