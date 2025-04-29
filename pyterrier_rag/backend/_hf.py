@@ -108,7 +108,7 @@ class HuggingFaceBackend(Backend):
             outputs = sliced_outputs
 
         # Decode outputs
-        texts = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
+        texts = self.tokenizer.batch_decode(outputs["sequences"], skip_special_tokens=True)
         logits = output['scores']
         return [
             BackendOutput(text=text, logits=logits[i], prompt_length=length)

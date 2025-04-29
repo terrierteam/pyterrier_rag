@@ -167,9 +167,8 @@ def test_logitbackend_transform_iter_missing_logits_attr(monkeypatch):
         def generate(self, inp):
             class X: pass
             return [X() for _ in inp]
-
-    lb = NoLogitAttr().logit_generator()
     with pytest.raises(ValueError):
+        lb = NoLogitAttr().logit_generator()
         lb.transform_iter([{"prompt": "x"}])
 
 
@@ -180,6 +179,6 @@ def test_logitbackend_transform_iter_none_logits(monkeypatch):
         def generate(self, inp):
             return [BackendOutput(text="t", logits=None, prompt_length=1) for _ in inp]
 
-    lb = NoneLogits().logit_generator()
     with pytest.raises(ValueError):
+        lb = NoneLogits().logit_generator()
         lb.transform_iter([{"prompt": "x"}])
