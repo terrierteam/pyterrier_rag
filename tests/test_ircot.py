@@ -91,14 +91,14 @@ def patch_transformers_and_reader(monkeypatch):
             pass
         def transform(self, inp):
             return inp
-    class FakeContextAggregationTransformer:
+    class FakeConcatenator:
         def __init__(self, **kwargs):
             self.kwargs = kwargs
         def __rshift__(self, other):
             return other
     # Patch transformers
     monkeypatch.setattr('pyterrier_rag.prompt.PromptTransformer', FakePromptTransformer)
-    monkeypatch.setattr('pyterrier_rag.prompt.ContextAggregationTransformer', FakeContextAggregationTransformer)
+    monkeypatch.setattr('pyterrier_rag.prompt.Concatenator', FakeConcatenator)
     # Patch Reader
     monkeypatch.setattr('pyterrier_rag.readers.Reader', DummyReader)
     yield
@@ -135,10 +135,10 @@ def test_make_default_configs():
 
 
 def test_init_with_provided_transformers():
-    from pyterrier_rag.prompt import PromptTransformer, ContextAggregationTransformer
+    from pyterrier_rag.prompt import PromptTransformer, Concatenator
     backend = FakeBackend()
     retriever = DummyRetriever()
-    fake_ctx = ContextAggregationTransformer(dummy='x')
+    fake_ctx = Concatenator(dummy='x')
     fake_prompt = PromptTransformer(dummy='y')
     ircot = IRCOT(retriever=retriever, backend=backend,
                   prompt=fake_prompt, context_aggregation=fake_ctx)

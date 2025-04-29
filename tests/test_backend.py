@@ -12,6 +12,7 @@ class DummyBackend(Backend):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.return_logits = True
 
     def generate(self, inp: Iterable[str]) -> Iterable[BackendOutput]:
         outputs = []
