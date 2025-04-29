@@ -261,7 +261,7 @@ class SearchO1(pt.Transformer):
         else:
             instruction = get_singleqa_search_o1_instruction(self.max_retrieval_step)
         
-        if "qwq" in self.generator.model.config._name_or_path.lower():
+        if "qwq" in self.generator._model.config._name_or_path.lower():
             user_prompt = get_task_instruction_openqa(question, model_name="qwq")
         else:
             user_prompt = get_task_instruction_openqa(question)
@@ -287,7 +287,7 @@ class SearchO1(pt.Transformer):
         input_ids, attention_mask = self.tokenizer_encode(prompts)
         # generation with stop words 
         prompt_length = input_ids.shape[-1] 
-        token_ids = self.generator.model.generate(
+        token_ids = self.generator._model.generate(
             input_ids, 
             attention_mask=attention_mask,
             do_sample=True, 
@@ -361,7 +361,7 @@ class SearchO1(pt.Transformer):
         
         prompts = user_prompts
         input_ids, attention_mask = self.tokenizer_encode(prompts)
-        token_ids = self.generator.model.generate(
+        token_ids = self.generator._model.generate(
             input_ids, 
             attention_mask=attention_mask,
             do_sample=True, 
@@ -525,7 +525,7 @@ class SearchO1ForceRetrieval(SearchO1):
         reasoning_steps = [[] for _ in range(len(sequences))]
         for _ in range(3):
             input_ids, attention_mask = self.tokenizer_encode(prompts)
-            token_ids = self.generator.model.generate(
+            token_ids = self.generator._model.generate(
                 input_ids, 
                 attention_mask=attention_mask,
                 do_sample=True, 
@@ -587,7 +587,7 @@ class SearchO1ForceRetrieval(SearchO1):
         generated_texts = [""] * len(new_prompts)
         if additional_retrieval_required_prompts: 
             input_ids, attention_mask = self.tokenizer_encode(additional_retrieval_required_prompts)
-            token_ids = self.generator.model.generate(
+            token_ids = self.generator._model.generate(
                 input_ids, 
                 attention_mask=attention_mask,
                 do_sample=True, 
