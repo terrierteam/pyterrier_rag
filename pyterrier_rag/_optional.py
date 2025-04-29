@@ -1,46 +1,27 @@
-from importlib.util import find_spec
-
-
 def is_openai_availible():
     try:
-        find_spec("openai")
-
+        import openai # noqa: F401
         return True
-    except ValueError:
+    except ImportError:
         return False
-
-
-def is_transformers_availible():
-    try:
-        find_spec("transformers")
-
-        return True
-    except ValueError:
-        return False
-
 
 def is_vllm_availible():
     try:
-        find_spec("vllm")
-
+        import vllm # noqa: F401
         return True
-    except ValueError:
+    except ImportError:
         return False
-
 
 def is_outlines_availible():
     try:
-        find_spec("outlines")
-
+        import outlines # noqa: F401
         return True
-    except ValueError:
+    except ImportError:
         return False
-
 
 def is_tiktoken_availible():
     try:
-        find_spec("tiktoken")
-
+        import tiktoken # noqa: F401
         return True
-    except ValueError:
+    except ImportError:
         return False
