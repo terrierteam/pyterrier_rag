@@ -90,5 +90,5 @@ class VLLMBackend(ragBackend):
         if self.return_logits
             logits = map(lambda x: x.outputs[0].logprobs, responses)
 
-            return [BackendOutput(text=t, logits=l) for t, l in zip(text, logits)]
-        return [BackendOutput(text=t) for t in text]
+            return [BackendOutput(text=txt, logits=logit) for txt, logit in zip(text, logits)]
+        return [BackendOutput(text=txt) for txt in text]

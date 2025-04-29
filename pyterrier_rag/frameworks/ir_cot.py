@@ -117,7 +117,7 @@ class IRCOT(pt.Transformer):
 
         while not stop:
             context = self.context_aggregation(top_k_docs)
-            output = self.reader(top_k_docs)
+            output = self.reader(context)
 
             if self.exit_condition(output) or self._exceeded_max_iterations(iter):
                 stop = True
