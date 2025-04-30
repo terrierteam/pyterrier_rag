@@ -1,5 +1,4 @@
 import unittest
-import pandas as pd
 from pyterrier_rag.prompt import Concatenator
 class TestPyterrier_rag(unittest.TestCase):
 
