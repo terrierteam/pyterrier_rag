@@ -12,32 +12,31 @@ def test_huggingface_init_and_attributes():
 
 
 def test_huggingface_generate_slicing_and_outputs():
-    backend = HuggingFaceBackend('HuggingFaceTB/SmolLM-135M', batch_size=2, max_new_tokens=1)
+    backend = HuggingFaceBackend('HuggingFaceTB/SmolLM-135M', batch_size=2, max_new_tokens=1, return_logits=True)
     # Provide two prompts
     prompts = ['a', 'bb']
     outputs = backend.generate(prompts)
     # Expect two outputs
     assert isinstance(outputs, list) and len(outputs) == 2
     # Check each BackendOutput
-    for idx, out in enumerate(outputs):
+    for _, out in enumerate(outputs):
         assert isinstance(out, BackendOutput)
-    # All logits fields should be a list of tensors
-    assert all(isinstance(out.logits, list) for out in outputs)
+    assert all(isinstance(out.logits, torch.Tensor) for out in outputs)
     # The first sliced output should match tensor([0,99]) since prompt_length=1
-    first_logits = outputs[0].logits[0].tolist()
+    first_logits = outputs[0].logits.tolist()
     assert len(first_logits) == 1
 
 
 def test_seq2seq_backend_no_slicing():
-    backend = Seq2SeqLMBackend('google-t5/t5-small', batch_size=1, max_new_tokens=1)
+    backend = Seq2SeqLMBackend('google-t5/t5-small', batch_size=1, max_new_tokens=1, return_logits=True)
     prompts = ['xyz']
     outputs = backend.generate(prompts)
     # No prompt removal: logits list should contain full sequences of length prompt+1
     logits_list = outputs[0].logits
     # Single batch element
     assert isinstance(logits_list, torch.Tensor)
-    full_seq = logits_list[0]
-    assert full_seq.shape[0] == 2
+    full_seq = logits_list
+    assert full_seq.shape[0] == 1
 
 
 def test_stopwordcriteria_basic_behavior():

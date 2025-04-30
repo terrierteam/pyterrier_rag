@@ -99,20 +99,22 @@ class HuggingFaceBackend(Backend):
         input_ids = inputs["input_ids"]
         prompt_lengths = (input_ids != pad_token_id).sum(dim=1).tolist()  # Count non-pad tokens
 
+        sequences = outputs["sequences"]
         # Remove prompt tokens from generated outputs if needed
         if self._remove_prompt:
             # Only keep tokens generated beyond the prompt length
-            sliced_outputs = []
-            for output, prompt_length in zip(outputs, prompt_lengths):
-                sliced_outputs.append(output[prompt_length:])
-            outputs = sliced_outputs
+            sliced_sequences = []
+            for i, prompt_length in enumerate(prompt_lengths):
+                sliced_sequences.append(sequences[i, prompt_length:])
+            sequences = sliced_sequences
 
         # Decode outputs
-        texts = self.tokenizer.batch_decode(outputs["sequences"], skip_special_tokens=True)
-        logits = output['scores']
+        texts = self.tokenizer.batch_decode(sequences, skip_special_tokens=True)
+        logits = outputs['scores']
+        logits = torch.stack(logits, dim=1)
         return [
             BackendOutput(text=text, logits=logits[i], prompt_length=length)
-            for i, text, length in enumerate(zip(texts, prompt_lengths))
+            for i, (text, length) in enumerate(zip(texts, prompt_lengths))
         ]
 
 
