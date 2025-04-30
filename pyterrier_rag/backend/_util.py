@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import Any
-from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM,
+from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM
 from pyterrier_rag.backend._base import Backend
 from pyterrier_rag.backend._hf import HuggingFaceBackend, Seq2SeqLMBackend
 from pyterrier_rag._optional import is_vllm_availible, is_openai_availible
