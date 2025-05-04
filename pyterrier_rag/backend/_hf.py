@@ -110,12 +110,18 @@ class HuggingFaceBackend(Backend):
 
         # Decode outputs
         texts = self.tokenizer.batch_decode(sequences, skip_special_tokens=True)
-        logits = outputs['scores']
-        logits = torch.stack(logits, dim=1)
-        return [
-            BackendOutput(text=text, logits=logits[i], prompt_length=length)
-            for i, (text, length) in enumerate(zip(texts, prompt_lengths))
-        ]
+        if self.return_logits:
+            logits = outputs['scores']
+            logits = torch.stack(logits, dim=1)
+            return [
+                BackendOutput(text=text, logits=logits[i], prompt_length=length)
+                for i, (text, length) in enumerate(zip(texts, prompt_lengths))
+            ]
+        else:
+            return [
+                BackendOutput(text=text, prompt_length=length)
+                for text, length in zip(texts, prompt_lengths)
+            ]
 
 
 class Seq2SeqLMBackend(HuggingFaceBackend):
