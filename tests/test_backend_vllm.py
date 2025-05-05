@@ -26,6 +26,7 @@ def test_vllmbackend_generate():
     # instantiate backend
     backend = VLLMBackend(
         model_name_or_path="HuggingFaceTB/SmolLM-135M",
+        model_args={"device_type": "cpu"},
         verbose=True,
     )
 
