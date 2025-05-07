@@ -16,6 +16,8 @@ As well as access to all of the retrievers (sparse, learned sparse, and dense) a
 
     datamodel
     measures
+    backendmodels
+    agentic
 
 Example Notebooks
 =================
