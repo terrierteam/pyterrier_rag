@@ -5,6 +5,8 @@ from typing import Dict, Iterable, List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 from torch.nn import CrossEntropyLoss
+import pyterrier as pt
+import pyterrier_alpha as pta
 from transformers import (
     AutoTokenizer,
     BartForConditionalGeneration,
@@ -15,8 +17,6 @@ from transformers import (
 from transformers.modeling_outputs import BaseModelOutput, Seq2SeqLMOutput, Seq2SeqModelOutput
 from transformers.models.bart.configuration_bart import BartConfig
 from transformers.models.t5.configuration_t5 import T5Config
-
-from ._base import Reader
 
 
 @dataclass
@@ -139,7 +139,7 @@ class T5FiDReader(T5ForConditionalGeneration):
         )
         kwargs["encoder_outputs"] = encoder_outputs
         return super().generate(**kwargs)
-    
+
     def _prepare_encoder_decoder_kwargs_for_generation(self, inputs_tensor: torch.Tensor, model_kwargs, model_input_name, *args, **kwargs):
 
         # 1. get encoder
@@ -403,9 +403,7 @@ class BARTFiDReader(BartForConditionalGeneration):
         return model_kwargs
 
 
-
-class FiD(Reader):
-
+class FiD(pt.Transformer):
     def __init__(
         self,
         model: Union[T5FiDReader, BARTFiDReader],
@@ -420,39 +418,36 @@ class FiD(Reader):
         device: Union[str, torch.device] = None,
         **kwargs
     ):
-        super().__init__(
-            batch_size=batch_size,
-            text_field=text_field,
-            text_max_length=text_max_length,
-            num_context=num_context,
-            max_new_tokens=max_new_tokens,
-            generation_config=generation_config,
-            verbose=verbose,
-            device=device,
-            **kwargs
-        )
-        self.model = model.to(self.device)
+        self.model = model.to(device)
         self.model.eval()
+        self.batch_size = batch_size
         self.tokenizer = tokenizer
+        self.text_field = text_field
+        self.text_max_length = text_max_length
+        self.num_context = num_context
+        self.max_new_tokens = max_new_tokens
+        self.generation_config = generation_config
+        self.device = device
         self.query_prefix = "question:"
         self.title_prefix = "title:"
         self.context_prefix = "context:"
-
-    def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
-        inp = list(inp)
-        qid = inp[0]["qid"]
-        query = inp[0]["query"]
-        for row in inp:
-            assert row["query"] == query, "All rows must have the same query for `transform_by_query`"
-
-        context = self.get_context_by_query(inp)
-        input_texts = self.format_input_texts(query, context)
-        inputs = self.tokenizer_encode(input_texts)
-        inputs = {k: v.to(self.device) if torch.is_tensor(v) else v for k, v in inputs.items()}
-        generated_token_ids = self.model.generate(**inputs, generation_config=self.generation_config)
-        qanswer = self.tokenizer.batch_decode(generated_token_ids, skip_special_tokens=True)[0]
-
-        return [ {"qid": qid, "query": query, "qanswer": qanswer} ]
+        self.verbose = verbose
+    
+    def get_context_by_query(self, inp: Iterable[dict]) -> Iterable[Union[str, Tuple[str]]]:
+        """Return at most self.num_context retrieved context.
+        """
+        if self.num_context and inp:
+            num = len(inp) if self.num_context == "auto" else self.num_context
+            if "score" in inp[0]:
+                inp = sorted(inp, key=lambda x: x["score"], reverse=True)
+            if "title" in inp[0]:
+                context = [(item["title"], item[self.text_field]) for item in inp]
+            else:
+                context = [item[self.text_field] for item in inp]
+            context = context[:num]
+        else:
+            context = None
+        return context
 
     def format_input_texts(self, question: str, context: Iterable[Union[str, Tuple[str]]]) -> List[str]:
 
@@ -488,6 +483,26 @@ class FiD(Reader):
 
         return {"input_ids": input_ids, "attention_mask": attention_mask}
 
+    @pta.transform.by_query(add_ranks=False)
+    def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
+        return self.transform_by_query(inp)
+
+    def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
+        inp = list(inp)
+        qid = inp[0]["qid"]
+        query = inp[0]["query"]
+        for row in inp:
+            assert row["query"] == query, "All rows must have the same query for `transform_by_query`"
+
+        context = self.get_context_by_query(inp)
+        input_texts = self.format_input_texts(query, context)
+        inputs = self.tokenizer_encode(input_texts)
+        inputs = {k: v.to(self.device) if torch.is_tensor(v) else v for k, v in inputs.items()}
+        generated_token_ids = self.model.generate(**inputs, generation_config=self.generation_config)
+        qanswer = self.tokenizer.batch_decode(generated_token_ids, skip_special_tokens=True)[0]
+
+        return [ {"qid": qid, "query": query, "qanswer": qanswer} ]
+
 
 class T5FiD(FiD):
 
@@ -495,7 +510,7 @@ class T5FiD(FiD):
         model = T5FiDReader.from_pretrained(model_name_or_path)
         tokenizer_name_or_path = tokenizer_name_or_path or model_name_or_path
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path)
-        super().__init__(model, tokenizer, batch_size, text_field, text_max_length, num_context, max_new_tokens, generation_config, verbose, device, **kwargs)
+        super().__init__(model, tokenizer, batch_size, text_field, text_max_length, num_context, max_new_tokens, generation_config, verbose, model.device, **kwargs)
 
 
 class BARTFiD(FiD):
@@ -504,4 +519,4 @@ class BARTFiD(FiD):
         model = BARTFiDReader.from_pretrained(model_name_or_path)
         tokenizer_name_or_path = tokenizer_name_or_path or model_name_or_path
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path)
-        super().__init__(model, tokenizer, batch_size, text_field, text_max_length, num_context, max_new_tokens, generation_config, verbose, device, **kwargs)
+        super().__init__(model, tokenizer, batch_size, text_field, text_max_length, num_context, max_new_tokens, generation_config, verbose, model.device, **kwargs)

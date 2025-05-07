@@ -27,7 +27,7 @@ version = {attr = "pyterrier_rag.__version__"}
 dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools.packages.find]
-exclude = ["tests"]
+exclude = ["tests", "cuda_tests"]
 
 [project.urls]
 Repository = "https://github.com/terrierteam/pyterrier_rag"
@@ -35,7 +35,7 @@ Repository = "https://github.com/terrierteam/pyterrier_rag"
 
 [tool.ruff]
 line-length = 120
-exclude = ["tests"]
+exclude = ["tests", "cuda_tests"]
 
 [project.entry-points."pyterrier.dataset_provider"]
 rag = "pyterrier_rag._datasets:RagDatasetProvider"

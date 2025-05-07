@@ -1,80 +1,61 @@
-from abc import ABC, abstractmethod
-from typing import Iterable, Tuple, Union
-
+from typing import Union
+import pandas as pd
 import pyterrier as pt
-import pyterrier_alpha as pta
-import torch
-from transformers import GenerationConfig
 
-GENERIC_PROMPT = "Use the context information to answer the Question: \n Context: {context} \n Question: {query} \n Answer:"
+from pyterrier_rag.backend import Backend
+from pyterrier_rag.prompt import PromptTransformer
 
 
-class Reader(pt.Transformer, ABC):
+GENERIC_PROMPT = (
+    "Use the context information to answer the Question: \n Context: {{ qcontext }} \n Question: {{ query }} \n Answer:"
+)
 
+
+class Reader(pt.Transformer):
+    """
+    Transformer that generates answers from context and queries using an LLM backend.
+
+    Combines a PromptTransformer with a Backend to produce text or logits,
+    then applies answer extraction to return final responses.
+
+    Parameters:
+        backend (Backend or str): A Backend instance or model identifier string.
+        prompt (PromptTransformer or str): Prompt template or raw instruction.
+        output_field (str): Field name in the output DataFrame for answers.
+
+    Raises:
+        ValueError: If the prompt expects logits but the backend does not support logits.
+    """
     def __init__(
         self,
-        *,
-        batch_size: int = 4,
-        text_field: str = 'text',
-        text_max_length: int = 512,
-        num_context: Union[int, str] = "auto",
-        max_new_tokens: int = 32,
-        generation_config: GenerationConfig = None,
-        verbose: bool = False,
-        device: Union[str, torch.device] = None,
-        **kwargs
+        backend: Union[Backend, str],
+        prompt: Union[PromptTransformer, str] = GENERIC_PROMPT,
+        output_field: str = "qanswer",
     ):
-        super().__init__()
+        self.prompt = prompt
+        self.backend = backend
+        self.output_field = output_field
+        self.__post_init__()
 
-        if device is None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-        if isinstance(device, str):
-            device = torch.device(device)
-        self.device = device
-
-        self.text_field = text_field
-        self.text_max_length = text_max_length
-        self.num_context = num_context
-        self.max_new_tokens = max_new_tokens
-        self.verbose = verbose
-        self.kwargs = kwargs
-
-        if generation_config is None:
-            # use greedy decoding by default
-            self.generation_config = GenerationConfig(
-                max_new_tokens = self.max_new_tokens,
-                temperature=1.0,
-                do_sample = False,
-                num_beams = 1
+    def __post_init__(self):
+        if isinstance(self.prompt, str):
+            self.prompt = PromptTransformer(
+                instruction=self.prompt,
+                model_name_or_path=self.backend._model_name_or_path,
             )
-        else:
-            self.generation_config = generation_config
-    
-    @property
-    def is_openai(self):
-        return False
-
-    # TODO: couldn't pass self.verbose to pta.transform.by_query
-    @pta.transform.by_query(add_ranks=False)
-    def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
-        return self.transform_by_query(inp)
-
-    @abstractmethod
-    def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
-        pass
-
-    def get_context_by_query(self, inp: Iterable[dict]) -> Iterable[Union[str, Tuple[str]]]:
-        """Return at most self.num_context retrieved context.
-        """
-        if self.num_context and inp:
-            num = len(inp) if self.num_context == "auto" else self.num_context
-            if "score" in inp[0]:
-                inp = sorted(inp, key=lambda x: x["score"], reverse=True)
-            if "title" in inp[0]:
-                context = [(item["title"], item[self.text_field]) for item in inp]
+        if isinstance(self.prompt, PromptTransformer):
+            self.prompt.set_output_attribute(self.backend._api_type)
+            if self.prompt.expect_logits and not self.backend._support_logits:
+                raise ValueError("The LLM does not support logits")
+            elif self.prompt.expect_logits and self.backend._support_logits:
+                self.backend = self.backend.logit_generator()
             else:
-                context = [item[self.text_field] for item in inp]
-            context = context[:num]
-        else:
-            context = None
-        return context
+                self.backend = self.backend.text_generator()
+
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
+        prompts = self.prompt(inp)
+        outputs = self.backend(prompts)
+        answers = self.prompt.answer_extraction(outputs)
+
+        prompts[self.output_field] = answers[self.output_field]
+        return prompts

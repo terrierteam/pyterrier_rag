@@ -2,7 +2,12 @@ python-terrier>=0.13.0
 pyterrier_alpha>=0.12.0
 ir_measures>=0.3.4
 regex
-transformers
 torch
-outlines
+torchvision
+torchaudio
+transformers>=4.44.2
+accelerate
+openai
+fastchat
+psutil
 rouge_score
