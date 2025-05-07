@@ -85,13 +85,13 @@ class IRCOT(pt.Transformer):
             "system_message": ircot_system_message,
             "instruction": ircot_prompt,
             "output_field": "qanswer",
-            "input_fields": ["query", "context", "prev"],
+            "input_fields": ["query", "qcontext", "prev"],
         }
 
     def _make_default_context_config(self):
         return {
             "in_fields": ["text"],
-            "out_field": "context",
+            "out_field": "qcontext",
             "tokenizer": self.backend.tokenizer,
             "max_length": self.backend.max_input_length,
             "max_elements": self.max_docs,

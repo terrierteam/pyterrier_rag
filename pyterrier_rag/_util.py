@@ -213,13 +213,13 @@ def dataframe_concat(
         return total_context
 
     def per_query_concat(inp: pd.DataFrame) -> pd.DataFrame:
-        out = pta.DataFrameBuilder(["query_id", "query", "context"])
+        out = pta.DataFrameBuilder(["query_id", "query", "qcontext"])
         for qid, group in inp.groupby("query_id"):
             out.extend(
                 {
                     "query_id": [qid],
                     "query": [group.iloc[0].query],
-                    "context": [_concat(group)],
+                    "qcontext": [_concat(group)],
                 }
             )
         return out.to_df()

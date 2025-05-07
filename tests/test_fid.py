@@ -50,7 +50,7 @@ class TestPyterrier_rag(unittest.TestCase):
             self.assertIn("China", result[0]['qanswer'])
         else:
             aggregate = context(data)
-            self.assertIn("Beijing", aggregate[0]['context'])
+            self.assertIn("Beijing", aggregate[0]["qcontext"])
             result = model(aggregate)
             self.assertIn("Beijing", result[0]['prompt'])
             self.assertIn("China", result[0]['qanswer'])
