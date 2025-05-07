@@ -83,6 +83,9 @@ class SearchR1(pt.Transformer):
      - qanswer (extracted from the output)
      - iteration (how many thought iterations)
      - all_queries (what was sent to the retriever)
+
+    .. cite.dblp:: journals/corr/abs-2503-09516
+
     """
 
     def __init__(self, 

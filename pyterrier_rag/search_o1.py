@@ -224,6 +224,33 @@ def replace_recent_steps(origin_str, replace_str):
 
 
 class SearchO1(pt.Transformer):
+    """
+    Implements the SearchO1 model as a PyTerrier transformer.
+
+    This is an Agentic RAG model that performs iterative reasoning and retrieval.
+    It uses a retriever to retrieve documents and a generator to generate answers.
+    The generator model is not trained for conducting retrieval per se, but instead
+    is prompted to generate reasoning steps and search queries. 
+
+    Implements the SearchO1 model as a PyTerrier transformer.
+    Uses code from https://github.com/sunnynexus/Search-o1.
+
+    Input columns:
+     - qid
+     - query
+    
+    Output columns:
+     - qid
+     - query
+     - prompt (output of the model)
+     - qanswer (extracted from the output)
+     - search_count (how many thought iterations)
+     - search_queries (what was sent to the retriever)
+     - history
+
+    .. cite.dblp:: journals/corr/abs-2501-05366
+
+    """
 
     def __init__(
         self, 

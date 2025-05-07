@@ -72,9 +72,8 @@ class R1Searcher(pt.Transformer):
      - all_queries (what was sent to the retriever)
      - stop_reason_final (why did the generation stop?): "finished", "many_retrieve", "query_inst_error", "shot_down"
 
-    R1-Searcher: Incentivizing the Search Capability in LLMs via Reinforcement Learning
-    Huatong Song, Jinhao Jiang, Yingqian Min, Jie Chen, Zhipeng Chen, Wayne Xin Zhao, Lei Fang, Ji-Rong Wen
-    https://arxiv.org/abs/2503.05592
+    .. cite.dblp:: journals/corr/abs-2503-05592
+
     """
 
     def __init__(self, 
