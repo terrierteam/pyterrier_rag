@@ -23,9 +23,9 @@ Example::
     )
 
 Various ROUGE measures are available:
- - ROUGE-1 (precision, recall, f-measure)
- - ROUGE-2 (precision, recall, f-measure)
- - ROUGE-L (precision, recall, f-measure) 
+ - ROUGE-1 (precision, recall, f-measure): ``pyterrier_rag.measures.ROUGE1P``, ``pyterrier_rag.measures.ROUGE1R``, ``pyterrier_rag.measures.ROUGE1F``
+ - ROUGE-2 (precision, recall, f-measure): ``pyterrier_rag.measures.ROUGE2P``, ``pyterrier_rag.measures.ROUGE2R``, ``pyterrier_rag.measures.ROUGE2F``
+ - ROUGE-L (precision, recall, f-measure): ``pyterrier_rag.measures.ROUGELP``, ``pyterrier_rag.measures.ROUGELR``, ``pyterrier_rag.measures.ROUGELF``
 
 For comparison with known-relevant documents:
  - BERTScore (measures similarity of answer with relevant documents): ``pyterrier_rag.measures.BERTScore``
