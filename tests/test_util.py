@@ -121,14 +121,14 @@ def test_concat_with_intermediate_and_max_elements():
 def test_concat_with_tokenizer_truncation_and_max_length():
     texts = ['aaaa', 'bbbb', 'cccc']
     tok = DummyTokenizer()
-    # initial max_per_context=3 → segments 'aaa','bbb','ccc', combined length=11 > max_length=6
-    # then max_per_context→2 → 'aa','bb','cc', combined length=8 > 6
+    # initial max_per_qcontext=3 → segments 'aaa','bbb','ccc', combined length=11 > max_length=6
+    # then max_per_qcontext→2 → 'aa','bb','cc', combined length=8 > 6
     # then →1 → 'a','b','c', combined length=5 ≤ 6
     out = concat(
         texts,
         tokenizer=tok,
         max_length=6,
-        max_per_context=3,
+        max_per_qcontext=3,
         truncation_rate=1
     )
     assert out == 'a\nb\nc'
@@ -156,7 +156,7 @@ def test_dataframe_concat_by_query(monkeypatch):
                 self.rows.append({
                     'qid': d['qid'][i],
                     'query': d['query'][i],
-                    'context': d['context'][i]
+                    'qcontext': d['qcontext'][i]
                 })
         def to_df(self):
             return pd.DataFrame(self.rows)
@@ -166,7 +166,7 @@ def test_dataframe_concat_by_query(monkeypatch):
     out_df = dataframe_concat(df, by_query=True)
     # one row per qid
     assert set(out_df['qid']) == {1, 2}
-    # contexts as expected
-    ctx = dict(zip(out_df['qid'], out_df['context']))
+    # qcontexts as expected
+    ctx = dict(zip(out_df['qid'], out_df['qcontext']))
     assert ctx[1] == 'a\nb'
     assert ctx[2] == 'c'

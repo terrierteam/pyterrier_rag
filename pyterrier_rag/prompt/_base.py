@@ -31,7 +31,7 @@ class PromptTransformer(pt.Transformer):
         conversation_template: Optional[Any] = None,
         api_type: Optional[str] = None,
         output_field: str = "prompt",
-        input_fields: List[str] = ["query", "context"],
+        input_fields: List[str] = ["query", "qcontext"],
         expects_logits: bool = False,
         answer_extraction: Optional[callable] = None,
         raw_instruction: bool = False,

@@ -219,12 +219,12 @@ def dataframe_concat(
             return "\n".join(lines)
 
     def per_query_concat(inp: pd.DataFrame) -> pd.DataFrame:
-        out = pta.DataFrameBuilder(["qid", "query", "context"])
+        out = pta.DataFrameBuilder(["qid", "query", "qcontext"])
         for qid, group in inp.groupby("qid"):
             out.extend({
                 "qid": [qid],
                 "query": [group.iloc[0].query],
-                "context": [_concat(group)],
+                "qcontext": [_concat(group)],
             })
         return out.to_df()
 

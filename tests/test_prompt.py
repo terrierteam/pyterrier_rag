@@ -89,10 +89,10 @@ def test_set_output_attribute(api, attr, method):
 
 def test_create_prompt_appends_and_returns():
     # instruction concatenates fields
-    instr = lambda query, context: f"{query}-{context}"
+    instr = lambda query, qcontext: f"{query}-{qcontext}"
     tf = PromptTransformer(instruction=instr)
     # build fields
-    fields = {"query": "Q", "context": "C"}
+    fields = {"query": "Q", "qcontext": "C"}
     out = tf.create_prompt(fields)
     # dummy get_prompt returns "Q-C"
     assert out == "Q-C"
@@ -100,9 +100,9 @@ def test_create_prompt_appends_and_returns():
 
 def test_transform_by_query_basic():
     # instruction uses both fields
-    instr = lambda query, context: f"ask: {query} | {context}"
-    tf = PromptTransformer(instruction=instr, input_fields=["query", "context"])
-    inp = [{"qid": "1", "query": "foo", "context": "bar"}]
+    instr = lambda query, qcontext: f"ask: {query} | {qcontext}"
+    tf = PromptTransformer(instruction=instr, input_fields=["query", "qcontext"])
+    inp = [{"qid": "1", "query": "foo", "qcontext": "bar"}]
     result = tf.transform_by_query(inp)
     # only one output dict
     assert isinstance(result, list) and len(result) == 1

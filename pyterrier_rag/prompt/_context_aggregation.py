@@ -38,7 +38,7 @@ class Concatenator(pt.Transformer):
     def __init__(
         self,
         in_fields: Optional[List[str]] = ["text"],
-        out_field: Optional[str] = "context",
+        out_field: Optional[str] = "qcontext",
         text_loader: Optional[callable] = None,
         intermediate_format: Optional[callable] = None,
         tokenizer: Optional[Any] = None,

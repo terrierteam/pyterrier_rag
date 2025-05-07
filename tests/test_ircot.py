@@ -123,11 +123,11 @@ def test_make_default_configs():
     assert prompt_cfg['system_message'] == ircot_system_message
     assert prompt_cfg['instruction'] == ircot_prompt
     assert prompt_cfg['output_field'] == 'qanswer'
-    assert prompt_cfg['input_fields'] == ['query', 'context', 'prev']
+    assert prompt_cfg['input_fields'] == ['query', 'qcontext', 'prev']
     # Context config
     context_cfg = ircot._make_default_context_config()
     assert context_cfg['in_fields'] == ['text']
-    assert context_cfg['out_field'] == 'context'
+    assert context_cfg['out_field'] == 'qcontext'
     assert context_cfg['tokenizer'] == backend.tokenizer
     assert context_cfg['max_length'] == backend.max_input_length
     assert context_cfg['max_elements'] == ircot.max_docs

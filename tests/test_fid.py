@@ -17,10 +17,10 @@ class TestPyterrier_rag(unittest.TestCase):
         from pyterrier_rag.backend import Seq2SeqLMBackend
         model = Seq2SeqLMBackend(model_name_or_path='google/flan-t5-base', return_logits=True)
         reader = Reader(model)
-        context_transformer = Concatenator()
-        self._test_fid(reader, context=context_transformer)
+        qcontext_transformer = Concatenator()
+        self._test_fid(reader, qcontext=qcontext_transformer)
 
-    def _test_fid(self, model, context=None):
+    def _test_fid(self, model, qcontext=None):
         data = [
                 {
                     "qid": "0",
@@ -39,7 +39,7 @@ class TestPyterrier_rag(unittest.TestCase):
             ]
 
         # now check without titles
-        if context is None:
+        if qcontext is None:
             result = model(data)
             self.assertIn("China", result[0]['qanswer'])
 
@@ -49,8 +49,8 @@ class TestPyterrier_rag(unittest.TestCase):
             result = model(data)
             self.assertIn("China", result[0]['qanswer'])
         else:
-            aggregate = context(data)
-            self.assertIn("Beijing", aggregate[0]['context'])
+            aggregate = qcontext(data)
+            self.assertIn("Beijing", aggregate[0]['qcontext'])
             result = model(aggregate)
             self.assertIn("Beijing", result[0]['prompt'])
             self.assertIn("China", result[0]['qanswer'])
