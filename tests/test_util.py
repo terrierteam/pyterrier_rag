@@ -128,7 +128,7 @@ def test_concat_with_tokenizer_truncation_and_max_length():
         texts,
         tokenizer=tok,
         max_length=6,
-        max_per_qcontext=3,
+        max_per_context=3,
         truncation_rate=1
     )
     assert out == 'a\nb\nc'
