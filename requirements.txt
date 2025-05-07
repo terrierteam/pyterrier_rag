@@ -11,3 +11,4 @@ openai
 fastchat
 psutil
 rouge_score
+fastchat
