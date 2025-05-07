@@ -8,6 +8,6 @@ torchaudio
 transformers>=4.44.2
 accelerate
 openai
-fastchat
+fschat
 psutil
 rouge_score
