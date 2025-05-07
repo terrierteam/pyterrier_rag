@@ -13,7 +13,7 @@ def push_columns(
 ) -> pd.DataFrame:
     """
     Changes a dataframe such that the selected column becomes "<column>_0", and any
-    "<column>_0" columns becames "<column>_1" etc.
+    "<column>_0" columns becomes "<column>_1" etc.
 
     Arguments:
         df: Dataframe with a "<column>" column
@@ -32,11 +32,12 @@ def push_columns(
     for query_idx in itertools.count():
         next_col = f"{base_column}_{query_idx}"
         if prev_col in cols:
-            rename_cols[prev_col] = next_col  # map e.g., query_0 to be renamed to query_1
+            rename_cols[prev_col] = next_col
             prev_col = next_col
         else:
             break
-    df = df.rename(columns=rename_cols)
+    # apply renaming in-place or on the copy
+    df.rename(columns=rename_cols, inplace=True)
     if keep_original:
         df[base_column] = df[f"{base_column}_0"]
     return df
@@ -49,7 +50,7 @@ def push_columns_dict(
 ) -> Union[Iterable[dict], dict]:
     def per_element(i: dict):
         cols = i.keys()
-        if "query" not in cols:
+        if base_column not in cols:
             raise KeyError(f"Expected a {base_column} column, but found {list(cols)}")
         prev_col = base_column
         rename_cols = {}
@@ -114,7 +115,7 @@ def intermediate_formatting(
 ) -> str:
     """
     If an intermediate_format is provided, apply it:
-      - For dict inputs, unpack as keyword args.
+      - For dict inputs, unpack as positional args (keys order).
       - For tuple/list inputs, unpack as positional args.
       - For other inputs, pass directly.
     If no intermediate_format, and inp is a dict, return its 'text' field or empty string.
@@ -127,7 +128,6 @@ def intermediate_formatting(
             return intermediate_format(*inp)
         return intermediate_format(inp)
 
-    # Default behavior when no formatter:
     if isinstance(inp, dict):
         return str(inp.get("text", ""))
     return str(inp)
@@ -144,9 +144,6 @@ def concat(
 ) -> str:
     """
     Concatenate input_texts into a single string, applying optional formatting and token-based truncation.
-
-    - If intermediate_format is None, dicts default to their 'text' field.
-    - Tokenizer-based path enforces per-context and overall token limits via truncation.
     """
     if max_elements > 0:
         input_texts = input_texts[:max_elements]
@@ -154,7 +151,6 @@ def concat(
     def to_text(element: Union[str, Tuple, List, dict]) -> str:
         return intermediate_formatting(element, intermediate_format)
 
-    # When a tokenizer is provided, enforce token limits
     if tokenizer is not None:
         while True:
             segments: List[str] = []
@@ -168,10 +164,8 @@ def concat(
             combined = "\n".join(segments)
             if max_length < 0 or len(tokenizer.encode(combined)) <= max_length:
                 return combined
-            # reduce per-context limit and retry
             max_per_context = max(0, max_per_context - truncation_rate)
 
-    # No tokenizer: simple join
     texts = [to_text(x) for x in input_texts]
     return "\n".join(texts)
 
@@ -190,38 +184,48 @@ def dataframe_concat(
     def _concat(inp: pd.DataFrame) -> str:
         if max_elements > 0:
             inp = inp.iloc[:max_elements]
-        max_context = max_per_context
         if tokenizer is not None:
+            max_context = max_per_context
             while True:
                 total_context = ""
                 for c in inp.itertuples():
                     if intermediate_format is not None:
-                        c = intermediate_format({field: getattr(c, field, None) for field in relevant_fields})
+                        c_text = intermediate_format({field: getattr(c, field, None) for field in relevant_fields})
                     else:
-                        c = " ".join([getattr(c, field, None) for field in relevant_fields])
-                    tokens = tokenizer.encode(c)
-                    if len(tokens) > max_per_context:
-                        tokens = tokens[:max_per_context]
-                        text = tokenizer.decode(tokens)
-                    total_context += text + "\n"
-                if len(tokenizer.encode(total_context)) <= max_length:
-                    break
-                else:
-                    max_context -= truncation_rate
+                        c_text = " ".join([getattr(c, field, None) for field in relevant_fields])
+                    tokens = tokenizer.encode(c_text)
+                    if len(tokens) > max_context:
+                        tokens = tokens[:max_context]
+                        c_text = tokenizer.decode(tokens)
+                    total_context += c_text + "\n"
+                if max_length < 0 or len(tokenizer.encode(total_context)) <= max_length:
+                    return total_context.strip("\n")
+                max_context = max(0, max_context - truncation_rate)
         else:
-            total_context = "\n".join(map(intermediate_format, inp))
-        return total_context
+            # no-tokenizer path
+            lines = []
+            if intermediate_format is None:
+                for row in inp.itertuples():
+                    if len(relevant_fields) == 1:
+                        val = getattr(row, relevant_fields[0], "")
+                        lines.append(str(val))
+                    else:
+                        parts = [str(getattr(row, f, "")) for f in relevant_fields]
+                        lines.append(" ".join(parts))
+            else:
+                for row in inp.itertuples():
+                    d = {f: getattr(row, f, None) for f in relevant_fields}
+                    lines.append(intermediate_format(d))
+            return "\n".join(lines)
 
     def per_query_concat(inp: pd.DataFrame) -> pd.DataFrame:
-        out = pta.DataFrameBuilder(["query_id", "query", "context"])
-        for qid, group in inp.groupby("query_id"):
-            out.extend(
-                {
-                    "query_id": [qid],
-                    "query": [group.iloc[0].query],
-                    "context": [_concat(group)],
-                }
-            )
+        out = pta.DataFrameBuilder(["qid", "query", "context"])
+        for qid, group in inp.groupby("qid"):
+            out.extend({
+                "qid": [qid],
+                "query": [group.iloc[0].query],
+                "context": [_concat(group)],
+            })
         return out.to_df()
 
     if by_query:
