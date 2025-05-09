@@ -139,15 +139,14 @@ def _bertscore(qrels, res, rel = 3, submeasure='f1', agg='max'):
         }
     return r[submeasure][agg]
 
-def BERTScore(rel=3, submeasure : str = 'f1', agg : str = 'max'):
+def BERTScore(rel : int = 3, submeasure : Literal['f1', 'recall', 'prediction'] = 'f1', agg : Literal['max', 'avg'] = 'max'):
     '''
     Implements BERTScore, a semantic measure of equivalence. This is defined to take a qrels dataframe with an additional text attribute,
     and compare with the generated qanswers. NB: This is a function that returns a measure - it needs to be called.
 
-    Arguments:
-     - rel(int): Minimum label value for relevant qrels. Defaults to 3, which is the highest label in MSMARCO.
-     - submeasure(str): One of 'precision', 'recall' and 'f1'. Defaults to 'f1'.
-     - agg(str): How to combine (aggregate) when there are multiple relevant documents. Valid options are 'max' or 'avg'. Defaults to 'max'.
+    :param rel: Minimum label value for relevant qrels. Defaults to 3, which is the highest label in MSMARCO.
+    :param submeasure: One of 'precision', 'recall' and 'f1'. Defaults to 'f1'.
+    :param agg: How to combine (aggregate) when there are multiple relevant documents. Valid options are 'max' or 'avg'. Defaults to 'max'.
 
     Returns:
      An IR measures measure object that can be used in pt.Evaluate or pt.Experiment
