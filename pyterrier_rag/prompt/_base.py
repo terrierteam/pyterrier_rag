@@ -54,7 +54,7 @@ class PromptTransformer(pt.Transformer):
             self.instruction = prompt(self.instruction)
         if self.model_name_or_path is not None:
             self.conversation_template = (
-                get_conversation_template(self.model_name_or_path) or self.conversation_template
+                self.conversation_template or get_conversation_template(self.model_name_or_path)
             )
         if self.conversation_template is None:
             self.conversation_template = get_conv_template("raw")
