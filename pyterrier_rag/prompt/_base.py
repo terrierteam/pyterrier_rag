@@ -54,11 +54,10 @@ class PromptTransformer(pt.Transformer):
             self.instruction = prompt(self.instruction)
         if self.model_name_or_path is not None:
             self.conversation_template = (
-                get_conversation_template(self.model_name_or_path) or self.conversation_template
+                self.conversation_template or get_conversation_template(self.model_name_or_path)
             )
         if self.conversation_template is None:
-            self.conversation_template = get_conv_template("raw")
-            self.raw_instruction = True
+            self.conversation_template = get_conv_template("zero_shot")
         if self.system_message is not None:
             # TODO: Set flag for if model supports system message
             self.conversation_template.set_system_message(self.system_message)
