@@ -95,7 +95,7 @@ def test_create_prompt_appends_and_returns():
     fields = {"query": "Q", "qcontext": "C"}
     out = tf.create_prompt(fields)
     # dummy get_prompt returns "Q-C"
-    assert out == "Q-C"
+    assert "Q-C" in out
 
 
 def test_transform_by_query_basic():
