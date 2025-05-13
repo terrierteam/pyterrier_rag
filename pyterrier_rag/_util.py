@@ -79,37 +79,6 @@ def push_columns_dict(
     return [*map(per_element, inp)]
 
 
-def find_maximum_push(inp: pd.DataFrame, base_column: str = "query") -> Tuple[str, int]:
-    columns = inp.columns
-    maxcol = None
-    maxval = -1
-    for col in columns:
-        if col.startswith(f"{base_column}_"):
-            val = int(col.split("_")[1])
-            if val > maxval:
-                maxval = val
-                maxcol = col
-    return maxcol, maxval
-
-
-def find_maximum_push_dict(inp: Union[Iterable[dict], dict], base_column: str = "query") -> Tuple[str, int]:
-    def per_element(i: dict):
-        cols = i.keys()
-        maxcol = None
-        maxval = -1
-        for col in cols:
-            if col.startswith(f"{base_column}_"):
-                val = int(col.split("_")[1])
-                if val > maxval:
-                    maxval = val
-                    maxcol = col
-        return maxcol, maxval
-
-    if isinstance(inp, dict):
-        return per_element(inp)
-    return map(per_element, inp)
-
-
 def intermediate_formatting(
     inp: Union[str, Tuple, List, dict], intermediate_format: Optional[Callable[..., str]] = None
 ) -> str:

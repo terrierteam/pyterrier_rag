@@ -7,8 +7,6 @@ import pyterrier_alpha as pta
 from pyterrier_rag._util import (
     push_columns,
     push_columns_dict,
-    find_maximum_push,
-    find_maximum_push_dict,
     intermediate_formatting,
     concat,
     dataframe_concat,
@@ -62,26 +60,6 @@ def test_push_columns_dict_list_keep():
 def test_push_columns_dict_missing():
     with pytest.raises(KeyError):
         push_columns_dict({'foo': 1})
-
-
-def test_find_maximum_push():
-    df = pd.DataFrame({'query_0': [1], 'query_2': [2], 'query_1': [3]})
-    col, val = find_maximum_push(df)
-    assert col == 'query_2'
-    assert val == 2
-
-
-def test_find_maximum_push_dict_single():
-    d = {'query_0': 'a', 'query_3': 'b'}
-    col, val = find_maximum_push_dict(d)
-    assert col == 'query_3'
-    assert val == 3
-
-
-def test_find_maximum_push_dict_iterable():
-    data = [{'query_0': 1}, {'query_1': 2, 'query_5': 3}]
-    results = list(find_maximum_push_dict(data))
-    assert results == [('query_0', 0), ('query_5', 5)]
 
 
 def test_intermediate_formatting_no_formatter_dict():
