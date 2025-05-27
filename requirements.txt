@@ -7,7 +7,7 @@ torchvision
 torchaudio
 transformers>=4.44.2
 accelerate
-openai
+openai<1.0 
 fschat
 psutil
 rouge_score
