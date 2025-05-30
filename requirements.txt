@@ -5,7 +5,7 @@ regex
 torch
 torchvision
 torchaudio
-transformers>=4.44.2
+transformers>=4.44.2,<4.53.0
 accelerate
 openai<1.0 
 fschat
