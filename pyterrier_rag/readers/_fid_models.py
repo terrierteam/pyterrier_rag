@@ -271,6 +271,7 @@ class FiDBartTModel(BartModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        **kwargs
     ):
         # copy from https://github.com/huggingface/transformers/blob/v4.38.2/src/transformers/models/bart/modeling_bart.py#L838
         if decoder_input_ids is None and decoder_inputs_embeds is None:
