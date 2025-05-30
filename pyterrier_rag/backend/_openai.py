@@ -1,6 +1,6 @@
 import os
 import time
-from typing import List
+from typing import List, Dict
 
 from pyterrier_rag._optional import is_openai_availible, is_tiktoken_availible
 from pyterrier_rag.backend._base import Backend, BackendOutput
@@ -22,6 +22,7 @@ class OpenAIBackend(Backend):
         **kwargs: Passed to Backend base class.
     """
     _api_type = "openai"
+    _supports_structured_generation = True
 
     def __init__(
         self,
@@ -103,13 +104,40 @@ class OpenAIBackend(Backend):
             completion = completion["choices"][0]["message"]["content"]
         return completion
 
-    def generate(self, prompt: List[dict], **kwargs) -> List[BackendOutput]:
-        response = self._call_completion(
-            messages=prompt,
-            return_text=True,
-            **{"model": self._model_name_or_path, **self._generation_args, **kwargs},
-        )
-        return [BackendOutput(text=r) for r in response]
+    def _isolate_prompt(self, inp: Dict[str, str]):
+        system_message = None if 'system' not in inp.keys() else inp['system']
+        prompt = None if 'user' not in inp.keys() else inp['user']
+
+        return system_message, prompt
+
+    def structured_generate(self, inps: List[dict], **kwargs) -> List[BackendOutput]:
+
+        assert len(inps.keys()) <= 2, f"structured_generate only supports a system message and a user prompt, got {inps.keys()}"
+
+        from outlines.models.openai import OpenAIConfig
+        from outlines import models
+
+        responses = []
+        for prompt in inps:
+            system_message, prompt = self._isolate_prompt(prompt)
+            args = OpenAIConfig(system_message=system_message, **self._generation_args, **kwargs)
+            model = self.structured_generator(models.openai(self._model_name_or_path, api_key=self._key, config=args))
+            response = model(prompt)
+
+            responses.append(response)
+
+        return [BackendOutput(text=r) for r in responses]
+
+    def generate(self, inps: List[dict], **kwargs) -> List[BackendOutput]:
+        responses = []
+        for prompt in inps:
+            response = self._call_completion(
+                messages=prompt,
+                return_text=True,
+                **{"model": self._model_name_or_path, **self._generation_args, **kwargs},
+            )
+            response.append(response)
+        return [BackendOutput(text=r) for r in responses]
 
 
 __all__ = ["OpenAIBackend"]

@@ -41,6 +41,7 @@ class VLLMBackend(ragBackend):
     _logit_type = "sparse"
     _support_logits = True
     _remove_prompt = True
+    _supports_structured_generation = True
 
     def __init__(
         self,
@@ -53,6 +54,7 @@ class VLLMBackend(ragBackend):
         max_new_tokens: int = 32,
         return_logits: bool = True,
         verbose: bool = False,
+        structured_generator: callable = None,
         **kwargs,
     ):
         super().__init__(
@@ -63,6 +65,7 @@ class VLLMBackend(ragBackend):
             return_logits=return_logits,
             generation_config=None,
             verbose=verbose,
+            structured_generator=structured_generator
             **kwargs,
         )
         if not is_vllm_availible():
@@ -71,6 +74,11 @@ class VLLMBackend(ragBackend):
 
         self._model_name_or_path = model_name_or_path
         self.model = LLM(model=model_name_or_path, **model_args)
+
+        if self.structured_generator is not None:
+            from outlines import models
+            self.model = models.VLLM(self.model)
+            self.model = self.structured_generator(self.model)
 
         if generation_args is None:
             generation_args = {
@@ -81,6 +89,12 @@ class VLLMBackend(ragBackend):
             generation_args["logprobs"] = 20
         self.generation_args = generation_args
         self.to_params = SamplingParams
+
+    def structured_generate(self, inps: Iterable[str], **kwargs) -> List[BackendOutput]:
+        args = self.to_params(**self.generation_args, **kwargs)
+        responses = self.model(inps, sampling_params=args)
+
+        return [BackendOutput(text=txt) for txt in responses]
 
     def generate(self, inps: Iterable[str], **kwargs) -> List[BackendOutput]:
         args = self.to_params(**self.generation_args, **kwargs)

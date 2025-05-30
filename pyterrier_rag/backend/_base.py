@@ -8,6 +8,7 @@ from transformers import GenerationConfig
 from more_itertools import chunked
 from dataclasses import dataclass
 
+from pyterrier_rag._optional import is_outlines_availible
 
 @dataclass
 class BackendOutput:
@@ -47,6 +48,7 @@ class Backend(pt.Transformer, ABC):
     _logit_type = None
     _api_type = None
     _remove_prompt = False
+    _supports_structured_generation = False
 
     def __init__(
         self,
@@ -61,6 +63,7 @@ class Backend(pt.Transformer, ABC):
         generation_config: GenerationConfig = None,
         verbose: bool = False,
         device: Union[str, torch.device] = None,
+        structured_generator: callable = None,
         **kwargs,
     ):
         super().__init__()
@@ -81,6 +84,13 @@ class Backend(pt.Transformer, ABC):
         self.verbose = verbose
         self.kwargs = kwargs
 
+        self.structured_generator = structured_generator
+        if structured_generator is not None:
+            assert is_outlines_availible(), "Could not load outlines, check environment"
+            self._support_logits = False
+            self.structured_generator = structured_generator
+            self.generate = self.structured_generate
+
         if generation_config is None:
             # use greedy decoding by default
             self.generation_config = GenerationConfig(
@@ -95,7 +105,7 @@ class Backend(pt.Transformer, ABC):
     @property
     def model_name_or_path(self):
         return self._model_name_or_path
-    
+
     @classmethod
     def from_model(self):
         raise NotImplementedError
@@ -119,6 +129,9 @@ class Backend(pt.Transformer, ABC):
 
     def generate(self, inp: Iterable[str]) -> Iterable[Union[BackendOutput, str]]:
         raise NotImplementedError("Implement the generate method")
+
+    def structured_generate(self, inp: Iterable[str]) -> Iterable[Union[BackendOutput, str]]:
+        raise NotImplementedError("Implement the structured generate method")
 
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
         return self.text_generator(self).transform_iter(inp)

@@ -9,6 +9,7 @@ from transformers import (
 import torch
 
 from pyterrier_rag.backend._base import Backend, BackendOutput
+from pyterrier_rag._util import to_outlines_generation_parameters, to_outlines_sampling_parameters
 
 
 class HuggingFaceBackend(Backend):
@@ -30,6 +31,7 @@ class HuggingFaceBackend(Backend):
     _support_logits = True
     _logit_type = "dense"
     _remove_prompt = True
+    _supports_structured_generation = True
 
     def __init__(
         self,
@@ -42,6 +44,7 @@ class HuggingFaceBackend(Backend):
         max_new_tokens: int = 32,
         return_logits: bool = False,
         verbose: bool = False,
+        structured_generator: callable = None,
         **kwargs,
     ):
         super().__init__(
@@ -51,6 +54,7 @@ class HuggingFaceBackend(Backend):
             return_logits=return_logits,
             generation_config=None,
             verbose=verbose,
+            structured_generator=structured_generator
             **kwargs,
         )
         self._model_name_or_path = model_name_or_path
@@ -76,6 +80,21 @@ class HuggingFaceBackend(Backend):
             }
         self._generation_args = generation_args
         self.model = self._model
+
+        if self.structured_generator is not None:
+            from outlines import models
+            self.model = models.Transformers(self.model, self.tokenizer)
+            self.model = self.structured_generator(self.model)
+
+    @torch.no_grad()
+    def structured_generate(self, inps: Iterable[str], **kwargs) -> List[BackendOutput]:
+        assert self.model is not None, "Model is not loaded, instantiate a subclass of HFModel"
+
+        responses = self.model(inps,
+                               generation_parameters=to_outlines_generation_parameters(self._generation_args),
+                               sampling_parameters=to_outlines_sampling_parameters(self._generation_args))
+
+        return [BackendOutput(text=txt) for txt in responses]
 
     @torch.no_grad()
     def generate(self, inps: Iterable[str], **kwargs) -> List[BackendOutput]:

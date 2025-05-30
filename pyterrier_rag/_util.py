@@ -1,4 +1,4 @@
-from typing import Union, Iterable, Tuple, List, Optional, Any, Callable
+from typing import Union, Iterable, Tuple, List, Optional, Any, Callable, Dict
 import pandas as pd
 import pyterrier_alpha as pta
 import itertools
@@ -231,3 +231,11 @@ def dataframe_concat(
     if by_query:
         return per_query_concat(input_frame)
     return _concat(input_frame)
+
+
+def to_outlines_generation_parameters(parameters: Dict[str, Union[int, str]]):
+    pass
+
+
+def to_outlines_sampling_parameters(parameters: Dict[str, Union[int, str]]):
+    pass
