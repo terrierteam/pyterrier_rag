@@ -47,12 +47,15 @@ class OpenAIBackend(Backend):
         )
         if not is_openai_availible():
             raise ImportError("Please install openai to use OpenAIBackend")
-        import openai
+        from openai import OpenAI
 
-        self._key = api_key or os.environ.get("OPENAI_API_KEY")
-        if self._key is None:
+        self.__key = api_key or os.environ.get("OPENAI_API_KEY")
+        if self.__key is None:
             raise ValueError("api_key must be provided or set as an environment variable OPENAI_API_KEY")
-        openai.api_key = self._key
+        self.client = OpenAI(
+            # This is the default and can be omitted
+            api_key=self.__key,
+        )
         self._model_name_or_path = model_name_or_path
         if is_tiktoken_availible():
             import tiktoken
@@ -77,7 +80,6 @@ class OpenAIBackend(Backend):
         return_text=False,
         **kwargs,
     ) -> List[int]:
-        import openai
 
         trials = self.max_trials
         while True:
@@ -87,7 +89,7 @@ class OpenAIBackend(Backend):
                     return ""
                 return {}
             try:
-                completion = openai.ChatCompletion.create(*args, **kwargs, timeout=30)
+                completion = self.client.chat.completions.create(*args, **kwargs, timeout=30)
                 break
             except Exception as e:
                 print(str(e))
