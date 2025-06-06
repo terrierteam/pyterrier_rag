@@ -60,7 +60,10 @@ class OpenAIBackend(Backend):
         if is_tiktoken_availible():
             import tiktoken
 
-            self._tokenizer = tiktoken.encoding_for_model(self._model_name_or_path)
+            try:
+                self._tokenizer = tiktoken.encoding_for_model(self._model_name_or_path)
+            except KeyError:
+                self._tokenizer = None
         else:
             self._tokenizer = None
 

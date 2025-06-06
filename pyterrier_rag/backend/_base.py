@@ -121,7 +121,7 @@ class Backend(pt.Transformer, ABC):
         raise NotImplementedError("Implement the generate method")
 
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
-        return self.text_generator(self).transform_iter(inp)
+        return self.text_generator().transform_iter(inp)
 
 
 class TextBackend(pt.Transformer):
