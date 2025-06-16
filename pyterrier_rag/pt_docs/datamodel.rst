@@ -9,7 +9,7 @@ PyTerrier-RAG uses an extended datamodel, building on the standard PyTerrier dat
 |   A  |  ``["qid", "qanswer"]``    | Generated answers                            |
 +------+---------+------------------+----------------------------------------------+
 |  GA  | ``["qid", "gold_answer"]`` | Gold truth answers (an array)                |
-+------+--------------------     ---+----------------------------------------------+
++------+----------------------------+----------------------------------------------+
 
 Different transformer classes make different tranasformations between these datatypes:
 
