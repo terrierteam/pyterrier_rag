@@ -47,12 +47,12 @@ class OpenAIBackend(Backend):
         )
         if not is_openai_availible():
             raise ImportError("Please install openai to use OpenAIBackend")
-        from openai import OpenAI
+        import openai
 
         self.__key = api_key or os.environ.get("OPENAI_API_KEY")
         if self.__key is None:
             raise ValueError("api_key must be provided or set as an environment variable OPENAI_API_KEY")
-        self.client = OpenAI(
+        self.client = openai.OpenAI(
             # This is the default and can be omitted
             api_key=self.__key,
         )
