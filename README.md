@@ -110,7 +110,7 @@ Use the `baseline` kwarg to conduct significance testing in your experiment - se
 
 If you use PyTerrier-RAG for you research, please cite our work:
 
-_Constructing and Evaluating Declarative RAG Pipelines in PyTerrier. Craig Macdonald, Jinyuan Fang, Andrew Parry and Zaiqiao Meng. In Proceedings of SIGIR 2025._ https://www.arxiv.org/abs/2506.10802
+_Constructing and Evaluating Declarative RAG Pipelines in PyTerrier. Craig Macdonald, Jinyuan Fang, Andrew Parry and Zaiqiao Meng. In Proceedings of SIGIR 2025._ https://arxiv.org/abs/2506.10802
 
 
 ## Credits
