@@ -17,7 +17,7 @@ class OpenAIBackend(Backend):
         batch_size (int): Prompts per batch.
         max_input_length (int): Max prompt tokens.
         max_new_tokens (int): Max tokens to generate.
-        max_trials (int): Retry attempts for API errors.
+        max_retries (int): Retry attempts for API errors.
         verbose (bool): Enable verbose logging.
         **kwargs: Passed to Backend base class.
     """
@@ -32,8 +32,9 @@ class OpenAIBackend(Backend):
         max_input_length: int = 512,
         max_new_tokens: int = 32,
         return_logits: bool = False,
-        max_trials: int = 10,
+        max_retries: int = 10,
         verbose: bool = False,
+        base_url: str = None,
         **kwargs,
     ):
         super().__init__(
@@ -49,12 +50,13 @@ class OpenAIBackend(Backend):
             raise ImportError("Please install openai to use OpenAIBackend")
         import openai
 
-        self.__key = api_key or os.environ.get("OPENAI_API_KEY")
-        if self.__key is None:
+        api_key = api_key or os.environ.get("OPENAI_API_KEY")
+        if api_key is None:
             raise ValueError("api_key must be provided or set as an environment variable OPENAI_API_KEY")
         self.client = openai.OpenAI(
-            # This is the default and can be omitted
-            api_key=self.__key,
+            base_url=base_url,
+            api_key=api_key,
+            max_retries=max_retries,
         )
         self._model_name_or_path = model_name_or_path
         if is_tiktoken_availible():
@@ -75,7 +77,6 @@ class OpenAIBackend(Backend):
                 "num_beams": 1,
             }
         self._generation_args = generation_args
-        self.max_trials = max_trials
 
     def _call_completion(
         self,
@@ -84,26 +85,19 @@ class OpenAIBackend(Backend):
         **kwargs,
     ) -> List[int]:
 
-        trials = self.max_trials
-        while True:
-            if trials <= 0:
-                print(f"Exceeded {self.max_trials}, exiting")
-                if return_text:
-                    return ""
-                return {}
-            try:
-                completion = self.client.chat.completions.create(*args, **kwargs, timeout=30)
-                break
-            except Exception as e:
-                print(str(e))
-                if "This model's maximum context length is" in str(e):
-                    print("reduce_length")
-                    return "ERROR::reduce_length"
-                if "The response was filtered" in str(e):
-                    print("The response was filtered")
-                    return "ERROR::The response was filtered"
-                time.sleep(0.1)
-                trials -= 1
+        try:
+            completion = self.client.chat.completions.create(*args, **kwargs, timeout=30)
+            break
+        except Exception as e:
+            print(str(e))
+            if "This model's maximum context length is" in str(e):
+                print("reduce_length")
+                return "ERROR::reduce_length"
+            if "The response was filtered" in str(e):
+                print("The response was filtered")
+                return "ERROR::The response was filtered"
+            time.sleep(0.1)
+            trials -= 1
         if return_text:
             completion = completion["choices"][0]["message"]["content"]
         return completion
