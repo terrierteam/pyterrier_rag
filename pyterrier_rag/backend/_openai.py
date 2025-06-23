@@ -7,7 +7,7 @@ from pyterrier_rag.backend._base import Backend, BackendOutput
 
 class OpenAIBackend(Backend):
     """
-    Backend using OpenAI ChatCompletion.
+    Backend using OpenAI API endpoint(s).
 
     Parameters:
         model_name_or_path (str): OpenAI model identifier.
@@ -17,9 +17,10 @@ class OpenAIBackend(Backend):
         max_input_length (int): Max prompt tokens.
         max_new_tokens (int): Max tokens to generate.
         max_retries (int): Retry attempts for API errors.
-        verbose (bool): Enable verbose logging.
+        api (str): Which API endpoint to use.
         base_url (str): Base API URL
         timeout (float): Timeout for API calls
+        verbose (bool): Enable verbose logging.
         **kwargs: Passed to Backend base class.
     """
     _api_type = "openai"
@@ -28,7 +29,6 @@ class OpenAIBackend(Backend):
         self,
         model_name_or_path: str,
         *,
-        api: Literal['chat/completions', 'completions'] = 'chat/completions',
         api_key: str = None,
         generation_args: dict = None,
         batch_size: int = 4,
@@ -36,9 +36,10 @@ class OpenAIBackend(Backend):
         max_new_tokens: int = 32,
         return_logits: bool = False,
         max_retries: int = 10,
-        verbose: bool = False,
+        api: Literal['chat/completions', 'completions'] = 'chat/completions',
         base_url: str = None,
         timeout: float = 30.,
+        verbose: bool = False,
         **kwargs,
     ):
         super().__init__(
