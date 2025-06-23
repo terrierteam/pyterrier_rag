@@ -101,14 +101,14 @@ class Backend(pt.Transformer, ABC):
         raise NotImplementedError
 
     def text_generator(self):
-        return TextBackend(self)
+        return TextGenerator(self)
 
     def logit_generator(self):
         if not self.return_logits:
             raise ValueError("Cannot return logits as it is disabled")
         if not self._support_logits:
             raise ValueError("This model cannot return logits")
-        return LogitBackend(self)
+        return LogitGenerator(self)
 
     def _raw_generate(self, tokenized_sequences: Iterable[dict]) -> List[str]:
         """
@@ -124,7 +124,7 @@ class Backend(pt.Transformer, ABC):
         return self.text_generator().transform_iter(inp)
 
 
-class TextBackend(pt.Transformer):
+class TextGenerator(pt.Transformer):
     def __init__(self, backend: Backend):
         self.backend = backend
         self.batch_size = self.backend.batch_size
@@ -132,6 +132,7 @@ class TextBackend(pt.Transformer):
         self.output_field = self.backend.output_field
 
     def transform_iter(self, inp: Iterable[str]) -> Iterable[str]:
+        inp = list(inp)
         queries = [i[self.input_field] for i in inp]
         out = []
         for chunk in chunked(queries, self.batch_size):
@@ -144,7 +145,7 @@ class TextBackend(pt.Transformer):
         return inp
 
 
-class LogitBackend(pt.Transformer):
+class LogitGenerator(pt.Transformer):
     def __init__(self, backend: Backend):
         if not backend._support_logits:
             raise ValueError("Backend does not support logits")
@@ -154,17 +155,18 @@ class LogitBackend(pt.Transformer):
         self.output_field = self.backend.output_field
 
     def transform_iter(self, inp: Iterable[str]) -> Iterable[str]:
+        inp = list(inp)
         queries = [i[self.input_field] for i in inp]
         out = []
         for chunk in chunked(queries, self.batch_size):
             out.extend(self.backend.generate(chunk))
         if not hasattr(out[0], "logits"):
-            raise ValueError("Backend must return BackendOutput to use LogitBackend, not {}".format(type(out[0])))
+            raise ValueError("Backend must return BackendOutput to use LogitGenerator, not {}".format(type(out[0])))
         if out[0].logits is None:
-            raise ValueError("Backend must return logits to use LogitBackend")
+            raise ValueError("Backend must return logits to use LogitGenerator")
         for i, o in zip(inp, out):
             i[self.output_field] = o.logits
         return inp
 
 
-__all__ = ["Backend", "BackendOutput", "TextBackend", "LogitBackend"]
+__all__ = ["Backend", "BackendOutput", "TextGenerator", "LogitGenerator"]

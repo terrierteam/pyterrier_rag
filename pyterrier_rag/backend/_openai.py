@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Iterable, Literal
 
 from pyterrier_rag._optional import is_openai_availible, is_tiktoken_availible
 from pyterrier_rag.backend._base import Backend, BackendOutput
@@ -27,6 +27,8 @@ class OpenAIBackend(Backend):
     def __init__(
         self,
         model_name_or_path: str,
+        *,
+        api: Literal['chat/completions', 'completions'] = 'chat/completions',
         api_key: str = None,
         generation_args: dict = None,
         batch_size: int = 4,
@@ -73,22 +75,54 @@ class OpenAIBackend(Backend):
 
         if generation_args is None:
             generation_args = {
-                "max_new_tokens": self.max_new_tokens,
+                "max_tokens": self.max_new_tokens,
                 "temperature": 1.0,
-                "do_sample": False,
-                "num_beams": 1,
             }
         self._generation_args = generation_args
         self.timeout = timeout
+        self.api = api
 
     def _call_completion(
         self,
-        *args,
+        prompts,
         return_text=False,
         **kwargs,
     ) -> List[int]:
+        args = {
+            'model': self._model_name_or_path,
+            'timeout': self.timeout,
+        }
+        args.update(self._generation_args)
+        args.update(kwargs)
         try:
-            completion = self.client.chat.completions.create(*args, **kwargs, timeout=self.timeout)
+            completions = self.client.completions.create(prompt=prompts, **args)
+        except Exception as e:
+            print(str(e))
+            if "This model's maximum context length is" in str(e):
+                print("reduce_length")
+                return ["ERROR::reduce_length" for _ in prompts]
+            if "The response was filtered" in str(e):
+                print("The response was filtered")
+                return ["ERROR::The response was filtered" for _ in prompts]
+            return ['ERROR:other' for _ in prompts]
+        if return_text:
+            completions = [c.text for c in completions.choices]
+        return completions
+
+    def _call_chat_completion(
+        self,
+        messages,
+        return_text=False,
+        **kwargs,
+    ) -> List[int]:
+        args = {
+            'model': self._model_name_or_path,
+            'timeout': self.timeout,
+        }
+        args.update(self._generation_args)
+        args.update(kwargs)
+        try:
+            completions = self.client.chat.completions.create(messages=messages, **args)
         except Exception as e:
             print(str(e))
             if "This model's maximum context length is" in str(e):
@@ -99,16 +133,30 @@ class OpenAIBackend(Backend):
                 return "ERROR::The response was filtered"
             return 'ERROR:other'
         if return_text:
-            completion = completion["choices"][0]["message"]["content"]
-        return completion
+            completions = completions.choices[0].message.content
+        return completions
 
-    def generate(self, prompt: List[dict], **kwargs) -> List[BackendOutput]:
-        response = self._call_completion(
-            messages=prompt,
-            return_text=True,
-            **{"model": self._model_name_or_path, **self._generation_args, **kwargs},
-        )
-        return [BackendOutput(text=r) for r in response]
+    def generate(self, inps: Iterable[str], max_new_tokens=None, **kwargs) -> List[BackendOutput]:
+        inps = list(inps)
+        if max_new_tokens is not None:
+            kwargs['max_tokens'] = max_new_tokens
+        if self.api == 'completions':
+            responses = self._call_completion(
+                inps,
+                return_text=True,
+                **kwargs,
+            )
+        elif self.api == 'chat/completions':
+            responses = []
+            for inp in inps:
+                responses.append(self._call_chat_completion(
+                    [{"role": "user", "content": inp} for inp in inps],
+                    return_text=True,
+                    **kwargs,
+                ))
+        else:
+            raise ValueError(f'api {self.api!r} not supported')
+        return [BackendOutput(text=r) for r in responses]
 
 
 __all__ = ["OpenAIBackend"]
