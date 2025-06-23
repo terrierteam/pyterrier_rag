@@ -1,5 +1,4 @@
 import os
-import time
 from typing import List
 
 from pyterrier_rag._optional import is_openai_availible, is_tiktoken_availible
@@ -19,6 +18,8 @@ class OpenAIBackend(Backend):
         max_new_tokens (int): Max tokens to generate.
         max_retries (int): Retry attempts for API errors.
         verbose (bool): Enable verbose logging.
+        base_url (str): Base API URL
+        timeout (float): Timeout for API calls
         **kwargs: Passed to Backend base class.
     """
     _api_type = "openai"
@@ -35,6 +36,7 @@ class OpenAIBackend(Backend):
         max_retries: int = 10,
         verbose: bool = False,
         base_url: str = None,
+        timeout: float = 30.,
         **kwargs,
     ):
         super().__init__(
@@ -77,6 +79,7 @@ class OpenAIBackend(Backend):
                 "num_beams": 1,
             }
         self._generation_args = generation_args
+        self.timeout = timeout
 
     def _call_completion(
         self,
@@ -85,7 +88,7 @@ class OpenAIBackend(Backend):
         **kwargs,
     ) -> List[int]:
         try:
-            completion = self.client.chat.completions.create(*args, **kwargs, timeout=30)
+            completion = self.client.chat.completions.create(*args, **kwargs, timeout=self.timeout)
         except Exception as e:
             print(str(e))
             if "This model's maximum context length is" in str(e):
