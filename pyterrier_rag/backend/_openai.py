@@ -84,10 +84,8 @@ class OpenAIBackend(Backend):
         return_text=False,
         **kwargs,
     ) -> List[int]:
-
         try:
             completion = self.client.chat.completions.create(*args, **kwargs, timeout=30)
-            break
         except Exception as e:
             print(str(e))
             if "This model's maximum context length is" in str(e):
@@ -96,8 +94,7 @@ class OpenAIBackend(Backend):
             if "The response was filtered" in str(e):
                 print("The response was filtered")
                 return "ERROR::The response was filtered"
-            time.sleep(0.1)
-            trials -= 1
+            return 'ERROR:other'
         if return_text:
             completion = completion["choices"][0]["message"]["content"]
         return completion
