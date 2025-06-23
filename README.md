@@ -8,7 +8,7 @@ PyTerrier-RAG is an extension for [PyTerrier](https://github.com/terrier-org/pyt
 
 As well as access to all of the retrievers (sparse, learned sparse and dense) and rerankers (from MonoT5 to RankGPT) accessible through the wider [PyTerrier ecosystem](https://pyterrier.readthedocs.io/en/latest/).
 
-Installation is as easy as `pip install git+https://github.com/terrierteam/pyterrier_rag`.
+Installation is as easy as `pip install pyterrier-rag`.
 
 ## Example Notebooks
 Try it out here on Google Colab now by clicking the "Open in Colab" button!
@@ -110,7 +110,7 @@ Use the `baseline` kwarg to conduct significance testing in your experiment - se
 
 If you use PyTerrier-RAG for you research, please cite our work:
 
-_Constructing and Evaluating Declarative RAG Pipelines in PyTerrier. Craig Macdonald, Jinyuan Fang, Andrew Parry and Zaiqiao Meng. In Proceedings of SIGIR 2025._
+_Constructing and Evaluating Declarative RAG Pipelines in PyTerrier. Craig Macdonald, Jinyuan Fang, Andrew Parry and Zaiqiao Meng. In Proceedings of SIGIR 2025._ https://arxiv.org/abs/2506.10802
 
 
 ## Credits
