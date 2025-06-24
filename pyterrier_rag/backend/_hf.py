@@ -25,7 +25,7 @@ class HuggingFaceBackend(Backend):
             **kwargs: Additional keyword arguments passed to `Backend` base class.
     """
     _model_class = AutoModelForCausalLM
-    _support_logits = True
+    support_logits = True
     _remove_prompt = True
 
     def __init__(

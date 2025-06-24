@@ -45,9 +45,9 @@ class Reader(pt.Transformer):
             )
         if isinstance(self.prompt, PromptTransformer):
             self.prompt.set_output_attribute(self.backend._api_type)
-            if self.prompt.expect_logits and not self.backend._support_logits:
+            if self.prompt.expect_logits and not self.backend.support_logits:
                 raise ValueError("The LLM does not support logits")
-            elif self.prompt.expect_logits and self.backend._support_logits:
+            elif self.prompt.expect_logits and self.backend.support_logits:
                 self.backend = self.backend.logit_generator()
             else:
                 self.backend = self.backend.text_generator()

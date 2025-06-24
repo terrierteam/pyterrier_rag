@@ -19,7 +19,7 @@ class VLLMBackend(Backend):
     Raises:
         ImportError: If the vllm library is unavailable.
     """
-    _support_logits = True
+    support_logits = True
 
     def __init__(
         self,

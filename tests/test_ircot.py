@@ -16,8 +16,8 @@ class DummyTokenizer:
         return [len(w) for w in text.split()]
     
 class FakeBackend(Backend):
-    _model_name_or_path = 'fake_model'
-    _support_logits = True
+    model_name_or_path = 'fake_model'
+    support_logits = True
     _api_type = None
 
     def __init__(self, **kwargs):
