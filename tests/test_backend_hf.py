@@ -28,7 +28,7 @@ def test_huggingface_generate_slicing_and_outputs():
 
 
 def test_seq2seq_backend_no_slicing():
-    backend = Seq2SeqLMBackend('google-t5/t5-small', batch_size=1, max_new_tokens=1)
+    backend = Seq2SeqLMBackend('google-t5/t5-small', max_new_tokens=1)
     prompts = ['xyz']
     outputs = backend.generate(prompts)
     # No prompt removal: logprobs list should contain full sequences of length prompt+1

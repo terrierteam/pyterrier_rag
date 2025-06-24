@@ -40,6 +40,7 @@ class OpenAIBackend(Backend):
         verbose: bool = False,
     ):
         super().__init__(
+            model_name_or_path=model_name_or_path,
             max_input_length=max_input_length,
             max_new_tokens=max_new_tokens,
             verbose=verbose,
