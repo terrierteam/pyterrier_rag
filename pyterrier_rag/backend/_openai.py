@@ -1,7 +1,7 @@
 import os
-from typing import List, Iterable, Literal
+from typing import List, Optional, Literal
 
-from pyterrier_rag._optional import is_openai_availible, is_tiktoken_availible
+from pyterrier_rag._optional import is_openai_availible
 from pyterrier_rag.backend._base import Backend, BackendOutput
 
 
@@ -20,7 +20,6 @@ class OpenAIBackend(Backend):
         base_url (str): Base API URL
         timeout (float): Timeout for API calls
         verbose (bool): Enable verbose logging.
-        **kwargs: Passed to Backend base class.
     """
     _api_type = "openai"
 
@@ -56,15 +55,6 @@ class OpenAIBackend(Backend):
             api_key=api_key,
             max_retries=max_retries,
         )
-        if is_tiktoken_availible():
-            import tiktoken
-
-            try:
-                self._tokenizer = tiktoken.encoding_for_model(model_name_or_path)
-            except KeyError:
-                self._tokenizer = None
-        else:
-            self._tokenizer = None
 
         if generation_args is None:
             generation_args = {
@@ -79,14 +69,15 @@ class OpenAIBackend(Backend):
         self,
         prompts,
         return_text=False,
-        **kwargs,
+        max_new_tokens=None,
     ) -> List[int]:
         args = {
             'model': self.model_name_or_path,
             'timeout': self.timeout,
         }
         args.update(self._generation_args)
-        args.update(kwargs)
+        if max_new_tokens:
+            args['max_tokens'] = max_new_tokens
         try:
             completions = self.client.completions.create(prompt=prompts, **args)
         except Exception as e:
@@ -106,14 +97,15 @@ class OpenAIBackend(Backend):
         self,
         messages,
         return_text=False,
-        **kwargs,
+        max_new_tokens=None,
     ) -> List[int]:
         args = {
             'model': self._model_name_or_path,
             'timeout': self.timeout,
         }
         args.update(self._generation_args)
-        args.update(kwargs)
+        if max_new_tokens:
+            args['max_tokens'] = max_new_tokens
         try:
             completions = self.client.chat.completions.create(messages=messages, **args)
         except Exception as e:
@@ -129,17 +121,19 @@ class OpenAIBackend(Backend):
             completions = completions.choices[0].message.content
         return completions
 
-    def generate(self, inps: Iterable[str], return_logits: bool = False, max_new_tokens=None, **kwargs) -> List[BackendOutput]:
+    def generate(self,
+        inps: List[str],
+        *,
+        return_logits: bool = False,
+        max_new_tokens: Optional[int] = None,
+    ) -> List[BackendOutput]:
         assert not return_logits, f"{self!r} does not support return_logits=True"
 
-        inps = list(inps)
-        if max_new_tokens is not None:
-            kwargs['max_tokens'] = max_new_tokens
         if self.api == 'completions':
             responses = self._call_completion(
                 inps,
                 return_text=True,
-                **kwargs,
+                max_new_tokens=max_new_tokens,
             )
         elif self.api == 'chat/completions':
             responses = []
@@ -147,7 +141,7 @@ class OpenAIBackend(Backend):
                 responses.append(self._call_chat_completion(
                     [{"role": "user", "content": inp}],
                     return_text=True,
-                    **kwargs,
+                    max_new_tokens=max_new_tokens,
                 ))
         else:
             raise ValueError(f'api {self.api!r} not supported')

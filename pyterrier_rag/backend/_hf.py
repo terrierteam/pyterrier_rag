@@ -1,4 +1,4 @@
-from typing import Iterable, List, Union
+from typing import Optional, List, Union
 
 from transformers import (
     AutoModelForCausalLM,
@@ -76,7 +76,12 @@ class HuggingFaceBackend(Backend):
         self._generation_args = generation_args
 
     @torch.no_grad()
-    def generate(self, inps: Iterable[str], return_logits: bool = False, **kwargs) -> List[BackendOutput]:
+    def generate(self,
+        inps: List[str],
+        *,
+        return_logits: bool = False,
+        max_new_tokens: Optional[int] = None,
+    ) -> List[BackendOutput]:
         # Tokenize inputs
         inputs = self.tokenizer(
             inps,
@@ -87,8 +92,13 @@ class HuggingFaceBackend(Backend):
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
+        generation_args = {}
+        generation_args.update(self._generation_args)
+        if max_new_tokens:
+            generation_args['max_new_tokens'] = max_new_tokens
+
         # Generate outputs
-        outputs = self._model.generate(**inputs, return_dict_in_generate=True, output_scores=return_logits, **self._generation_args, **kwargs)
+        outputs = self._model.generate(**inputs, return_dict_in_generate=True, output_scores=return_logits, **max_new_tokens)
 
         # Compute prompt lengths (non-padding tokens per input)
         pad_token_id = self.tokenizer.pad_token_id

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterable, Union, List, Dict
+from typing import List, Dict, Optional
 
 import pyterrier as pt
 from more_itertools import chunked
@@ -52,7 +52,22 @@ class Backend(pt.Transformer, ABC):
     # Abstract methods
 
     @abstractmethod
-    def generate(self, inp: Iterable[str]) -> Iterable[Union[BackendOutput, str]]:
+    def generate(self,
+        inps: List[str],
+        *,
+        return_logits: bool = False,
+        max_new_tokens: Optional[int] = None,
+    ) -> List[BackendOutput]:
+        """ Generate text from input prompts.
+
+        Parameters:
+            inps (List[str]): Input prompts to generate text for.
+            return_logits (bool): Whether to return logits along with text. (Only available if ``backend._support_logits==True``.)
+            max_new_tokens (Optional[int]): Override for max tokens to generate.
+
+        Returns:
+            List[BackendOutput]: An output for each ``inp``, each containing the generated text and optionally logits.
+        """
         raise NotImplementedError("Implement the generate method")
 
     # Transformer implementations
@@ -60,12 +75,12 @@ class Backend(pt.Transformer, ABC):
     def text_generator(self, *, input_field='prompt', output_field='qanswer') -> pt.Transformer:
         return TextGenerator(self, input_field=input_field, output_field=output_field)
 
-    def logit_generator(self, *, input_field='prompt', output_field='qanswer') -> pt.Transformer:
+    def logit_generator(self, *, input_field='prompt', output_field='qanswer', logits_field='qanswer_logits') -> pt.Transformer:
         if not self._support_logits:
             raise ValueError("This model cannot return logits")
-        return LogitGenerator(self, input_field=input_field, output_field=output_field)
+        return LogitGenerator(self, input_field=input_field, output_field=output_field, logits_field=logits_field)
 
-    def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
+    def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
         return self.text_generator().transform_iter(inp)
 
 
@@ -82,7 +97,7 @@ class TextGenerator(pt.Transformer):
         self.output_field = output_field
         self.batch_size = batch_size
 
-    def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
+    def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
         for chunk in chunked(inp, self.batch_size):
             chunk = list(chunk)
             prompts = [i[self.input_field] for i in inp]
@@ -97,6 +112,7 @@ class LogitGenerator(pt.Transformer):
         *,
         input_field: str = 'prompt',
         output_field: str = 'qanswer',
+        logits_field: str = 'qanswer_logits',
         batch_size: int = 4,
     ):
         if not backend._support_logits:
@@ -104,15 +120,16 @@ class LogitGenerator(pt.Transformer):
         self.backend = backend
         self.input_field = input_field
         self.output_field = output_field
+        self.logits_field = logits_field
         self.batch_size = batch_size
 
-    def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
+    def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
         for chunk in chunked(inp, self.batch_size):
             chunk = list(chunk)
             prompts = [i[self.input_field] for i in inp]
             out = self.backend.generate(prompts, return_logits=True)
             for rec, o in zip(chunk, out):
-                yield {**rec, self.output_field: o.logits}
+                yield {**rec, self.output_field: o.text, self.logits_field: o.logits}
 
 
 __all__ = ["Backend", "BackendOutput", "TextGenerator", "LogitGenerator"]

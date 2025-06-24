@@ -1,4 +1,4 @@
-from typing import Iterable, List
+from typing import Optional, List
 
 from pyterrier_rag.backend._base import Backend, BackendOutput
 from pyterrier_rag._optional import is_vllm_availible
@@ -53,12 +53,18 @@ class VLLMBackend(Backend):
         self.generation_args = generation_args
         self.to_params = SamplingParams
 
-    def generate(self, inps: Iterable[str], return_logits=False, **kwargs) -> List[BackendOutput]:
+    def generate(self,
+        inps: List[str],
+        *,
+        return_logits: bool = False,
+        max_new_tokens: Optional[int] = None,
+    ) -> List[BackendOutput]:
         generation_args = {}
         generation_args.update(self.generation_args)
-        generation_args.update(kwargs)
+        if max_new_tokens:
+            generation_args['max_tokens'] = max_new_tokens
         if return_logits:
-            generation_args.update({'logprobs': self.logit_topk})
+            generation_args['logprobs'] = self.logit_topk
         args = self.to_params(**generation_args)
         responses = self.model.generate(inps, args)
         text = map(lambda x: x.outputs[0].text, responses)
