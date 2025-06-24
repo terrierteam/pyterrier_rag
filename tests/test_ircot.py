@@ -18,7 +18,6 @@ class DummyTokenizer:
 class FakeBackend(Backend):
     _model_name_or_path = 'fake_model'
     _support_logits = True
-    _logit_type = None
     _api_type = None
 
     def __init__(self, **kwargs):

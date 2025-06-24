@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Iterable, Union
+from typing import Iterable, Union, List, Dict
 
 import pyterrier as pt
-import numpy as np
 from more_itertools import chunked
 from dataclasses import dataclass
 
@@ -10,7 +9,7 @@ from dataclasses import dataclass
 @dataclass
 class BackendOutput:
     text: str = None
-    logits: np.array = None
+    logits: List[Dict[str, float]] = None
     prompt_length: int = None
 
 
@@ -30,13 +29,10 @@ class Backend(pt.Transformer, ABC):
     Attributes:
         _model_name_or_path: model name or checkpoint directory
         _support_logits (bool): Flag indicating logit support.
-        _logit_type (str): Type of logits produced.
         _api_type (str): If using API do not return string
     """
 
-    _model_name_or_path = None
     _support_logits = False
-    _logit_type = None
     _api_type = None
 
     def __init__(

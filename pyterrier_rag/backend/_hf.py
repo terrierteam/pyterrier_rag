@@ -26,7 +26,6 @@ class HuggingFaceBackend(Backend):
     """
     _model_class = AutoModelForCausalLM
     _support_logits = True
-    _logit_type = "dense"
     _remove_prompt = True
 
     def __init__(
@@ -37,6 +36,7 @@ class HuggingFaceBackend(Backend):
         generation_args: dict = None,
         max_input_length: int = None,
         max_new_tokens: int = 32,
+        logit_topk: int = 20,
         verbose: bool = False,
         device: Union[str, torch.device] = None,
     ):
@@ -64,6 +64,7 @@ class HuggingFaceBackend(Backend):
 
         max_position_embeddings = getattr(self._model.config, "max_position_embeddings", None)
         self.max_input_length = max_input_length or max_position_embeddings
+        self.logit_topk = logit_topk
 
         if generation_args is None:
             generation_args = {
@@ -106,12 +107,11 @@ class HuggingFaceBackend(Backend):
         # Decode outputs
         texts = self.tokenizer.batch_decode(sequences, skip_special_tokens=True)
         if return_logits:
-            logits = outputs['scores']
-            logits = torch.stack(logits, dim=1)
-            return [
-                BackendOutput(text=text, logits=logits[i], prompt_length=length)
-                for i, (text, length) in enumerate(zip(texts, prompt_lengths))
-            ]
+            raise NotImplementedError() # TODO: process outputs['scores'] as topk dict. NOTE: it's a Tuple[torch.tensor], where the Tuple is the length of the *generated sequence*, not the batch size
+            # return [
+            #     BackendOutput(text=text, logits=logits[i], prompt_length=length)
+            #     for i, (text, length) in enumerate(zip(texts, prompt_lengths))
+            # ]
         else:
             return [
                 BackendOutput(text=text, prompt_length=length)
