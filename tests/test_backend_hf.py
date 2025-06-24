@@ -21,21 +21,21 @@ def test_huggingface_generate_slicing_and_outputs():
     # Check each BackendOutput
     for _, out in enumerate(outputs):
         assert isinstance(out, BackendOutput)
-    assert all(isinstance(out.logits, torch.Tensor) for out in outputs)
+    assert all(isinstance(out.logprobs, torch.Tensor) for out in outputs)
     # The first sliced output should match tensor([0,99]) since prompt_length=1
-    first_logits = outputs[0].logits.tolist()
-    assert len(first_logits) == 1
+    first_logprobs = outputs[0].logprobs.tolist()
+    assert len(first_logprobs) == 1
 
 
 def test_seq2seq_backend_no_slicing():
     backend = Seq2SeqLMBackend('google-t5/t5-small', batch_size=1, max_new_tokens=1)
     prompts = ['xyz']
     outputs = backend.generate(prompts)
-    # No prompt removal: logits list should contain full sequences of length prompt+1
-    logits_list = outputs[0].logits
+    # No prompt removal: logprobs list should contain full sequences of length prompt+1
+    logprobs_list = outputs[0].logprobs
     # Single batch element
-    assert isinstance(logits_list, torch.Tensor)
-    full_seq = logits_list
+    assert isinstance(logprobs_list, torch.Tensor)
+    full_seq = logprobs_list
     assert full_seq.shape[0] == 1
 
 

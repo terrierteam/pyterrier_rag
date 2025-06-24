@@ -2,7 +2,7 @@ import pytest
 import torch
 import numpy as np
 from typing import Iterable
-from pyterrier_rag.backend import Backend, BackendOutput, TextGenerator, LogitGenerator
+from pyterrier_rag.backend import Backend, BackendOutput, TextGenerator
 from transformers import GenerationConfig
 
 # A minimal subclass implementing `generate` for testing
@@ -12,16 +12,16 @@ class DummyBackend(Backend):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.return_logits = True
+        self.return_logprobs = True
 
     def generate(self, inp: Iterable[str]) -> Iterable[BackendOutput]:
         outputs = []
         for prompt in inp:
-            logits = np.array([len(prompt), 0])
+            logprobs = np.array([len(prompt), 0])
             outputs.append(
                 BackendOutput(
                     text=f"resp:{prompt}",
-                    logits=logits,
+                    logprobs=logprobs,
                     prompt_length=len(prompt),
                 )
             )
@@ -91,23 +91,23 @@ def test_text_generator_returns_textgenerator():
     assert tb.backend is b
 
 
-def test_logit_generator_without_support(monkeypatch):
+def test_logprob_generator_without_support(monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    class NoLogits(Backend):
+    class NoLogprobs(Backend):
         supports_logprobs = False
         def generate(self, inp):
             return [BackendOutput(text="x") for _ in inp]
 
-    b = NoLogits()
+    b = NoLogprobs()
     with pytest.raises(ValueError):
-        b.logit_generator()
+        b.logprob_generator()
 
 
-def test_logit_generator_with_support(monkeypatch):
+def test_logprob_generator_with_support(monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
     b = DummyBackend()
-    lb = b.logit_generator()
-    assert isinstance(lb, LogitGenerator)
+    lb = b.logprob_generator()
+    assert isinstance(lb, LogprobGenerator)
     assert lb.backend is b
 
 
@@ -141,10 +141,10 @@ def test_textgenerator_transform_iter_invalid_type(monkeypatch):
         tb.transform_iter([{"prompt": "x"}])
 
 
-def test_logitgenerator_transform_iter_success(monkeypatch):
+def test_logprobgenerator_transform_iter_success(monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
     b = DummyBackend(batch_size=2)
-    lb = b.logit_generator()
+    lb = b.logprob_generator()
     inputs = [{"prompt": "a"}, {"prompt": "bb"}]
     result = lb.transform_iter(inputs)
     for out_dict, inp in zip(result, inputs):
@@ -153,25 +153,25 @@ def test_logitgenerator_transform_iter_success(monkeypatch):
         )
 
 
-def test_logitgenerator_transform_iter_missing_logits_attr(monkeypatch):
+def test_logprobgenerator_transform_iter_missing_logprobs_attr(monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    class NoLogitAttr(Backend):
+    class NoLogprobAttr(Backend):
         supports_logprobs = True
         def generate(self, inp):
             class X: pass
             return [X() for _ in inp]
     with pytest.raises(ValueError):
-        lb = NoLogitAttr().logit_generator()
+        lb = NoLogprobAttr().logprob_generator()
         lb.transform_iter([{"prompt": "x"}])
 
 
-def test_logitgenerator_transform_iter_none_logits(monkeypatch):
+def test_logprobgenerator_transform_iter_none_logprobs(monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    class NoneLogits(Backend):
+    class NoneLogprobs(Backend):
         supports_logprobs = True
         def generate(self, inp):
-            return [BackendOutput(text="t", logits=None, prompt_length=1) for _ in inp]
+            return [BackendOutput(text="t", logprobs=None, prompt_length=1) for _ in inp]
 
     with pytest.raises(ValueError):
-        lb = NoneLogits().logit_generator()
+        lb = NoneLogprobs().logprob_generator()
         lb.transform_iter([{"prompt": "x"}])
