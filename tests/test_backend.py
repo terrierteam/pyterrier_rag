@@ -7,11 +7,10 @@ from transformers import GenerationConfig
 
 # A minimal subclass implementing `generate` for testing
 class DummyBackend(Backend):
-    _model_name_or_path = "dummy-model"
     supports_logprobs = True
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__("dummy-model", **kwargs)
         self.return_logprobs = True
 
     def generate(self, inp: Iterable[str]) -> Iterable[BackendOutput]:
@@ -98,7 +97,7 @@ def test_logprob_generator_without_support(monkeypatch):
         def generate(self, inp):
             return [BackendOutput(text="x") for _ in inp]
 
-    b = NoLogprobs()
+    b = NoLogprobs("dummy-model")
     with pytest.raises(ValueError):
         b.logprob_generator()
 
@@ -136,7 +135,7 @@ def test_textgenerator_transform_iter_invalid_type(monkeypatch):
         def generate(self, inp):
             return [1 for _ in inp]
 
-    tb = TextGenerator(IntBackend())
+    tb = TextGenerator(IntBackend("dummy-model"))
     with pytest.raises(ValueError):
         tb.transform_iter([{"prompt": "x"}])
 
@@ -161,7 +160,7 @@ def test_logprobgenerator_transform_iter_missing_logprobs_attr(monkeypatch):
             class X: pass
             return [X() for _ in inp]
     with pytest.raises(ValueError):
-        lb = NoLogprobAttr().logprob_generator()
+        lb = NoLogprobAttr("dummy-model").logprob_generator()
         lb.transform_iter([{"prompt": "x"}])
 
 
@@ -173,5 +172,5 @@ def test_logprobgenerator_transform_iter_none_logprobs(monkeypatch):
             return [BackendOutput(text="t", logprobs=None, prompt_length=1) for _ in inp]
 
     with pytest.raises(ValueError):
-        lb = NoneLogprobs().logprob_generator()
+        lb = NoneLogprobs("dummy-model").logprob_generator()
         lb.transform_iter([{"prompt": "x"}])

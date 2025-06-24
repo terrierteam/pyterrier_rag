@@ -16,13 +16,11 @@ class DummyTokenizer:
         return [len(w) for w in text.split()]
     
 class FakeBackend(Backend):
-    model_name_or_path = 'fake_model'
     supports_logprobs = True
-    _api_type = None
 
     def __init__(self, **kwargs):
         # initialize with default parameters
-        super().__init__(**kwargs)
+        super().__init__('fake_model', **kwargs)
         # add missing tokenizer attribute for context config
         self.tokenizer = DummyTokenizer()
 
