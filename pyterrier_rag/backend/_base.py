@@ -121,7 +121,7 @@ class Backend(pt.Transformer, ABC):
         raise NotImplementedError("Implement the generate method")
 
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
-        return self.text_generator(self).transform_iter(inp)
+        return self.text_generator().transform_iter(inp)
 
 
 class TextBackend(pt.Transformer):
@@ -132,6 +132,7 @@ class TextBackend(pt.Transformer):
         self.output_field = self.backend.output_field
 
     def transform_iter(self, inp: Iterable[str]) -> Iterable[str]:
+        inp = list(inp)
         queries = [i[self.input_field] for i in inp]
         out = []
         for chunk in chunked(queries, self.batch_size):
@@ -154,6 +155,7 @@ class LogitBackend(pt.Transformer):
         self.output_field = self.backend.output_field
 
     def transform_iter(self, inp: Iterable[str]) -> Iterable[str]:
+        inp = list(inp)
         queries = [i[self.input_field] for i in inp]
         out = []
         for chunk in chunked(queries, self.batch_size):

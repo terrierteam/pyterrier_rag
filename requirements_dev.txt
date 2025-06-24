@@ -5,3 +5,4 @@ pytest-json-report
 ruff
 bert_score
 evaluate # used by bertscore
+pytest-httpserver

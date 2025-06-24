@@ -2,143 +2,87 @@ import os
 import sys
 import time
 import pytest
-from pyterrier_rag.backend import BackendOutput
-
 import numpy as np
-
-# assume the subclass is in openai_backend.py
+from pytest_httpserver import HTTPServer
+from pyterrier_rag.backend import BackendOutput
 from pyterrier_rag.backend._openai import OpenAIBackend
 
 
 def test_import_error_when_openai_not_available(monkeypatch):
-    # simulate openai not available
-    monkeypatch.setattr("pyterrier_rag._optional.is_openai_availible", lambda: False)
     import importlib
-    importlib.reload(sys.modules.get('pyterrier_rag.backend._openai', None) or importlib.import_module('pyterrier_rag.backend._openai'))
-    with pytest.raises(ImportError):
-        OpenAIBackend("gpt-4o-mini")
+    sys.modules.pop("some_module", None)
+    real_import = __import__
+    def fake_import(name, *args, **kwargs):
+        if name == "openai":
+            raise ImportError("No module named 'openai'")
+        return real_import(name, *args, **kwargs)
+    monkeypatch.setattr("builtins.__import__", fake_import)
+
+    try:
+        importlib.reload(sys.modules.get('pyterrier_rag.backend._openai', None) or importlib.import_module('pyterrier_rag.backend._openai'))
+        with pytest.raises(ImportError):
+            OpenAIBackend("gpt-4o-mini")
+    finally:
+        importlib.reload(sys.modules.get('pyterrier_rag.backend._openai', None) or importlib.import_module('pyterrier_rag.backend._openai'))
 
 
-def test_value_error_when_no_api_key(monkeypatch):
-    # simulate openai available but no API key
-    monkeypatch.setattr("pyterrier_rag._optional.is_openai_availible", lambda: True)
-    # ensure env var not set
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    import importlib
-    # reload openai_backend to reset import
-    importlib.reload(sys.modules.get('pyterrier_rag.backend._openai', None) or importlib.import_module('pyterrier_rag.backend._openai'))
-    with pytest.raises(ValueError):
-        OpenAIBackend("gpt-4o-mini")
+def test_api_key(monkeypatch, subtests):
+    with subtests.test(env=False, arg=False):
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        with pytest.raises(ValueError):
+            OpenAIBackend("gpt-4o-mini")
+
+    with subtests.test(env=False, arg=True):
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        backend = OpenAIBackend("gpt-4o-mini", api_key="sk-test")
+        assert backend.client.api_key == "sk-test"
+
+    with subtests.test(env=True, arg=False):
+        monkeypatch.setenv("OPENAI_API_KEY", 'sk-env')
+        backend = OpenAIBackend("gpt-4o-mini")
+        assert backend.client.api_key == "sk-env"
+
+    with subtests.test(env=True, arg=True):
+        monkeypatch.setenv("OPENAI_API_KEY", 'sk-env')
+        backend = OpenAIBackend("gpt-4o-mini", api_key="sk-test")
+        assert backend.client.api_key == "sk-test"
 
 
-def test_api_key_from_parameter(monkeypatch):
-    monkeypatch.setattr("pyterrier_rag._optional.is_openai_availible", lambda: True)
-    # create dummy openai module
-    class DummyChatCompletion:
-        @staticmethod
-        def create(*args, **kwargs):
-            return {"choices": [{"message": {"content": ["ok"]}}]}
-
-    dummy_openai = type(sys)("openai")
-    dummy_openai.ChatCompletion = DummyChatCompletion
-    sys.modules['openai'] = dummy_openai
-
-    # ensure no env var
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    backend = OpenAIBackend("gpt-4o-mini", api_key="sk-test")
-    # openai.api_key should be set
-    assert dummy_openai.api_key == "sk-test"
-    assert backend._model_name_or_path == "gpt-4o-mini"
-    # default generation_args set
-    assert backend._generation_args["temperature"] == 1.0
-    assert backend._generation_args["max_new_tokens"] == backend.max_new_tokens
+def test_init(monkeypatch):
+    OpenAIBackend("gpt-4o-mini", api_key="k")
 
 
-def test_tokenizer_initialization(monkeypatch):
-    monkeypatch.setattr("pyterrier_rag._optional.is_openai_availible", lambda: True)
-    # simulate tiktoken available
-    monkeypatch.setattr("pyterrier_rag._optional.is_tiktoken_availible", lambda: True)
+def test_generate_chat_completions(monkeypatch, httpserver):
+    httpserver.expect_request("/v1/chat/completions").respond_with_json({
+        "choices": [
+            {"message": {"content": "world"}},
+        ]
+    })
 
-    class DummyChatCompletion:
-        @staticmethod
-        def create(*args, **kwargs):
-            return {"choices": [{"message": {"content": ["x"]}}]}
-
-    dummy_openai = type(sys)("openai")
-    dummy_openai.ChatCompletion = DummyChatCompletion
-    sys.modules['openai'] = dummy_openai
-
-    backend = OpenAIBackend("gpt-4o-mini", api_key="k")
-
-def test_call_completion_success_after_retry(monkeypatch):
-    monkeypatch.setattr("pyterrier_rag._optional.is_openai_availible", lambda: True)
-    # dummy openai
-    calls = []
-    class DummyChat:
-        @staticmethod
-        def create(*args, **kwargs):
-            calls.append(kwargs)
-            if len(calls) == 1:
-                raise Exception("Temporary error")
-            return {"choices": [{"message": {"content": "hello"}}]}
-    dummy_openai = type(sys)("openai")
-    dummy_openai.ChatCompletion = DummyChat
-    sys.modules['openai'] = dummy_openai
-
-    backend = OpenAIBackend("gpt-4o-mini", api_key="key")
-    # patch sleep to avoid delay
-    monkeypatch.setattr(time, "sleep", lambda s: None)
-    # call private method
-    result = backend._call_completion(messages=[{"role":"user","content":"hi"}], return_text=True)
-    assert result == "hello"
-    assert len(calls) == 2
+    backend = OpenAIBackend("gpt-4o-mini", base_url=httpserver.url_for('/v1/'), api_key="k")
+    outputs = backend.generate(['hello', 'some message'])
+    assert outputs == [BackendOutput(text='world'), BackendOutput(text='world')]
 
 
-def test_call_completion_reduce_length(monkeypatch):
-    monkeypatch.setattr("pyterrier_rag._optional.is_openai_availible", lambda: True)
-    class ChatErr:
-        @staticmethod
-        def create(*args, **kwargs):
-            raise Exception("This model's maximum context length is")
-    dummy_openai = type(sys)("openai")
-    dummy_openai.ChatCompletion = ChatErr
-    sys.modules['openai'] = dummy_openai
+def test_generate_completions(monkeypatch, httpserver):
+    httpserver.expect_request("/v1/completions").respond_with_json({
+        "choices": [
+            {"text": "world"},
+            {"text": "universe"},
+        ]
+    })
 
-    backend = OpenAIBackend("gpt-4o-mini", api_key="k")
-    res = backend._call_completion(messages=[], return_text=False)
-    assert res == "ERROR::reduce_length"
+    backend = OpenAIBackend("gpt-4o-mini", base_url=httpserver.url_for('/v1/'), api_key="k", api='completions')
+    outputs = backend.generate(['hello', 'some message'])
+    assert outputs == [BackendOutput(text='world'), BackendOutput(text='universe')]
 
+TEST_OPENAI_BASE_URL = os.environ.get('TEST_OPENAI_BASE_URL')
+TEST_OPENAI_API_KEY = os.environ.get('TEST_OPENAI_API_KEY')
 
-def test_call_completion_filtered(monkeypatch):
-    monkeypatch.setattr("pyterrier_rag._optional.is_openai_availible", lambda: True)
-    class ChatErr2:
-        @staticmethod
-        def create(*args, **kwargs):
-            raise Exception("The response was filtered")
-    dummy_openai = type(sys)("openai")
-    dummy_openai.ChatCompletion = ChatErr2
-    sys.modules['openai'] = dummy_openai
-
-    backend = OpenAIBackend("gpt-4o-mini", api_key="k")
-    res = backend._call_completion(messages=[], return_text=False)
-    assert res == "ERROR::The response was filtered"
-
-
-def test_generate_outputs_backendoutput_list(monkeypatch):
-    monkeypatch.setattr("pyterrier_rag._optional.is_openai_availible", lambda: True)
-    # simulate openai returning list of strings
-    class DummyChatCompletion3:
-        @staticmethod
-        def create(*args, **kwargs):
-            return {"choices": [{"message": {"content": ["one","two"]}}]}
-    dummy_openai = type(sys)("openai")
-    dummy_openai.ChatCompletion = DummyChatCompletion3
-    sys.modules['openai'] = dummy_openai
-
-    backend = OpenAIBackend("gpt-4o-mini", api_key="k")
-    prompts = [{"role":"user","content":"hi"}]
-    outputs = backend.generate(prompts)
-    assert isinstance(outputs, list)
-    assert all(isinstance(o, BackendOutput) for o in outputs)
-    texts = [o.text for o in outputs]
-    assert texts == ["one", "two"]
+@pytest.mark.skipif(not TEST_OPENAI_BASE_URL or not TEST_OPENAI_API_KEY, reason="TEST_OPENAI_BASE_URL and TEST_OPENAI_API_KEY not provided")
+def test_integration_basic():
+    backend = OpenAIBackend("gpt-4o-mini", base_url=TEST_OPENAI_BASE_URL, api_key=TEST_OPENAI_API_KEY)
+    result = backend.generate(['hello world', 'some text'])
+    assert len(result) == 2
+    assert len(result[0].text) > 0
+    assert len(result[1].text) > 0
