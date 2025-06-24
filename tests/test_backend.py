@@ -8,7 +8,7 @@ from transformers import GenerationConfig
 # A minimal subclass implementing `generate` for testing
 class DummyBackend(Backend):
     _model_name_or_path = "dummy-model"
-    support_logits = True
+    supports_logprobs = True
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -94,7 +94,7 @@ def test_text_generator_returns_textgenerator():
 def test_logit_generator_without_support(monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
     class NoLogits(Backend):
-        support_logits = False
+        supports_logprobs = False
         def generate(self, inp):
             return [BackendOutput(text="x") for _ in inp]
 
@@ -132,7 +132,7 @@ def test_textgenerator_transform_iter_success(monkeypatch):
 def test_textgenerator_transform_iter_invalid_type(monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
     class IntBackend(Backend):
-        support_logits = False
+        supports_logprobs = False
         def generate(self, inp):
             return [1 for _ in inp]
 
@@ -156,7 +156,7 @@ def test_logitgenerator_transform_iter_success(monkeypatch):
 def test_logitgenerator_transform_iter_missing_logits_attr(monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
     class NoLogitAttr(Backend):
-        support_logits = True
+        supports_logprobs = True
         def generate(self, inp):
             class X: pass
             return [X() for _ in inp]
@@ -168,7 +168,7 @@ def test_logitgenerator_transform_iter_missing_logits_attr(monkeypatch):
 def test_logitgenerator_transform_iter_none_logits(monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
     class NoneLogits(Backend):
-        support_logits = True
+        supports_logprobs = True
         def generate(self, inp):
             return [BackendOutput(text="t", logits=None, prompt_length=1) for _ in inp]
 

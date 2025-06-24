@@ -9,8 +9,7 @@ from dataclasses import dataclass
 @dataclass
 class BackendOutput:
     text: str = None
-    logits: List[Dict[str, float]] = None
-    prompt_length: int = None
+    logprobs: Optional[List[Dict[str, float]]] = None
 
 
 class Backend(pt.Transformer, ABC):
@@ -18,8 +17,7 @@ class Backend(pt.Transformer, ABC):
     Abstract base class for model-backed Transformers in PyTerrier.
 
     Subclasses must implement the raw generation logic (generate) and the
-    high-level generate method. Supports optional logit extraction and prompt
-    trimming.
+    high-level generate method. Supports optional logprob extraction.
 
     Parameters:
         max_input_length (int): Maximum token length for each input prompt.
@@ -28,10 +26,10 @@ class Backend(pt.Transformer, ABC):
         device (Union[str, torch.device]): Device for model execution.
     Attributes:
         model_name_or_path: model name or checkpoint directory
-        support_logits (bool): Flag indicating logit support.
+        supports_logprobs (bool): Flag indicating support for including the logprobs of generated tokens.
         _api_type (str): If using API do not return string
     """
-    support_logits = False
+    supports_logprobs = False
     _api_type = None
 
     def __init__(
@@ -54,18 +52,18 @@ class Backend(pt.Transformer, ABC):
     def generate(self,
         inps: List[str],
         *,
-        return_logits: bool = False,
+        return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
     ) -> List[BackendOutput]:
         """ Generate text from input prompts.
 
         Parameters:
             inps (List[str]): Input prompts to generate text for.
-            return_logits (bool): Whether to return logits along with text. (Only available if ``backend.support_logits==True``.)
+            return_logprobs (bool): Whether to return logprobs of generated tokens along with text. (Only available if ``backend.supports_logprobs==True``.)
             max_new_tokens (Optional[int]): Override for max tokens to generate.
 
         Returns:
-            List[BackendOutput]: An output for each ``inp``, each containing the generated text and optionally logits.
+            List[BackendOutput]: An output for each ``inp``, each containing the generated text and optionally logprobs.
         """
         raise NotImplementedError("Implement the generate method")
 
@@ -88,26 +86,26 @@ class Backend(pt.Transformer, ABC):
         """
         return TextGenerator(self, input_field=input_field, output_field=output_field, max_new_tokens=max_new_tokens)
 
-    def logit_generator(self,
+    def logprobs_generator(self,
         *,
         input_field: str = 'prompt',
         output_field: str = 'qanswer',
-        logits_field: str = 'qanswer_logits',
+        logprobs_field: str = 'qanswer_logprobs',
         batch_size: int = 4,
         max_new_tokens: Optional[int] = None,
     ) -> pt.Transformer:
-        """ Create a text generator transformer that also returns the logits of each token using this backend.
+        """ Create a text generator transformer that also returns the logprobs of each token using this backend.
 
         Parameters:
             input_field (str): Name of the field containing input prompts.
             output_field (str): Name of the field to store generated text.
-            logits_field (str): Name of the field to store logits.
+            logprobs_field (str): Name of the field to store logprobs.
             batch_size (int): Number of prompts to process in each batch.
             max_new_tokens (Optional[int]): Override for max tokens to generate. If None, uses the backend's max_new_tokens.
         """
-        if not self.support_logits:
-            raise ValueError("This model cannot return logits")
-        return TextGenerator(self, input_field=input_field, output_field=output_field, logits_field=logits_field, max_new_tokens=max_new_tokens)
+        if not self.supports_logprobs:
+            raise ValueError("This model cannot return logprobs")
+        return TextGenerator(self, input_field=input_field, output_field=output_field, logprobs_field=logprobs_field, max_new_tokens=max_new_tokens)
 
     def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
         return self.text_generator().transform_iter(inp)
@@ -121,7 +119,7 @@ class TextGenerator(pt.Transformer):
         *,
         input_field: str = 'prompt',
         output_field: str = 'qanswer',
-        logits_field: Optional[str] = None,
+        logprobs_field: Optional[str] = None,
         batch_size: int = 4,
         max_new_tokens: Optional[int] = None,
     ):
@@ -130,27 +128,27 @@ class TextGenerator(pt.Transformer):
             backend (Backend): The backend to use for text generation.
             input_field (str): Name of the field containing input prompts.
             output_field (str): Name of the field to store generated text.
-            logits_field (Optional[str]): Name of the field to store logits. If None, logits are not returned.
+            logprobs_field (Optional[str]): Name of the field to store generated logprobs. If None, logprobs are not returned.
             batch_size (int): Number of prompts to process in each batch.
             max_new_tokens (Optional[int]): Override for max tokens to generate. If None, uses the backend's max_new_tokens.
         """
-        if logits_field is not None and not backend.support_logits:
-            raise ValueError("Backend does not support logits")
+        if logprobs_field is not None and not backend.supports_logprobs:
+            raise ValueError("Backend does not support logprobs")
         self.backend = backend
         self.input_field = input_field
         self.output_field = output_field
-        self.logits_field = logits_field
+        self.logprobs_field = logprobs_field
         self.batch_size = batch_size
 
     def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
         for chunk in chunked(inp, self.batch_size):
             chunk = list(chunk)
             prompts = [i[self.input_field] for i in inp]
-            out = self.backend.generate(prompts, return_logits=self.logits_field is not None)
+            out = self.backend.generate(prompts, return_logprobs=self.logprobs_field is not None)
             for rec, o in zip(chunk, out):
                 result = {**rec, self.output_field: o.text}
-                if self.logits_field is not None:
-                    result[self.logits_field] = o.logits
+                if self.logprobs_field is not None:
+                    result[self.logprobs_field] = o.logprobs
                 yield result
 
 

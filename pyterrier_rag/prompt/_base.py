@@ -19,7 +19,7 @@ class PromptTransformer(pt.Transformer):
         api_type (str, optional): API format: 'openai','gemini','vertex','reka'.
         output_field (str): Field name to store the generated prompt.
         input_fields (List[str]): Input record fields required to build the prompt.
-        expects_logits (bool): Indicator for logit-based backends.
+        expects_logprobs (bool): Indicator for logprob-based backends.
         answer_extraction (callable, optional): Function to parse model outputs.
         raw_instruction (bool): If True, returns raw instruction without template.
     """
@@ -32,7 +32,7 @@ class PromptTransformer(pt.Transformer):
         api_type: Optional[str] = None,
         output_field: str = "prompt",
         input_fields: List[str] = ["query", "qcontext"],
-        expects_logits: bool = False,
+        expects_logprobs: bool = False,
         answer_extraction: Optional[callable] = None,
         raw_instruction: bool = False,
     ):
@@ -43,7 +43,7 @@ class PromptTransformer(pt.Transformer):
         self.input_fields = input_fields
         self.conversation_template = conversation_template
         self.api_type = api_type
-        self.expect_logits = expects_logits
+        self.expects_logprobs = expects_logprobs
         self.answer_extraction = answer_extraction or self.answer_extraction
         self.raw_instruction = raw_instruction
 

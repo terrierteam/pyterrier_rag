@@ -23,7 +23,7 @@ The backend can be used to generate responses to prompts. For example, using the
     :caption: Generate a response using the backend
 
     backend.generate(["What is the capital of France?"])
-    # Outputs: [BackendOutput(text='The capital of France is Paris.', logits=None, prompt_length=None)]
+    # Outputs: [BackendOutput(text='The capital of France is Paris.', logprobs=None)]
 
 Backends also function as PyTerrier Transformers. By default, they take input from the ``prompt`` column and output
 to the ``qanswer`` column:

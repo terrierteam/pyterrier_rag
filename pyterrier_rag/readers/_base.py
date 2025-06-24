@@ -15,7 +15,7 @@ class Reader(pt.Transformer):
     """
     Transformer that generates answers from context and queries using an LLM backend.
 
-    Combines a PromptTransformer with a Backend to produce text or logits,
+    Combines a PromptTransformer with a Backend to produce text or logprobs,
     then applies answer extraction to return final responses.
 
     Parameters:
@@ -24,7 +24,7 @@ class Reader(pt.Transformer):
         output_field (str): Field name in the output DataFrame for answers.
 
     Raises:
-        ValueError: If the prompt expects logits but the backend does not support logits.
+        ValueError: If the prompt expects logprobs but the backend does not support logprobs.
     """
     def __init__(
         self,
@@ -45,10 +45,10 @@ class Reader(pt.Transformer):
             )
         if isinstance(self.prompt, PromptTransformer):
             self.prompt.set_output_attribute(self.backend._api_type)
-            if self.prompt.expect_logits and not self.backend.support_logits:
-                raise ValueError("The LLM does not support logits")
-            elif self.prompt.expect_logits and self.backend.support_logits:
-                self.backend = self.backend.logit_generator()
+            if self.prompt.expect_logprobs and not self.backend.supports_logprobs:
+                raise ValueError("The LLM does not support logprobs")
+            elif self.prompt.expect_logprobs and self.backend.supports_logprobs:
+                self.backend = self.backend.logprobs_generator()
             else:
                 self.backend = self.backend.text_generator()
 

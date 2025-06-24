@@ -13,7 +13,7 @@ from pyterrier_rag.backend._base import Backend, BackendOutput
 
 class HuggingFaceBackend(Backend):
     """
-        Backend implementation using HuggingFace Transformer models for text and logit generation.
+        Backend implementation using a HuggingFace Transformer model.
 
         Parameters:
             model_name_or_path (str): Identifier or path of the pretrained model.
@@ -25,7 +25,7 @@ class HuggingFaceBackend(Backend):
             **kwargs: Additional keyword arguments passed to `Backend` base class.
     """
     _model_class = AutoModelForCausalLM
-    support_logits = True
+    supports_logprobs = True
     _remove_prompt = True
 
     def __init__(
@@ -36,7 +36,7 @@ class HuggingFaceBackend(Backend):
         generation_args: dict = None,
         max_input_length: int = None,
         max_new_tokens: int = 32,
-        logit_topk: int = 20,
+        logprobs_topk: int = 20,
         verbose: bool = False,
         device: Union[str, torch.device] = None,
     ):
@@ -64,7 +64,7 @@ class HuggingFaceBackend(Backend):
 
         max_position_embeddings = getattr(self._model.config, "max_position_embeddings", None)
         self.max_input_length = max_input_length or max_position_embeddings
-        self.logit_topk = logit_topk
+        self.logprob_topk = logprob_topk
 
         if generation_args is None:
             generation_args = {
@@ -79,7 +79,7 @@ class HuggingFaceBackend(Backend):
     def generate(self,
         inps: List[str],
         *,
-        return_logits: bool = False,
+        return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
     ) -> List[BackendOutput]:
         # Tokenize inputs
@@ -98,7 +98,7 @@ class HuggingFaceBackend(Backend):
             generation_args['max_new_tokens'] = max_new_tokens
 
         # Generate outputs
-        outputs = self._model.generate(**inputs, return_dict_in_generate=True, output_scores=return_logits, **max_new_tokens)
+        outputs = self._model.generate(**inputs, return_dict_in_generate=True, output_scores=return_logprobs, **max_new_tokens)
 
         # Compute prompt lengths (non-padding tokens per input)
         pad_token_id = self.tokenizer.pad_token_id
@@ -116,7 +116,7 @@ class HuggingFaceBackend(Backend):
 
         # Decode outputs
         texts = self.tokenizer.batch_decode(sequences, skip_special_tokens=True)
-        if return_logits:
+        if return_logprobs:
             raise NotImplementedError() # TODO: process outputs['scores'] as topk dict. NOTE: it's a Tuple[torch.tensor], where the Tuple is the length of the *generated sequence*, not the batch size
             # return [
             #     BackendOutput(text=text, logits=logits[i], prompt_length=length)
