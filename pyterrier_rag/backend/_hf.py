@@ -64,7 +64,7 @@ class HuggingFaceBackend(Backend):
 
         max_position_embeddings = getattr(self._model.config, "max_position_embeddings", None)
         self.max_input_length = max_input_length or max_position_embeddings
-        self.logprob_topk = logprob_topk
+        self.logprobs_topk = logprobs_topk
 
         if generation_args is None:
             generation_args = {
