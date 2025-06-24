@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Iterable, Union
 
 import pyterrier as pt
-import torch
 import numpy as np
 from more_itertools import chunked
 from dataclasses import dataclass
