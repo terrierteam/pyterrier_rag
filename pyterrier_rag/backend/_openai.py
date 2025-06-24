@@ -96,7 +96,7 @@ class OpenAIBackend(Backend):
         for choice in completions.choices:
             results.append(BackendOutput(text=choice.text))
             if return_logprobs and choice.logprobs is not None:
-                results[-1].logprobs = {lp.token: lp.logprob for lp in choice.logprobs.top_logprobs}
+                results[-1].logprobs = choice.logprobs.top_logprobs
         return results
 
     def _call_chat_completion(
@@ -126,7 +126,7 @@ class OpenAIBackend(Backend):
             return BackendOutput(text="ERROR::other")
         result = BackendOutput(text=completions.choices[0].message.content)
         if return_logprobs and completions.choices[0].logprobs is not None:
-            result.logprobs = {lp.token: lp.logprob for lp in completions.choices[0].logprobs.top_logprobs}
+            result.logprobs = [{lp.token: lp.logprob for lp in lps.top_logprobs} for lps in completions.choices[0].logprobs.content]
         return result
 
     def generate(self,
@@ -138,11 +138,20 @@ class OpenAIBackend(Backend):
         pass
 
         if self.api == 'completions':
-            results = self._call_completion(
-                inps,
-                max_new_tokens=max_new_tokens,
-                return_logprobs=return_logprobs,
-            )
+            if return_logprobs:
+                results = []
+                for inp in inps:
+                    results.append(self._call_completion(
+                        [inp],
+                        max_new_tokens=max_new_tokens,
+                        return_logprobs=return_logprobs,
+                    )[0])
+            else:
+                results = self._call_completion(
+                    inps,
+                    max_new_tokens=max_new_tokens,
+                    return_logprobs=return_logprobs,
+                )
         elif self.api == 'chat/completions':
             results = []
             for inp in inps:

@@ -1,3 +1,5 @@
+import types
+import unittest
 import os
 import sys
 import time
@@ -6,6 +8,114 @@ import numpy as np
 from pytest_httpserver import HTTPServer
 from pyterrier_rag.backend import BackendOutput
 from pyterrier_rag.backend._openai import OpenAIBackend
+from openai.types.chat import ChatCompletion
+from openai.types import Completion
+from . import test_backend
+
+
+@unittest.skipIf(os.environ.get('TEST_OPENAI_KEY') is None, "TEST_OPENAI_KEY not set")
+class TestOpenAIBackend(test_backend.BaseTestBackend, unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.backend = OpenAIBackend(
+            model_name_or_path="gpt-4o-mini",
+            api_key=os.environ['TEST_OPENAI_KEY'],
+            api='completions',
+        )
+
+
+@unittest.skipIf(os.environ.get('TEST_OPENAI_KEY') is None, "TEST_OPENAI_KEY not set")
+class TestOpenAIBackendChat(test_backend.BaseTestBackend, unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.backend = OpenAIBackend(
+            model_name_or_path="gpt-4o-mini",
+            api_key=os.environ['TEST_OPENAI_KEY'],
+            api='chat/completions',
+        )
+
+
+@unittest.skipIf(os.environ.get('TEST_IDA_KEY') is None, "TEST_IDA_KEY not set")
+class TestOpenAIBackendLlama(test_backend.BaseTestBackend, unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.backend = OpenAIBackend(
+            model_name_or_path="llama-3-8b-instruct",
+            api_key=os.environ['TEST_IDA_KEY'],
+            base_url='http://api.llm.apps.os.dcs.gla.ac.uk/v1/',
+            api='completions',
+        )
+
+
+@unittest.skipIf(os.environ.get('TEST_IDA_KEY') is None, "TEST_IDA_KEY not set")
+class TestOpenAIBackendLlamaChat(test_backend.BaseTestBackend, unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.backend = OpenAIBackend(
+            model_name_or_path="llama-3-8b-instruct",
+            api_key=os.environ['TEST_IDA_KEY'],
+            base_url='http://api.llm.apps.os.dcs.gla.ac.uk/v1/',
+            api='chat/completions',
+        )
+
+
+class TestOpenAIBackendMock(test_backend.BaseTestBackend, unittest.TestCase):
+    @classmethod
+    def completions(self, **kwargs):
+        if kwargs.get('logprobs'):
+            return Completion.construct(**{
+                "choices": [
+                    {"text": "world", "logprobs": {"top_logprobs": [{"a": 1, "b": 2}]}},
+                ] * len(kwargs['prompt'])
+            })
+        else:
+            return Completion.construct(**{
+                "choices": [
+                    {"text": "world"},
+                ] * len(kwargs['prompt'])
+            })
+
+    @classmethod
+    def setUpClass(cls):
+        cls.backend = OpenAIBackend(
+            model_name_or_path="dummy",
+            api_key="dummy",
+            api='completions',
+        )
+        # Simulate the OpenAI backend
+        cls.backend.client = types.SimpleNamespace()
+        cls.backend.client.completions = types.SimpleNamespace()
+        cls.backend.client.completions.create = cls.completions
+
+
+class TestOpenAIBackendMockChat(test_backend.BaseTestBackend, unittest.TestCase):
+    @classmethod
+    def chat_completions(self, **kwargs):
+        if kwargs.get('logprobs'):
+            return ChatCompletion.construct(**{
+                "choices": [
+                    {"message": {"content": "world"}, "logprobs": {'content': [{"top_logprobs": [{'token': 'a', 'logprob': 1}, {'token': 'b', 'logprob': 2}]}]}},
+                ]
+            })
+        else:
+            return ChatCompletion.construct(**{
+                "choices": [
+                    {"message": {"content": "world"}},
+                ]
+            })
+
+    @classmethod
+    def setUpClass(cls):
+        cls.backend = OpenAIBackend(
+            model_name_or_path="dummy",
+            api_key="dummy",
+            api='chat/completions',
+        )
+        # Simulate the OpenAI backend
+        cls.backend.client = types.SimpleNamespace()
+        cls.backend.client.chat = types.SimpleNamespace()
+        cls.backend.client.chat.completions = types.SimpleNamespace()
+        cls.backend.client.chat.completions.create = cls.chat_completions
 
 
 def test_import_error_when_openai_not_available(monkeypatch):

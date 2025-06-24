@@ -1,3 +1,5 @@
+import unittest
+import pandas as pd
 import pytest
 import torch
 import numpy as np
@@ -68,4 +70,43 @@ def test_logprobgenerator_transform_iter_success(monkeypatch):
     result = lb.transform_iter(inputs)
     for out_dict, inp in zip(result, inputs):
         assert out_dict['qanswer'].startswith('resp:')
-        assert out_dict['qanswer_logprobs'] == [[{'a': 1, 'b': 2}]]
+        assert out_dict['qanswer_logprobs'] == [{'a': 1, 'b': 2}]
+
+
+class BaseTestBackend:
+    def test_generate(self):
+        prompts = ["Hello", "World"]
+        outputs = self.backend.generate(prompts)
+        self.assertIsInstance(outputs, list)
+        self.assertEqual(len(outputs), len(prompts))
+        for output in outputs:
+            self.assertIsInstance(output, BackendOutput)
+            self.assertIsInstance(output.text, str)
+            self.assertEqual(output.logprobs, None)
+
+    def test_generate_logprobs(self):
+        if not self.backend.supports_logprobs:
+            self.skipTest(f"{self.backend!r} does not support logprobs")
+        prompts = ["Hello", "World"]
+        outputs = self.backend.generate(prompts, return_logprobs=True)
+        self.assertIsInstance(outputs, list)
+        self.assertEqual(len(outputs), len(prompts))
+        for output in outputs:
+            self.assertIsInstance(output, BackendOutput)
+            self.assertIsInstance(output.text, str)
+            self.assertIsInstance(output.logprobs, list)
+            self.assertIsInstance(output.logprobs[0], dict)
+
+    def test_generate_logprobs_1tok(self):
+        if not self.backend.supports_logprobs:
+            self.skipTest(f"{self.backend!r} does not support logprobs")
+        prompts = ["Hello", "World"]
+        outputs = self.backend.generate(prompts, return_logprobs=True, max_new_tokens=1)
+        self.assertIsInstance(outputs, list)
+        self.assertEqual(len(outputs), len(prompts))
+        for output in outputs:
+            self.assertIsInstance(output, BackendOutput)
+            self.assertIsInstance(output.text, str)
+            self.assertIsInstance(output.logprobs, list)
+            self.assertEqual(len(output.logprobs), 1)
+            self.assertIsInstance(output.logprobs[0], dict)

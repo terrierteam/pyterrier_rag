@@ -1,8 +1,16 @@
+import unittest
 import pytest
 import torch
 
 from pyterrier_rag.backend._hf import HuggingFaceBackend, Seq2SeqLMBackend, StopWordCriteria
 from pyterrier_rag.backend import BackendOutput
+from . import test_backend
+
+
+class TestOpenAIBackend(test_backend.BaseTestBackend, unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.backend = HuggingFaceBackend('HuggingFaceTB/SmolLM-135M')
 
 def test_huggingface_init_and_attributes():
     # Instantiate CBT with dummy model
