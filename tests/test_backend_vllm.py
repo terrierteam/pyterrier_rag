@@ -1,3 +1,4 @@
+import torch
 import pytest
 import sys
 import types
@@ -8,6 +9,7 @@ from pyterrier_rag.backend._vllm import VLLMBackend
 from pyterrier_rag.backend import BackendOutput
 
 
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="cuda not available")
 def test_vllmbackend_generate():
     # instantiate backend
     backend = VLLMBackend(
