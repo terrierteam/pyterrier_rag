@@ -41,13 +41,13 @@ class Reader(pt.Transformer):
         if isinstance(self.prompt, str):
             self.prompt = PromptTransformer(
                 instruction=self.prompt,
-                model_name_or_path=self.backend._model_name_or_path,
+                model_name_or_path=self.backend.model_name_or_path,
             )
         if isinstance(self.prompt, PromptTransformer):
             self.prompt.set_output_attribute(self.backend._api_type)
-            if self.prompt.expect_logprobs and not self.backend.supports_logprobs:
+            if self.prompt.expects_logprobs and not self.backend.supports_logprobs:
                 raise ValueError("The LLM does not support logprobs")
-            elif self.prompt.expect_logprobs and self.backend.supports_logprobs:
+            elif self.prompt.expects_logprobs and self.backend.supports_logprobs:
                 self.backend = self.backend.logprobs_generator()
             else:
                 self.backend = self.backend.text_generator()

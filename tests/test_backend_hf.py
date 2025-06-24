@@ -6,13 +6,13 @@ from pyterrier_rag.backend import BackendOutput
 
 def test_huggingface_init_and_attributes():
     # Instantiate CBT with dummy model
-    backend = HuggingFaceBackend('HuggingFaceTB/SmolLM-135M', batch_size=2)
+    backend = HuggingFaceBackend('HuggingFaceTB/SmolLM-135M')
     # generation args present
     assert 'temperature' in backend._generation_args
 
 
 def test_huggingface_generate_slicing_and_outputs():
-    backend = HuggingFaceBackend('HuggingFaceTB/SmolLM-135M', batch_size=2, max_new_tokens=1)
+    backend = HuggingFaceBackend('HuggingFaceTB/SmolLM-135M', max_new_tokens=1)
     # Provide two prompts
     prompts = ['a', 'bb']
     outputs = backend.generate(prompts)
@@ -21,7 +21,7 @@ def test_huggingface_generate_slicing_and_outputs():
     # Check each BackendOutput
     for _, out in enumerate(outputs):
         assert isinstance(out, BackendOutput)
-    assert all(isinstance(out.logprobs, torch.Tensor) for out in outputs)
+    assert all(isinstance(out.logprobs, list) for out in outputs)
     # The first sliced output should match tensor([0,99]) since prompt_length=1
     first_logprobs = outputs[0].logprobs.tolist()
     assert len(first_logprobs) == 1
@@ -34,7 +34,7 @@ def test_seq2seq_backend_no_slicing():
     # No prompt removal: logprobs list should contain full sequences of length prompt+1
     logprobs_list = outputs[0].logprobs
     # Single batch element
-    assert isinstance(logprobs_list, torch.Tensor)
+    assert isinstance(logprobs_list, list)
     full_seq = logprobs_list
     assert full_seq.shape[0] == 1
 

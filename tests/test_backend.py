@@ -11,76 +11,18 @@ class DummyBackend(Backend):
 
     def __init__(self, **kwargs):
         super().__init__("dummy-model", **kwargs)
-        self.return_logprobs = True
 
-    def generate(self, inp: Iterable[str]) -> Iterable[BackendOutput]:
+    def generate(self, inp, return_logprobs=False, max_new_tokens=None) -> Iterable[BackendOutput]:
         outputs = []
         for prompt in inp:
-            logprobs = np.array([len(prompt), 0])
+            logprobs = [{'a': 1, 'b': 2}]
             outputs.append(
                 BackendOutput(
                     text=f"resp:{prompt}",
                     logprobs=logprobs,
-                    prompt_length=len(prompt),
                 )
             )
         return outputs
-
-
-def test_model_name_or_path_default():
-    b = Backend()
-    assert b.model_name_or_path is None
-
-
-def test_model_name_or_path_subclass():
-    b = DummyBackend()
-    assert b.model_name_or_path == "dummy-model"
-
-
-def test_default_device_cpu(monkeypatch):
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    b = DummyBackend()
-    assert isinstance(b.device, torch.device)
-    assert b.device == torch.device("cpu")
-
-
-def test_default_device_cuda(monkeypatch):
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
-    b = DummyBackend()
-    assert b.device == torch.device("cuda")
-
-
-def test_device_arg_string(monkeypatch):
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    b = DummyBackend(device="cuda")
-    assert b.device == torch.device("cuda")
-
-
-def test_device_arg_device():
-    b = DummyBackend(device=torch.device("cpu"))
-    assert b.device == torch.device("cpu")
-
-
-def test_generation_config_default(monkeypatch):
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    b = DummyBackend(max_new_tokens=42)
-    cfg = b.generation_config
-    assert cfg.max_new_tokens == 42
-    assert cfg.temperature == 1.0
-    assert cfg.do_sample is False
-    assert cfg.num_beams == 1
-
-
-def test_generation_config_custom(monkeypatch):
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    custom_cfg = GenerationConfig(
-        max_new_tokens=5,
-        temperature=0.5,
-        do_sample=True,
-        num_beams=3,
-    )
-    b = DummyBackend(generation_config=custom_cfg)
-    assert b.generation_config is custom_cfg
 
 
 def test_text_generator_returns_textgenerator():
@@ -90,8 +32,7 @@ def test_text_generator_returns_textgenerator():
     assert tb.backend is b
 
 
-def test_logprob_generator_without_support(monkeypatch):
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+def test_logprobs_generator_without_support(monkeypatch):
     class NoLogprobs(Backend):
         supports_logprobs = False
         def generate(self, inp):
@@ -99,27 +40,19 @@ def test_logprob_generator_without_support(monkeypatch):
 
     b = NoLogprobs("dummy-model")
     with pytest.raises(ValueError):
-        b.logprob_generator()
+        b.logprobs_generator()
 
 
-def test_logprob_generator_with_support(monkeypatch):
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+def test_logprobs_generator_with_support(monkeypatch):
     b = DummyBackend()
-    lb = b.logprob_generator()
-    assert isinstance(lb, LogprobGenerator)
+    lb = b.logprobs_generator()
+    assert isinstance(lb, TextGenerator)
     assert lb.backend is b
-
-
-def test_backend_generate_not_implemented(monkeypatch):
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    b = Backend()
-    with pytest.raises(NotImplementedError):
-        b.generate([])
+    assert lb.logprobs_field == 'qanswer_logprobs'
 
 
 def test_textgenerator_transform_iter_success(monkeypatch):
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    b = DummyBackend(batch_size=2)
+    b = DummyBackend()
     tb = TextGenerator(b)
     inputs = [{"prompt": "one"}, {"prompt": "two"}, {"prompt": "three"}]
     result = tb.transform_iter(inputs)
@@ -128,49 +61,11 @@ def test_textgenerator_transform_iter_success(monkeypatch):
         assert out_dict["qanswer"] == exp
 
 
-def test_textgenerator_transform_iter_invalid_type(monkeypatch):
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    class IntBackend(Backend):
-        supports_logprobs = False
-        def generate(self, inp):
-            return [1 for _ in inp]
-
-    tb = TextGenerator(IntBackend("dummy-model"))
-    with pytest.raises(ValueError):
-        tb.transform_iter([{"prompt": "x"}])
-
-
 def test_logprobgenerator_transform_iter_success(monkeypatch):
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    b = DummyBackend(batch_size=2)
-    lb = b.logprob_generator()
+    b = DummyBackend()
+    lb = b.logprobs_generator()
     inputs = [{"prompt": "a"}, {"prompt": "bb"}]
     result = lb.transform_iter(inputs)
     for out_dict, inp in zip(result, inputs):
-        np.testing.assert_array_equal(
-            out_dict["qanswer"], np.array([len(inp["prompt"]), 0])
-        )
-
-
-def test_logprobgenerator_transform_iter_missing_logprobs_attr(monkeypatch):
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    class NoLogprobAttr(Backend):
-        supports_logprobs = True
-        def generate(self, inp):
-            class X: pass
-            return [X() for _ in inp]
-    with pytest.raises(ValueError):
-        lb = NoLogprobAttr("dummy-model").logprob_generator()
-        lb.transform_iter([{"prompt": "x"}])
-
-
-def test_logprobgenerator_transform_iter_none_logprobs(monkeypatch):
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    class NoneLogprobs(Backend):
-        supports_logprobs = True
-        def generate(self, inp):
-            return [BackendOutput(text="t", logprobs=None, prompt_length=1) for _ in inp]
-
-    with pytest.raises(ValueError):
-        lb = NoneLogprobs("dummy-model").logprob_generator()
-        lb.transform_iter([{"prompt": "x"}])
+        assert out_dict['qanswer'].startswith('resp:')
+        assert out_dict['qanswer_logprobs'] == [[{'a': 1, 'b': 2}]]

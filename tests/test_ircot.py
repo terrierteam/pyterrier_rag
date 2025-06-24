@@ -28,7 +28,7 @@ class FakeBackend(Backend):
         # Generate BackendOutput instances for each input query
         outputs = []
         for _ in inp:
-            outputs.append(BackendOutput(text="So the answer is: fake answer", logprobs=None, prompt_length=0))
+            outputs.append(BackendOutput(text="So the answer is: fake answer"))
         return outputs
 
 class DummyRetriever:
@@ -80,7 +80,7 @@ class SimpleConvTemplate:
 def patch_transformers_and_reader(monkeypatch):
     # Fake prompt and context transformers
     class FakePromptTransformer(pt.Transformer):
-        expect_logprobs=False
+        expects_logprobs=False
         def __init__(self, **kwargs):
             self.kwargs = kwargs
         def set_output_attribute(self, attr):

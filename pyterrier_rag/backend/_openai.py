@@ -53,7 +53,6 @@ class OpenAIBackend(Backend):
         if api_key is None:
             raise ValueError("api_key must be provided or set as an environment variable OPENAI_API_KEY")
         self.client = openai.OpenAI(
-            model_name_or_path=model_name_or_path,
             base_url=base_url,
             api_key=api_key,
             max_retries=max_retries,
@@ -107,7 +106,7 @@ class OpenAIBackend(Backend):
         return_logprobs: bool = False,
     ) -> List[int]:
         args = {
-            'model': self._model_name_or_path,
+            'model': self.model_name_or_path,
             'timeout': self.timeout,
         }
         args.update(self._generation_args)

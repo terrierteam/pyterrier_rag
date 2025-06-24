@@ -98,7 +98,7 @@ class HuggingFaceBackend(Backend):
             generation_args['max_new_tokens'] = max_new_tokens
 
         # Generate outputs
-        outputs = self._model.generate(**inputs, return_dict_in_generate=True, output_scores=return_logprobs, **max_new_tokens)
+        outputs = self._model.generate(**inputs, return_dict_in_generate=True, output_scores=return_logprobs, **generation_args)
 
         # Compute prompt lengths (non-padding tokens per input)
         pad_token_id = self.tokenizer.pad_token_id
@@ -119,12 +119,12 @@ class HuggingFaceBackend(Backend):
         if return_logprobs:
             raise NotImplementedError() # TODO: process outputs['scores'] as topk dict. NOTE: it's a Tuple[torch.tensor], where the Tuple is the length of the *generated sequence*, not the batch size
             # return [
-            #     BackendOutput(text=text, logits=logits[i], prompt_length=length)
+            #     BackendOutput(text=text, logits=logits[i])
             #     for i, (text, length) in enumerate(zip(texts, prompt_lengths))
             # ]
         else:
             return [
-                BackendOutput(text=text, prompt_length=length)
+                BackendOutput(text=text)
                 for text, length in zip(texts, prompt_lengths)
             ]
 
