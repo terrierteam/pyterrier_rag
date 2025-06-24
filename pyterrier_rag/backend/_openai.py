@@ -13,7 +13,6 @@ class OpenAIBackend(Backend):
         model_name_or_path (str): OpenAI model identifier.
         api_key (str, optional): API key or set via OPENAI_API_KEY env var.
         generation_args (dict, optional): Params for ChatCompletion.create.
-        batch_size (int): Prompts per batch.
         max_input_length (int): Max prompt tokens.
         max_new_tokens (int): Max tokens to generate.
         max_retries (int): Retry attempts for API errors.
@@ -31,25 +30,18 @@ class OpenAIBackend(Backend):
         *,
         api_key: str = None,
         generation_args: dict = None,
-        batch_size: int = 4,
         max_input_length: int = 512,
         max_new_tokens: int = 32,
-        return_logits: bool = False,
         max_retries: int = 10,
         api: Literal['chat/completions', 'completions'] = 'chat/completions',
         base_url: str = None,
         timeout: float = 30.,
         verbose: bool = False,
-        **kwargs,
     ):
         super().__init__(
-            batch_size=batch_size,
             max_input_length=max_input_length,
             max_new_tokens=max_new_tokens,
-            generation_config=None,
-            return_logits=return_logits,
             verbose=verbose,
-            **kwargs,
         )
         if not is_openai_availible():
             raise ImportError("Please install openai to use OpenAIBackend")
@@ -59,16 +51,16 @@ class OpenAIBackend(Backend):
         if api_key is None:
             raise ValueError("api_key must be provided or set as an environment variable OPENAI_API_KEY")
         self.client = openai.OpenAI(
+            model_name_or_path=model_name_or_path,
             base_url=base_url,
             api_key=api_key,
             max_retries=max_retries,
         )
-        self._model_name_or_path = model_name_or_path
         if is_tiktoken_availible():
             import tiktoken
 
             try:
-                self._tokenizer = tiktoken.encoding_for_model(self._model_name_or_path)
+                self._tokenizer = tiktoken.encoding_for_model(model_name_or_path)
             except KeyError:
                 self._tokenizer = None
         else:
@@ -90,7 +82,7 @@ class OpenAIBackend(Backend):
         **kwargs,
     ) -> List[int]:
         args = {
-            'model': self._model_name_or_path,
+            'model': self.model_name_or_path,
             'timeout': self.timeout,
         }
         args.update(self._generation_args)
@@ -137,7 +129,9 @@ class OpenAIBackend(Backend):
             completions = completions.choices[0].message.content
         return completions
 
-    def generate(self, inps: Iterable[str], max_new_tokens=None, **kwargs) -> List[BackendOutput]:
+    def generate(self, inps: Iterable[str], return_logits: bool = False, max_new_tokens=None, **kwargs) -> List[BackendOutput]:
+        assert not return_logits, f"{self!r} does not support return_logits=True"
+
         inps = list(inps)
         if max_new_tokens is not None:
             kwargs['max_tokens'] = max_new_tokens

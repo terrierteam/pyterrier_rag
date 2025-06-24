@@ -20,7 +20,6 @@ class FakeBackend(Backend):
     _support_logits = True
     _logit_type = None
     _api_type = None
-    _remove_prompt = False
 
     def __init__(self, **kwargs):
         # initialize with default parameters

@@ -12,7 +12,7 @@ def test_huggingface_init_and_attributes():
 
 
 def test_huggingface_generate_slicing_and_outputs():
-    backend = HuggingFaceBackend('HuggingFaceTB/SmolLM-135M', batch_size=2, max_new_tokens=1, return_logits=True)
+    backend = HuggingFaceBackend('HuggingFaceTB/SmolLM-135M', batch_size=2, max_new_tokens=1)
     # Provide two prompts
     prompts = ['a', 'bb']
     outputs = backend.generate(prompts)
@@ -28,7 +28,7 @@ def test_huggingface_generate_slicing_and_outputs():
 
 
 def test_seq2seq_backend_no_slicing():
-    backend = Seq2SeqLMBackend('google-t5/t5-small', batch_size=1, max_new_tokens=1, return_logits=True)
+    backend = Seq2SeqLMBackend('google-t5/t5-small', batch_size=1, max_new_tokens=1)
     prompts = ['xyz']
     outputs = backend.generate(prompts)
     # No prompt removal: logits list should contain full sequences of length prompt+1

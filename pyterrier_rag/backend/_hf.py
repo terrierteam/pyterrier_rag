@@ -1,4 +1,4 @@
-from typing import Iterable, List
+from typing import Iterable, List, Union
 
 from transformers import (
     AutoModelForCausalLM,
@@ -19,12 +19,11 @@ class HuggingFaceBackend(Backend):
             model_name_or_path (str): Identifier or path of the pretrained model.
             model_args (dict): Arguments passed to `from_pretrained` for model instantiation.
             generation_args (dict): Parameters controlling text generation.
-            batch_size (int): Number of inputs to process per batch.
             max_input_length (int): Maximum token length for inputs (defaults to model config).
             max_new_tokens (int): Maximum number of tokens to generate per input.
             verbose (bool): Flag to enable verbose logging.
             **kwargs: Additional keyword arguments passed to `Backend` base class.
-        """
+    """
     _model_class = AutoModelForCausalLM
     _support_logits = True
     _logit_type = "dense"
@@ -33,24 +32,26 @@ class HuggingFaceBackend(Backend):
     def __init__(
         self,
         model_name_or_path: str,
+        *,
         model_args: dict = {},
         generation_args: dict = None,
-        batch_size: int = 4,
         max_input_length: int = None,
         max_new_tokens: int = 32,
-        return_logits: bool = False,
         verbose: bool = False,
-        **kwargs,
+        device: Union[str, torch.device] = None,
     ):
         super().__init__(
-            batch_size=batch_size,
+            model_name_or_path=model_name_or_path,
             max_new_tokens=max_new_tokens,
-            return_logits=return_logits,
-            generation_config=None,
             verbose=verbose,
-            **kwargs,
         )
-        self._model_name_or_path = model_name_or_path
+
+        if device is None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        if isinstance(device, str):
+            device = torch.device(device)
+        self.device = device
+
         self._model = (
             None
             if self._model_class is None
@@ -72,12 +73,9 @@ class HuggingFaceBackend(Backend):
                 "num_beams": 1,
             }
         self._generation_args = generation_args
-        self.model = self._model
 
     @torch.no_grad()
-    def generate(self, inps: Iterable[str], **kwargs) -> List[BackendOutput]:
-        assert self.model is not None, "Model is not loaded, instantiate a subclass of HFModel"
-
+    def generate(self, inps: Iterable[str], return_logits: bool = False, **kwargs) -> List[BackendOutput]:
         # Tokenize inputs
         inputs = self.tokenizer(
             inps,
@@ -89,7 +87,7 @@ class HuggingFaceBackend(Backend):
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         # Generate outputs
-        outputs = self.model.generate(**inputs, return_dict_in_generate=True, output_scores=self.return_logits, **self._generation_args, **kwargs)
+        outputs = self._model.generate(**inputs, return_dict_in_generate=True, output_scores=return_logits, **self._generation_args, **kwargs)
 
         # Compute prompt lengths (non-padding tokens per input)
         pad_token_id = self.tokenizer.pad_token_id
@@ -107,7 +105,7 @@ class HuggingFaceBackend(Backend):
 
         # Decode outputs
         texts = self.tokenizer.batch_decode(sequences, skip_special_tokens=True)
-        if self.return_logits:
+        if return_logits:
             logits = outputs['scores']
             logits = torch.stack(logits, dim=1)
             return [

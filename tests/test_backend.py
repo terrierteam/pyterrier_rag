@@ -111,13 +111,6 @@ def test_logit_generator_with_support(monkeypatch):
     assert lb.backend is b
 
 
-def test_backend_raw_generate_not_implemented(monkeypatch):
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    b = Backend()
-    with pytest.raises(NotImplementedError):
-        b._raw_generate([])
-
-
 def test_backend_generate_not_implemented(monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
     b = Backend()

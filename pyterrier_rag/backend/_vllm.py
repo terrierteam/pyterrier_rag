@@ -1,7 +1,7 @@
 from typing import Iterable, List
 import numpy as np
 
-from pyterrier_rag.backend._base import Backend as ragBackend, BackendOutput
+from pyterrier_rag.backend._base import Backend, BackendOutput
 from pyterrier_rag._optional import is_vllm_availible
 
 
@@ -20,7 +20,7 @@ def get_logits_from_dict(d: List[dict], tokenizer):
     return output
 
 
-class VLLMBackend(ragBackend):
+class VLLMBackend(Backend):
     """
     Backend implementation using the vLLM library for text generation and sparse logits.
 
@@ -28,45 +28,36 @@ class VLLMBackend(ragBackend):
         model_name_or_path (str): Identifier or path of the vLLM model.
         model_args (dict, optional): Keyword arguments for LLM instantiation.
         generation_args (dict, optional): Parameters for sampling (e.g., max_tokens, temperature).
-        batch_size (int): Prompts to process per batch (inherited).
         max_input_length (int): Maximum tokens per input prompt (inherited).
         max_new_tokens (int): Tokens to generate per prompt (inherited).
         verbose (bool): Enable verbose output.
-        **kwargs: Additional parameters forwarded to the base Backend class.
 
     Raises:
         ImportError: If the vllm library is unavailable.
     """
     _logit_type = "sparse"
     _support_logits = True
-    _remove_prompt = True
 
     def __init__(
         self,
         model_name_or_path: str,
+        *,
         model_args: dict = {},
         generation_args: dict = None,
-        batch_size: int = 4,
         max_input_length: int = 512,
         max_new_tokens: int = 32,
-        return_logits: bool = True,
         verbose: bool = False,
-        **kwargs,
     ):
         super().__init__(
-            batch_size=batch_size,
+            model_name_or_path=model_name_or_path,
             max_input_length=max_input_length,
             max_new_tokens=max_new_tokens,
-            return_logits=return_logits,
-            generation_config=None,
             verbose=verbose,
-            **kwargs,
         )
         if not is_vllm_availible():
             raise ImportError("Please install vllm to use VLLMBackend")
         from vllm import LLM, SamplingParams
 
-        self._model_name_or_path = model_name_or_path
         self.model = LLM(model=model_name_or_path, **model_args)
 
         if generation_args is None:
@@ -74,17 +65,20 @@ class VLLMBackend(ragBackend):
                 "max_tokens": self.max_new_tokens,
                 "temperature": 1.0,
             }
-        if self.return_logits:
-            generation_args["logprobs"] = 20
         self.generation_args = generation_args
         self.to_params = SamplingParams
 
-    def generate(self, inps: Iterable[str], **kwargs) -> List[BackendOutput]:
-        args = self.to_params(**self.generation_args, **kwargs)
+    def generate(self, inps: Iterable[str], return_logits=False, **kwargs) -> List[BackendOutput]:
+        generation_args = {}
+        generation_args.update(self.generation_args)
+        generation_args.update(kwargs)
+        if return_logits:
+            generation_args.update({'logprobs': 20})
+        args = self.to_params(**generation_args)
         responses = self.model.generate(inps, args)
         text = map(lambda x: x.outputs[0].text, responses)
 
-        if self.return_logits:
+        if return_logits:
             logits = map(lambda x: x.outputs[0].logprobs, responses)
 
             return [BackendOutput(text=txt, logits=logit) for txt, logit in zip(text, logits)]
