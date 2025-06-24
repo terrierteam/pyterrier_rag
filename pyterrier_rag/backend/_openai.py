@@ -21,6 +21,7 @@ class OpenAIBackend(Backend):
         timeout (float): Timeout for API calls
         verbose (bool): Enable verbose logging.
     """
+    support_logits = True
     _api_type = "openai"
 
     def __init__(
@@ -35,6 +36,7 @@ class OpenAIBackend(Backend):
         api: Literal['chat/completions', 'completions'] = 'chat/completions',
         base_url: str = None,
         timeout: float = 30.,
+        logit_topk: int = 20,
         verbose: bool = False,
     ):
         super().__init__(
@@ -63,13 +65,14 @@ class OpenAIBackend(Backend):
             }
         self._generation_args = generation_args
         self.timeout = timeout
+        self.logit_topk = logit_topk
         self.api = api
 
     def _call_completion(
         self,
         prompts,
-        return_text=False,
         max_new_tokens=None,
+        return_logits: bool = False,
     ) -> List[int]:
         args = {
             'model': self.model_name_or_path,
@@ -78,26 +81,29 @@ class OpenAIBackend(Backend):
         args.update(self._generation_args)
         if max_new_tokens:
             args['max_tokens'] = max_new_tokens
+        if return_logits:
+            args['logprobs'] = self.logit_topk
         try:
             completions = self.client.completions.create(prompt=prompts, **args)
         except Exception as e:
             print(str(e))
             if "This model's maximum context length is" in str(e):
-                print("reduce_length")
-                return ["ERROR::reduce_length" for _ in prompts]
+                return [BackendOutput(text="ERROR::reduce_length")] * len(prompts)
             if "The response was filtered" in str(e):
-                print("The response was filtered")
-                return ["ERROR::The response was filtered" for _ in prompts]
-            return ['ERROR:other' for _ in prompts]
-        if return_text:
-            completions = [c.text for c in completions.choices]
-        return completions
+                return [BackendOutput(text="ERROR::response_filtered")] * len(prompts)
+            return [BackendOutput(text="ERROR::other")] * len(prompts)
+        results = []
+        for choice in completions.choices:
+            results.append(BackendOutput(text=choice.text))
+            if return_logits and choice.logprobs is not None:
+                results[-1].logits = {lp.token: lp.logprob for lp in choice.logprobs.top_logprobs}
+        return results
 
     def _call_chat_completion(
         self,
         messages,
-        return_text=False,
         max_new_tokens=None,
+        return_logits: bool = False,
     ) -> List[int]:
         args = {
             'model': self._model_name_or_path,
@@ -106,20 +112,22 @@ class OpenAIBackend(Backend):
         args.update(self._generation_args)
         if max_new_tokens:
             args['max_tokens'] = max_new_tokens
+        if return_logits:
+            args['logprobs'] = True
+            args['top_logprobs'] = self.logit_topk
         try:
             completions = self.client.chat.completions.create(messages=messages, **args)
         except Exception as e:
             print(str(e))
             if "This model's maximum context length is" in str(e):
-                print("reduce_length")
-                return "ERROR::reduce_length"
+                return BackendOutput(text="ERROR::reduce_length")
             if "The response was filtered" in str(e):
-                print("The response was filtered")
-                return "ERROR::The response was filtered"
-            return 'ERROR:other'
-        if return_text:
-            completions = completions.choices[0].message.content
-        return completions
+                return BackendOutput(text="ERROR::response_filtered")
+            return BackendOutput(text="ERROR::other")
+        result = BackendOutput(text=completions.choices[0].message.content)
+        if return_logits and completions.choices[0].logprobs is not None:
+            result.logits = {lp.token: lp.logprob for lp in completions.choices[0].logprobs.top_logprobs}
+        return result
 
     def generate(self,
         inps: List[str],
@@ -127,25 +135,25 @@ class OpenAIBackend(Backend):
         return_logits: bool = False,
         max_new_tokens: Optional[int] = None,
     ) -> List[BackendOutput]:
-        assert not return_logits, f"{self!r} does not support return_logits=True"
+        pass
 
         if self.api == 'completions':
-            responses = self._call_completion(
+            results = self._call_completion(
                 inps,
-                return_text=True,
                 max_new_tokens=max_new_tokens,
+                return_logits=return_logits,
             )
         elif self.api == 'chat/completions':
-            responses = []
+            results = []
             for inp in inps:
-                responses.append(self._call_chat_completion(
+                results.append(self._call_chat_completion(
                     [{"role": "user", "content": inp}],
-                    return_text=True,
                     max_new_tokens=max_new_tokens,
+                    return_logits=return_logits,
                 ))
         else:
             raise ValueError(f'api {self.api!r} not supported')
-        return [BackendOutput(text=r) for r in responses]
+        return results
 
 
 __all__ = ["OpenAIBackend"]

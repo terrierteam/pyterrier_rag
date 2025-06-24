@@ -31,7 +31,6 @@ class Backend(pt.Transformer, ABC):
         support_logits (bool): Flag indicating logit support.
         _api_type (str): If using API do not return string
     """
-
     support_logits = False
     _api_type = None
 
