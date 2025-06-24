@@ -151,7 +151,7 @@ class OpenAIBackend(Backend):
             responses = []
             for inp in inps:
                 responses.append(self._call_chat_completion(
-                    [{"role": "user", "content": inp} for inp in inps],
+                    [{"role": "user", "content": inp}],
                     return_text=True,
                     **kwargs,
                 ))

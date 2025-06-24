@@ -1,8 +1,6 @@
 from enum import Enum
-from typing import Any
-from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM
 from pyterrier_rag.backend._base import Backend
-from pyterrier_rag.backend._hf import HuggingFaceBackend, Seq2SeqLMBackend
+from pyterrier_rag.backend._hf import HuggingFaceBackend
 from pyterrier_rag._optional import is_vllm_availible, is_openai_availible
 
 
@@ -11,19 +9,6 @@ class Backends(Enum):
     HF_SEQ2SEQ = "seq2seq"
     VLLM = "vllm"
     OPENAI = "openai"
-
-
-def coerce_backend(model: Any):
-    if isinstance(model, AutoModelForCausalLM):
-        return HuggingFaceBackend.from_model(model)
-    if isinstance(model, AutoModelForSeq2SeqLM):
-        return Seq2SeqLMBackend.from_model(model)
-    if is_vllm_availible():
-        from vllm import LLM
-        from pyterrier_rag.backend._vllm import VLLMBackend
-        if isinstance(model, LLM):
-            return VLLMBackend.from_model(model)
-    raise ValueError(f"Could not coerce backend of type {type(model)}")
 
 
 def get_backend(backend_type: str, model_name: str, **backend_kwargs) -> Backend:

@@ -25,9 +25,6 @@ class Backend(pt.Transformer, ABC):
     trimming.
 
     Parameters:
-        input_field (str): Name of the input field carrying the prompt text.
-        output_field (str): Name of the output field to populate with results.
-        output_format (str): Desired format for text outputs (e.g., 'text').
         batch_size (int): Number of prompts to process per batch.
         max_input_length (int): Maximum token length for each input prompt.
         max_new_tokens (int): Maximum number of tokens to generate.
@@ -51,9 +48,6 @@ class Backend(pt.Transformer, ABC):
     def __init__(
         self,
         *,
-        input_field: str = "prompt",
-        output_field: str = "qanswer",
-        output_format: str = "text",
         batch_size: int = 4,
         max_input_length: int = 512,
         max_new_tokens: int = 32,
@@ -71,9 +65,6 @@ class Backend(pt.Transformer, ABC):
             device = torch.device(device)
         self.device = device
 
-        self.input_field = input_field
-        self.output_field = output_field
-        self.output_format = output_format
         self.batch_size = batch_size
         self.max_input_length = max_input_length
         self.max_new_tokens = max_new_tokens
@@ -95,20 +86,20 @@ class Backend(pt.Transformer, ABC):
     @property
     def model_name_or_path(self):
         return self._model_name_or_path
-    
+
     @classmethod
     def from_model(self):
         raise NotImplementedError
 
-    def text_generator(self):
-        return TextBackend(self)
+    def text_generator(self, *, input_field='prompt', output_field='qanswer') -> pt.Transformer:
+        return TextGenerator(self, input_field=input_field, output_field=output_field)
 
-    def logit_generator(self):
+    def logit_generator(self, *, input_field='prompt', output_field='qanswer') -> pt.Transformer:
         if not self.return_logits:
             raise ValueError("Cannot return logits as it is disabled")
         if not self._support_logits:
             raise ValueError("This model cannot return logits")
-        return LogitBackend(self)
+        return LogitGenerator(self, input_field=input_field, output_field=output_field)
 
     def _raw_generate(self, tokenized_sequences: Iterable[dict]) -> List[str]:
         """
@@ -124,12 +115,12 @@ class Backend(pt.Transformer, ABC):
         return self.text_generator().transform_iter(inp)
 
 
-class TextBackend(pt.Transformer):
-    def __init__(self, backend: Backend):
+class TextGenerator(pt.Transformer):
+    def __init__(self, backend: Backend, *, input_field: str = 'prompt', output_field: str = 'qanswer'):
         self.backend = backend
         self.batch_size = self.backend.batch_size
-        self.input_field = self.backend.input_field
-        self.output_field = self.backend.output_field
+        self.input_field = input_field
+        self.output_field = output_field
 
     def transform_iter(self, inp: Iterable[str]) -> Iterable[str]:
         inp = list(inp)
@@ -145,14 +136,14 @@ class TextBackend(pt.Transformer):
         return inp
 
 
-class LogitBackend(pt.Transformer):
-    def __init__(self, backend: Backend):
+class LogitGenerator(pt.Transformer):
+    def __init__(self, backend: Backend, *, input_field: str = 'prompt', output_field: str = 'qanswer'):
         if not backend._support_logits:
             raise ValueError("Backend does not support logits")
         self.backend = backend
         self.batch_size = self.backend.batch_size
-        self.input_field = self.backend.input_field
-        self.output_field = self.backend.output_field
+        self.input_field = input_field
+        self.output_field = output_field
 
     def transform_iter(self, inp: Iterable[str]) -> Iterable[str]:
         inp = list(inp)
@@ -161,12 +152,12 @@ class LogitBackend(pt.Transformer):
         for chunk in chunked(queries, self.batch_size):
             out.extend(self.backend.generate(chunk))
         if not hasattr(out[0], "logits"):
-            raise ValueError("Backend must return BackendOutput to use LogitBackend, not {}".format(type(out[0])))
+            raise ValueError("Backend must return BackendOutput to use LogitGenerator, not {}".format(type(out[0])))
         if out[0].logits is None:
-            raise ValueError("Backend must return logits to use LogitBackend")
+            raise ValueError("Backend must return logits to use LogitGenerator")
         for i, o in zip(inp, out):
             i[self.output_field] = o.logits
         return inp
 
 
-__all__ = ["Backend", "BackendOutput", "TextBackend", "LogitBackend"]
+__all__ = ["Backend", "BackendOutput", "TextGenerator", "LogitGenerator"]

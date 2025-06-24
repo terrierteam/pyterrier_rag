@@ -18,7 +18,6 @@ class HuggingFaceBackend(Backend):
         Parameters:
             model_name_or_path (str): Identifier or path of the pretrained model.
             model_args (dict): Arguments passed to `from_pretrained` for model instantiation.
-            output_format (str): Format for text output (e.g., 'text').
             generation_args (dict): Parameters controlling text generation.
             batch_size (int): Number of inputs to process per batch.
             max_input_length (int): Maximum token length for inputs (defaults to model config).
@@ -35,7 +34,6 @@ class HuggingFaceBackend(Backend):
         self,
         model_name_or_path: str,
         model_args: dict = {},
-        output_format: str = "text",
         generation_args: dict = None,
         batch_size: int = 4,
         max_input_length: int = None,
@@ -45,7 +43,6 @@ class HuggingFaceBackend(Backend):
         **kwargs,
     ):
         super().__init__(
-            output_format=output_format,
             batch_size=batch_size,
             max_new_tokens=max_new_tokens,
             return_logits=return_logits,

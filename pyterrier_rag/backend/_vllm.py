@@ -27,7 +27,6 @@ class VLLMBackend(ragBackend):
     Parameters:
         model_name_or_path (str): Identifier or path of the vLLM model.
         model_args (dict, optional): Keyword arguments for LLM instantiation.
-        output_format (str): Desired output format (default 'text').
         generation_args (dict, optional): Parameters for sampling (e.g., max_tokens, temperature).
         batch_size (int): Prompts to process per batch (inherited).
         max_input_length (int): Maximum tokens per input prompt (inherited).
@@ -46,7 +45,6 @@ class VLLMBackend(ragBackend):
         self,
         model_name_or_path: str,
         model_args: dict = {},
-        output_format: str = "text",
         generation_args: dict = None,
         batch_size: int = 4,
         max_input_length: int = 512,
@@ -56,7 +54,6 @@ class VLLMBackend(ragBackend):
         **kwargs,
     ):
         super().__init__(
-            output_format=output_format,
             batch_size=batch_size,
             max_input_length=max_input_length,
             max_new_tokens=max_new_tokens,
