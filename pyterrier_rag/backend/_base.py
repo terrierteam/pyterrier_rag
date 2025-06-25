@@ -199,10 +199,6 @@ class _DefaultBackend(Backend):
         else:
             sys.stderr.write(f"replaced default backend {self._backend!r} with {backend!r}\n")
         self._backend = backend
-        self.model_name_or_path = backend.model_name_or_path
-        self.max_input_length = backend.max_input_length
-        self.max_new_tokens = backend.max_new_tokens
-        self.verbose = backend.verbose
 
     def generate(
         self,
