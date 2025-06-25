@@ -7,44 +7,49 @@ from pyterrier_rag.backend import BackendOutput
 from . import test_backend
 
 
-class TestOpenAIBackend(test_backend.BaseTestBackend, unittest.TestCase):
+class TestHuggingFaceBackend(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.backend = HuggingFaceBackend('HuggingFaceTB/SmolLM-135M')
 
-def test_huggingface_init_and_attributes():
-    # Instantiate CBT with dummy model
-    backend = HuggingFaceBackend('HuggingFaceTB/SmolLM-135M')
-    # generation args present
-    assert 'temperature' in backend._generation_args
+    def test_huggingface_init_and_attributes(self):
+        # generation args present
+        assert 'temperature' in self.backend._generation_args
+
+    # TODO: once return_logprobs support added to HuggingFaceBackend
+    # def test_huggingface_generate_slicing_and_outputs(self):
+    #     # Provide two prompts
+    #     prompts = ['a', 'bb']
+    #     outputs = self.backend.generate(prompts, max_new_tokens=1, return_logprobs=True)
+    #     # Expect two outputs
+    #     assert isinstance(outputs, list) and len(outputs) == 2
+    #     # Check each BackendOutput
+    #     for _, out in enumerate(outputs):
+    #         assert isinstance(out, BackendOutput)
+    #     assert all(isinstance(out.logprobs, list) for out in outputs)
+    #     # The first sliced output should match tensor([0,99]) since prompt_length=1
+    #     first_logprobs = outputs[0].logprobs.tolist()
+    #     assert len(first_logprobs) == 1
 
 
-def test_huggingface_generate_slicing_and_outputs():
-    backend = HuggingFaceBackend('HuggingFaceTB/SmolLM-135M', max_new_tokens=1)
-    # Provide two prompts
-    prompts = ['a', 'bb']
-    outputs = backend.generate(prompts)
-    # Expect two outputs
-    assert isinstance(outputs, list) and len(outputs) == 2
-    # Check each BackendOutput
-    for _, out in enumerate(outputs):
-        assert isinstance(out, BackendOutput)
-    assert all(isinstance(out.logprobs, list) for out in outputs)
-    # The first sliced output should match tensor([0,99]) since prompt_length=1
-    first_logprobs = outputs[0].logprobs.tolist()
-    assert len(first_logprobs) == 1
+class TestHuggingFaceBackendSeq2Seq(test_backend.BaseTestBackend, unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.backend = Seq2SeqLMBackend('google-t5/t5-small')
+
+    # TODO: once return_logprobs support added to Seq2SeqLMBackend
+    # def test_seq2seq_backend_no_slicing(self):
+    #     prompts = ['xyz']
+    #     outputs = self.backend.generate(prompts, max_new_tokens=1, return_logprobs=True)
+    #     # No prompt removal: logprobs list should contain full sequences of length prompt+1
+    #     logprobs_list = outputs[0].logprobs
+    #     # Single batch element
+    #     assert isinstance(logprobs_list, list)
+    #     full_seq = logprobs_list
+    #     assert full_seq.shape[0] == 1
 
 
-def test_seq2seq_backend_no_slicing():
-    backend = Seq2SeqLMBackend('google-t5/t5-small', max_new_tokens=1)
-    prompts = ['xyz']
-    outputs = backend.generate(prompts)
-    # No prompt removal: logprobs list should contain full sequences of length prompt+1
-    logprobs_list = outputs[0].logprobs
-    # Single batch element
-    assert isinstance(logprobs_list, list)
-    full_seq = logprobs_list
-    assert full_seq.shape[0] == 1
+
 
 
 def test_stopwordcriteria_basic_behavior():

@@ -62,7 +62,8 @@ class VLLMBackend(Backend):
         return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
     ) -> List[BackendOutput]:
-        assert isinstance(inps[0], str), f'{self!r} only supports str inputs to generate'
+        if not isinstance(inps[0], str):
+            raise ValueError(f'{self!r} only supports str inputs to generate')
         generation_args = {}
         generation_args.update(self.generation_args)
         if max_new_tokens:

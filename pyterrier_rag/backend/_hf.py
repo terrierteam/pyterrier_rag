@@ -24,10 +24,9 @@ class HuggingFaceBackend(Backend):
             max_input_length (int): Maximum token length for inputs (defaults to model config).
             max_new_tokens (int): Maximum number of tokens to generate per input.
             verbose (bool): Flag to enable verbose logging.
-            **kwargs: Additional keyword arguments passed to `Backend` base class.
     """
+    supports_logprobs = False # TODO: add support for logprobs
     _model_class = AutoModelForCausalLM
-    supports_logprobs = True
     _remove_prompt = True
 
     def __init__(
@@ -85,7 +84,10 @@ class HuggingFaceBackend(Backend):
         return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
     ) -> List[BackendOutput]:
-        assert isinstance(inps[0], str), f'{self!r} only supports str inputs to generate'
+        if not isinstance(inps[0], str):
+            raise ValueError(f'{self!r} only supports str inputs to generate')
+        if return_logprobs:
+            raise ValueError(f'{self!r} does not support logprobs generation')
         # Tokenize inputs
         inputs = self.tokenizer(
             inps,
@@ -120,17 +122,10 @@ class HuggingFaceBackend(Backend):
 
         # Decode outputs
         texts = self.tokenizer.batch_decode(sequences, skip_special_tokens=True)
-        if return_logprobs:
-            raise NotImplementedError() # TODO: process outputs['scores'] as topk dict. NOTE: it's a Tuple[torch.tensor], where the Tuple is the length of the *generated sequence*, not the batch size
-            # return [
-            #     BackendOutput(text=text, logits=logits[i])
-            #     for i, (text, length) in enumerate(zip(texts, prompt_lengths))
-            # ]
-        else:
-            return [
-                BackendOutput(text=text)
-                for text, length in zip(texts, prompt_lengths)
-            ]
+        return [
+            BackendOutput(text=text)
+            for text, length in zip(texts, prompt_lengths)
+        ]
 
 
 class Seq2SeqLMBackend(HuggingFaceBackend):
