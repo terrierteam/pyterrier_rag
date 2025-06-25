@@ -3,6 +3,7 @@ import torch
 import pytest
 import sys
 import types
+import gc
 import numpy as np
 
 # assume the subclass is in vllm_backend.py in the same directory
@@ -16,3 +17,15 @@ class TestVllmBackend(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.backend = VLLMBackend('HuggingFaceTB/SmolLM-135M')
+
+    @classmethod
+    def tearDownClass(cls):
+        backend = self.backend
+        cls.backend = None
+        del backend
+        # Run garbage collection
+        gc.collect()
+
+        # Clear PyTorch CUDA cache
+        torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
