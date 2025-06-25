@@ -85,3 +85,6 @@ class VLLMBackend(Backend):
 
             return [BackendOutput(text=txt, logprobs=lp) for txt, lp in zip(text, logprobs)]
         return [BackendOutput(text=txt) for txt in text]
+
+    def __repr__(self):
+        return f"VLLMBackend({self.model_name_or_path!r})"

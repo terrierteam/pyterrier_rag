@@ -127,6 +127,9 @@ class HuggingFaceBackend(Backend):
             for text, length in zip(texts, prompt_lengths)
         ]
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.model_name_or_path!r})"
+
 
 class Seq2SeqLMBackend(HuggingFaceBackend):
     _model_class = AutoModelForSeq2SeqLM

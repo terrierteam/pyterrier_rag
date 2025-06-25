@@ -164,5 +164,8 @@ class OpenAIBackend(Backend):
             raise ValueError(f'api {self.api!r} not supported')
         return results
 
+    def __repr__(self):
+        return f"OpenAIBackend({self.model_name_or_path!r})"
+
 
 __all__ = ["OpenAIBackend"]
