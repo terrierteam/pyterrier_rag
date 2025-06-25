@@ -55,6 +55,8 @@ recommended setting it at the top of your script/notebook).
     ptr.default_backend.set(ptr.OpenAIBackend('gpt-4o-mini'))
     ptr.default_backend.generate(['What is the capital of France?']) # -> uses the OpenAIBackend from above
 
+The default backend is automatically loaded via the ``PYTERRIER_RAG_DEFAULT_BACKEND`` (using :meth:`pyterrier_rag.Backend.from_dsn`)
+if it is set when PyTerrier RAG is first loaded.
 
 Token Probabilities
 ------------------------
