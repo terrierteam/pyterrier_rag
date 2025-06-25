@@ -43,12 +43,72 @@ to the ``qanswer`` column:
 Usually you won't use a backend directly though -- they are instead typically used by other components, such as
 Prompts and Frameworks.
 
+Token Probabilities
+------------------------
+
+Some components need the log probabilities of the generated tokens (and alternative tokens). This is included
+as part of the :class:`~pyterrier_rag.backend.BackendOutput` object when using `return_logprobs=True` in :meth:`~pyterrier_rag.Backend.generate`
+or by using :meth:`~pyterrier_rag.Backend.logprobs_generator`. For example:
+
+.. code-block:: python
+    :caption: Include log probabilities for response
+
+    backend.generate(["What is the capital of France?"], return_logprobs=True)
+    # [BackendOutput(text='The capital of France is Paris.', logprobs=[
+    #     {'The': -0.04, 'That': -0.31, ...},
+    #     ...,
+    #     {'Paris': -0.01, 'Berlin': -2.12, ...},
+    #     ...,
+    # ])]
+
+    inp = pd.DataFrame([
+        {'prompt': 'What is the capital of France?'},
+        {'prompt': 'What is the capital of Germany?'},
+    ])
+    generator = backend.logprobs_generator()
+    generator(inp)
+    #                             prompt                            qanswer                           qanswer_logprobs
+    # 0   What is the capital of France?    The capital of France is Paris.  [{'The': -0.04, 'That': -0.31, ...}, ...]
+    # 1  What is the capital of Germany?  The capital of Germany is Berlin.  [{'The': -0.02, 'That': -0.29, ...}, ...]
+
+This feature is typically most useful when a you have a single-token response. You can force the backend to generate
+a single token using ``max_new_tokens=1`` and a suitable prompt:
+
+.. code-block:: python
+    :caption: Force a single token response
+
+    backend.generate(["What is the capital of France? Answer in a single word only."], max_new_tokens=1, return_logprobs=True)
+    # [BackendOutput(text='Paris', logprobs=[{'Paris': -0.01, 'Berlin': -2.12, ...}])]
+
+    inp = pd.DataFrame([
+        {'prompt': 'What is the capital of France? Answer in a single word only.'},
+        {'prompt': 'What is the capital of Germany? Answer in a single word only.'},
+    ])
+    generator = backend.logprobs_generator(max_new_tokens=1)
+    generator(inp)
+    #                             prompt   qanswer                           qanswer_logprobs
+    # 0   What is the capital of France?     Paris   [{'Paris': -0.01, 'Berlin': -2.12, ...}]
+    # 1  What is the capital of Germany?    Berlin   [{'Berlin': -0.02, 'Paris': -2.29, ...}]
+
+
 
 API Documentation
 ------------------------
 
+General
+~~~~~~~~~~~~~~~~~~~~~~~~
+
 .. autoclass:: pyterrier_rag.Backend
    :members:
+
+.. autoclass:: pyterrier_rag.backend.TextGenerator
+   :members:
+
+.. autoclass:: pyterrier_rag.backend.BackendOutput
+   :members:
+
+Implementations
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: pyterrier_rag.HuggingFaceBackend
    :members:
