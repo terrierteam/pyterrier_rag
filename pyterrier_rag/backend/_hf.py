@@ -1,4 +1,4 @@
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict
 
 from transformers import (
     AutoModelForCausalLM,
@@ -18,7 +18,7 @@ class HuggingFaceBackend(Backend):
         .. cite.dblp:: journals/corr/abs-1910-03771
 
         Parameters:
-            model_name_or_path (str): Identifier or path of the pretrained model.
+            model_id (str): Identifier or path of the pretrained model.
             model_args (dict): Arguments passed to `from_pretrained` for model instantiation.
             generation_args (dict): Parameters controlling text generation.
             max_input_length (int): Maximum token length for inputs (defaults to model config).
@@ -31,7 +31,7 @@ class HuggingFaceBackend(Backend):
 
     def __init__(
         self,
-        model_name_or_path: str,
+        model_id: str,
         *,
         model_args: dict = {},
         generation_args: dict = None,
@@ -42,7 +42,7 @@ class HuggingFaceBackend(Backend):
         device: Union[str, torch.device] = None,
     ):
         super().__init__(
-            model_name_or_path=model_name_or_path,
+            model_id=model_id,
             max_new_tokens=max_new_tokens,
             verbose=verbose,
         )
@@ -56,9 +56,9 @@ class HuggingFaceBackend(Backend):
         self._model = (
             None
             if self._model_class is None
-            else self._model_class.from_pretrained(model_name_or_path, **model_args).to(self.device).eval()
+            else self._model_class.from_pretrained(model_id, **model_args).to(self.device).eval()
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
             self._model.generation_config.pad_token_id = self.tokenizer.pad_token_id
@@ -127,8 +127,31 @@ class HuggingFaceBackend(Backend):
             for text, length in zip(texts, prompt_lengths)
         ]
 
+    @staticmethod
+    def from_params(params: Dict[str, str]) -> 'HuggingFaceBackend':
+        """Create a HuggingFaceBackend instance from parameters.
+
+        Supported params:
+
+            - model_id (str): Identifier or path of the HuggingFace model.
+            - max_input_length (int): Maximum tokens per input prompt.
+            - max_new_tokens (int): Tokens to generate per prompt.
+            - logprobs_topk (int): Number of top logprobs to return.
+            - verbose (bool): Enable verbose output.
+
+        Returns:
+            HuggingFaceBackend: An instance of HuggingFaceBackend.
+        """
+        return HuggingFaceBackend(
+            model_id=params['model_id'],
+            max_input_length=int(params.get('max_input_length', 512)),
+            max_new_tokens=int(params.get('max_new_tokens', 32)),
+            logprobs_topk=int(params.get('logprobs_topk', 20)),
+            verbose=params.get('verbose', False) in ['True', 'true', '1'],
+        )
+
     def __repr__(self):
-        return f"{self.__class__.__name__}({self.model_name_or_path!r})"
+        return f"{self.__class__.__name__}({self.model_id!r})"
 
 
 class Seq2SeqLMBackend(HuggingFaceBackend):

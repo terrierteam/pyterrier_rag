@@ -6,7 +6,7 @@ import time
 import pytest
 import numpy as np
 from pytest_httpserver import HTTPServer
-from pyterrier_rag.backend import BackendOutput
+from pyterrier_rag.backend import BackendOutput, Backend
 from pyterrier_rag.backend._openai import OpenAIBackend
 from openai.types.chat import ChatCompletion
 from openai.types import Completion
@@ -17,51 +17,28 @@ from . import test_backend
 class TestOpenAIBackend(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.backend = OpenAIBackend(
-            model_name_or_path="gpt-4o-mini",
-            api_key=os.environ['TEST_OPENAI_KEY'],
-            api='completions',
-            max_retries=2,
-            timeout=2,
-        )
+        cls.backend = Backend.from_dsn('openai:gpt-4o-mini api_key=$TEST_OPENAI_KEY api=completions max_retries=2 timeout=2')
 
 
 @unittest.skipIf(os.environ.get('TEST_OPENAI_KEY') is None, "TEST_OPENAI_KEY not set")
 class TestOpenAIBackendChat(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.backend = OpenAIBackend(
-            model_name_or_path="gpt-4o-mini",
-            api_key=os.environ['TEST_OPENAI_KEY'],
-            api='chat/completions',
-            max_retries=2,
-            timeout=2,
-        )
+        cls.backend = Backend.from_dsn('openai:gpt-4o-mini api_key=$TEST_OPENAI_KEY api=chat/completions max_retries=2 timeout=2')
 
 
 @unittest.skipIf(os.environ.get('TEST_IDA_KEY') is None, "TEST_IDA_KEY not set")
 class TestOpenAIBackendLlama(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.backend = OpenAIBackend(
-            model_name_or_path="llama-3-8b-instruct",
-            api_key=os.environ['TEST_IDA_KEY'],
-            base_url='http://api.llm.apps.os.dcs.gla.ac.uk/v1/',
-            api='completions',
-        )
+        cls.backend = Backend.from_dsn('openai:llama-3-8b-instruct api_key=$TEST_IDA_KEY base_url=http://api.llm.apps.os.dcs.gla.ac.uk/v1/ api=completions max_retries=2 timeout=2')
 
 
 @unittest.skipIf(os.environ.get('TEST_IDA_KEY') is None, "TEST_IDA_KEY not set")
 class TestOpenAIBackendLlamaChat(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.backend = OpenAIBackend(
-            model_name_or_path="llama-3-8b-instruct",
-            api_key=os.environ['TEST_IDA_KEY'],
-            base_url='http://api.llm.apps.os.dcs.gla.ac.uk/v1/',
-            api='chat/completions',
-        )
-
+        cls.backend = Backend.from_dsn('openai:llama-3-8b-instruct api_key=$TEST_IDA_KEY base_url=http://api.llm.apps.os.dcs.gla.ac.uk/v1/ api=chat/completions max_retries=2 timeout=2')
 
 class TestOpenAIBackendMock(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
@@ -82,7 +59,7 @@ class TestOpenAIBackendMock(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.backend = OpenAIBackend(
-            model_name_or_path="dummy",
+            model_id="dummy",
             api_key="dummy",
             api='completions',
         )
@@ -111,7 +88,7 @@ class TestOpenAIBackendMockChat(test_backend.BaseTestBackend, unittest.TestCase)
     @classmethod
     def setUpClass(cls):
         cls.backend = OpenAIBackend(
-            model_name_or_path="dummy",
+            model_id="dummy",
             api_key="dummy",
             api='chat/completions',
         )

@@ -41,7 +41,7 @@ class Reader(pt.Transformer):
         if isinstance(self.prompt, str):
             self.prompt = PromptTransformer(
                 instruction=self.prompt,
-                model_name_or_path=self.backend.model_name_or_path,
+                model_name_or_path=self.backend.model_id,
             )
         if isinstance(self.prompt, PromptTransformer):
             self.prompt.set_output_attribute(self.backend.supports_message_input)

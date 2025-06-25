@@ -1,4 +1,4 @@
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict
 
 from pyterrier_rag.backend._base import Backend, BackendOutput
 from pyterrier_rag._optional import is_vllm_availible
@@ -11,7 +11,7 @@ class VLLMBackend(Backend):
     .. cite.dblp:: conf/sosp/KwonLZ0ZY0ZS23
 
     Parameters:
-        model_name_or_path (str): Identifier or path of the vLLM model.
+        model_id (str): Identifier or path of the vLLM model.
         model_args (dict, optional): Keyword arguments for LLM instantiation.
         generation_args (dict, optional): Parameters for sampling (e.g., max_tokens, temperature).
         max_input_length (int): Maximum tokens per input prompt (inherited).
@@ -25,7 +25,7 @@ class VLLMBackend(Backend):
 
     def __init__(
         self,
-        model_name_or_path: str,
+        model_id: str,
         *,
         model_args: dict = {},
         generation_args: dict = None,
@@ -35,7 +35,7 @@ class VLLMBackend(Backend):
         verbose: bool = False,
     ):
         super().__init__(
-            model_name_or_path=model_name_or_path,
+            model_id=model_id,
             max_input_length=max_input_length,
             max_new_tokens=max_new_tokens,
             verbose=verbose,
@@ -44,7 +44,7 @@ class VLLMBackend(Backend):
             raise ImportError("Please install vllm to use VLLMBackend")
         from vllm import LLM, SamplingParams
 
-        self.model = LLM(model=model_name_or_path, **model_args)
+        self.model = LLM(model=model_id, **model_args)
         self.logprobs_topk = logprobs_topk
 
         if generation_args is None:
@@ -86,5 +86,28 @@ class VLLMBackend(Backend):
             return [BackendOutput(text=txt, logprobs=lp) for txt, lp in zip(text, logprobs)]
         return [BackendOutput(text=txt) for txt in text]
 
+    @staticmethod
+    def from_params(params: Dict[str, str]) -> 'VLLMBackend':
+        """Create a VLLMBackend instance from parameters.
+
+        Supported params:
+
+            - model_id (str): Identifier or path of the vLLM model.
+            - max_input_length (int): Maximum tokens per input prompt.
+            - max_new_tokens (int): Tokens to generate per prompt.
+            - logprobs_topk (int): Number of top logprobs to return.
+            - verbose (bool): Enable verbose output.
+
+        Returns:
+            VLLMBackend: An instance of VLLMBackend.
+        """
+        return VLLMBackend(
+            model_id=params['model_id'],
+            max_input_length=int(params.get('max_input_length', 512)),
+            max_new_tokens=int(params.get('max_new_tokens', 32)),
+            logprobs_topk=int(params.get('logprobs_topk', 20)),
+            verbose=bool(params.get('verbose', False)),
+        )
+
     def __repr__(self):
-        return f"VLLMBackend({self.model_name_or_path!r})"
+        return f"VLLMBackend({self.model_id!r})"

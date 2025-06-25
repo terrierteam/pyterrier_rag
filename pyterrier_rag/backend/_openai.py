@@ -1,6 +1,6 @@
 import sys
 import os
-from typing import List, Optional, Literal, Union
+from typing import List, Optional, Literal, Union, Dict
 
 from pyterrier_rag._optional import is_openai_availible
 from pyterrier_rag.backend._base import Backend, BackendOutput
@@ -11,7 +11,7 @@ class OpenAIBackend(Backend):
     Backend using an OpenAI API-compatible endpoint.
 
     Parameters:
-        model_name_or_path (str): OpenAI model identifier.
+        model_id (str): OpenAI model identifier.
         api_key (str, optional): API key or set via OPENAI_API_KEY env var.
         generation_args (dict, optional): Params for ChatCompletion.create.
         max_input_length (int): Max prompt tokens.
@@ -29,7 +29,7 @@ class OpenAIBackend(Backend):
 
     def __init__(
         self,
-        model_name_or_path: str,
+        model_id: str,
         *,
         api_key: str = None,
         generation_args: dict = None,
@@ -43,7 +43,7 @@ class OpenAIBackend(Backend):
         verbose: bool = False,
     ):
         super().__init__(
-            model_name_or_path=model_name_or_path,
+            model_id=model_id,
             max_input_length=max_input_length,
             max_new_tokens=max_new_tokens,
             verbose=verbose,
@@ -81,7 +81,7 @@ class OpenAIBackend(Backend):
         if not isinstance(prompts[0], str):
             raise ValueError("prompts must be str when using the completions API")
         args = {
-            'model': self.model_name_or_path,
+            'model': self.model_id,
             'timeout': self.timeout,
         }
         args.update(self._generation_args)
@@ -112,7 +112,7 @@ class OpenAIBackend(Backend):
         return_logprobs: bool = False,
     ) -> List[int]:
         args = {
-            'model': self.model_name_or_path,
+            'model': self.model_id,
             'timeout': self.timeout,
         }
         args.update(self._generation_args)
@@ -164,8 +164,42 @@ class OpenAIBackend(Backend):
             raise ValueError(f'api {self.api!r} not supported')
         return results
 
+    @staticmethod
+    def from_params(params: Dict[str, str]) -> 'OpenAIBackend':
+        """Create an OpenAIBackend instance from the provided parameters.
+
+        Supported params:
+
+            - model_id: str, the OpenAI model identifier (required)
+            - api_key: str, API key for OpenAI (default: None, uses OPENAI_API_KEY env var). If value starts with $, loads the value from the provided environment variable.
+            - max_retries: int, number of retries for API errors (default: 10)
+            - base_url: str, base URL for the OpenAI API (default: None)
+            - timeout: float, timeout for API calls in seconds (default: 30.0)
+            - logprobs_topk: int, number of top log probabilities to return (default: 20)
+            - verbose: bool, enable verbose logging (default: False)
+        
+        Returns:
+            OpenAIBackend: An instance of OpenAIBackend.
+        """
+        api_key = params.get("api_key")
+        if api_key and api_key.startswith("$"):
+            env_var = api_key[1:]
+            api_key = os.environ.get(env_var)
+            if not api_key:
+                raise ValueError(f"Environment variable {env_var} not found for OpenAI API key")
+
+        return OpenAIBackend(
+            model_id=params["model_id"],
+            api_key=api_key,
+            max_retries=int(params.get("max_retries", 10)),
+            base_url=params.get("base_url"),
+            timeout=float(params.get("timeout", 30.0)),
+            logprobs_topk=int(params.get("logprobs_topk", 20)),
+            verbose=bool(params.get("verbose", False)),
+        )
+
     def __repr__(self):
-        return f"OpenAIBackend({self.model_name_or_path!r})"
+        return f"OpenAIBackend({self.model_id!r})"
 
 
 __all__ = ["OpenAIBackend"]

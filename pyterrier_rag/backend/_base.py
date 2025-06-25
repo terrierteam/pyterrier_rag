@@ -1,10 +1,12 @@
-import sys
+import re
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Union
 
 import pyterrier as pt
 from more_itertools import chunked
 from dataclasses import dataclass
+
+import pyterrier_rag as ptr
 
 
 @dataclass
@@ -25,8 +27,9 @@ class Backend(pt.Transformer, ABC):
         max_new_tokens (int): Maximum number of tokens to generate.
         verbose (bool): Flag to enable detailed logging.
         device (Union[str, torch.device]): Device for model execution.
+
     Attributes:
-        model_name_or_path: model name or checkpoint directory
+        model_id: model name or checkpoint path
         supports_logprobs (bool): Flag indicating support for including the logprobs of generated tokens.
         supports_message_input (bool): Flag indicating support for message (chat)-formatted (``List[dict]``) inputs to ``generate``, in addition to ``str`` inputs.
     """
@@ -35,14 +38,14 @@ class Backend(pt.Transformer, ABC):
 
     def __init__(
         self,
-        model_name_or_path: str,
+        model_id: str,
         *,
         max_input_length: int = 512,
         max_new_tokens: int = 32,
         verbose: bool = False,
     ):
         super().__init__()
-        self.model_name_or_path = model_name_or_path
+        self.model_id = model_id
         self.max_input_length = max_input_length
         self.max_new_tokens = max_new_tokens
         self.verbose = verbose
@@ -112,6 +115,52 @@ class Backend(pt.Transformer, ABC):
     def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
         return self.text_generator().transform_iter(inp)
 
+    # factory methods
+
+    @staticmethod
+    def from_dsn(dsn: str) -> 'Backend':
+        """ Create a Backend instance from a DSN (Data Source Name) string.
+
+        The DSN format is: ``<provider>:<model_id> [key1=value1 key2=value2 ...]``.
+
+        Examples: ``"openai:gpt-3.5-turbo"``, ``"openai:meta-llama/Llama-4-Scout-17B-16E-Instruct base_path=http://localhost:8080/v1"``,
+        ``"vllm:meta-llama/Llama-4-Scout-17B-16E-Instruct"``, ands ``"huggingface:meta-llama/Llama-4-Scout-17B-16E-Instruct"``.
+
+        See each backend implementation ``from_params`` method for their supported keys.
+
+        Parameters:
+            dsn (str): The DSN string to parse.
+
+        Returns:
+            Backend: An instance of the appropriate Backend subclass based on the provider.
+
+        Raises:
+            ValueError: If the DSN format is invalid or the provider is unknown.
+        """
+        pattern = r"^(?P<backend>\w+):(?P<model_id>[\w/-]+)(?:\s+(?P<params>.*))?$"
+        match = re.match(pattern, dsn)
+        if not match:
+            raise ValueError(f"Invalid DSN format: {dsn!r}")
+
+        backend = match.group("backend")
+        backend_cls = {
+            'openai': ptr.OpenAIBackend,
+            'huggingface': ptr.HuggingFaceBackend,
+            'vllm': ptr.VLLMBackend,
+        }.get(backend)
+        if backend_cls is None:
+            raise ValueError(f'unknown backend {backend}')
+
+        params_str = match.group("params")
+        params = {
+            'model_id': match.group("model_id"),
+        }
+        if params_str:
+            for param in params_str.split():
+                key, value = param.split("=")
+                params[key] = value
+        return backend_cls.from_params(params)
+
 
 class TextGenerator(pt.Transformer):
     """ Transformer that generates text from the specified backend.
@@ -154,69 +203,4 @@ class TextGenerator(pt.Transformer):
                 yield result
 
 
-class _DefaultBackend(Backend):
-    def __init__(self):
-        self._backend = None
-
-    @property
-    def backend(self):
-        if self._backend is None:
-            raise RuntimeError("You need to run default_backend.set(backend) before using default_backend.")
-        return self._backend
-
-    @property
-    def supports_logprobs(self):
-        return self.backend.supports_logprobs
-
-    @property
-    def supports_message_input(self):
-        return self.backend.supports_message_input
-
-    @property
-    def model_name_or_path(self):
-        return self.backend.model_name_or_path
-
-    @property
-    def max_input_length(self):
-        return self.backend.max_input_length
-
-    @property
-    def max_new_tokens(self):
-        return self.backend.max_new_tokens
-
-    @property
-    def verbose(self):
-        return self.backend.verbose
-
-    def set(self, backend: Backend):
-        """ Set the default backend to use for text generation.
-        
-        Parameters:
-            backend (Backend): The backend instance to set.
-        """
-        if self._backend is None:
-            sys.stderr.write(f"set default backend to {backend!r}\n")
-        else:
-            sys.stderr.write(f"replaced default backend {self._backend!r} with {backend!r}\n")
-        self._backend = backend
-
-    def generate(
-        self,
-        inps: Union[List[str], List[List[dict]]],
-        *,
-        return_logprobs: bool = False,
-        max_new_tokens: Optional[int] = None,
-    ) -> List[BackendOutput]:
-        """ Delegate the generation to the set backend. """
-        return self.backend.generate(inps, return_logprobs=return_logprobs, max_new_tokens=max_new_tokens)
-
-    def __repr__(self):
-        if self._backend is None:
-            return "<DefaultBackend: not set>"
-        return repr(self._backend)
-
-
-default_backend = _DefaultBackend()
-
-
-__all__ = ["Backend", "BackendOutput", "TextGenerator", "default_backend"]
+__all__ = ["Backend", "BackendOutput", "TextGenerator"]

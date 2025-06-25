@@ -3,14 +3,14 @@ import pytest
 import torch
 
 from pyterrier_rag.backend._hf import HuggingFaceBackend, Seq2SeqLMBackend, StopWordCriteria
-from pyterrier_rag.backend import BackendOutput
+from pyterrier_rag.backend import BackendOutput, Backend
 from . import test_backend
 
 
 class TestHuggingFaceBackend(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.backend = HuggingFaceBackend('HuggingFaceTB/SmolLM-135M')
+        cls.backend = Backend.from_dsn('huggingface:HuggingFaceTB/SmolLM-135M')
 
     def test_huggingface_init_and_attributes(self):
         # generation args present

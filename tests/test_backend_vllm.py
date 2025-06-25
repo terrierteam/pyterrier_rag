@@ -8,7 +8,7 @@ import numpy as np
 
 # assume the subclass is in vllm_backend.py in the same directory
 from pyterrier_rag.backend._vllm import VLLMBackend
-from pyterrier_rag.backend import BackendOutput
+from pyterrier_rag.backend import BackendOutput, Backend
 from . import test_backend
 
 
@@ -16,7 +16,7 @@ from . import test_backend
 class TestVllmBackend(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.backend = VLLMBackend('HuggingFaceTB/SmolLM-135M')
+        cls.backend = Backend.from_dsn('vllm:HuggingFaceTB/SmolLM-135M')
 
     @classmethod
     def tearDownClass(cls):

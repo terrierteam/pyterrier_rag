@@ -81,7 +81,7 @@ class IRCOT(pt.Transformer):
 
     def _make_default_prompt_config(self):
         return {
-            "model_name_or_path": self.backend.model_name_or_path,
+            "model_name_or_path": self.backend.model_id,
             "system_message": ircot_system_message,
             "instruction": ircot_prompt,
             "output_field": "qanswer",

@@ -115,7 +115,7 @@ def test_make_default_configs():
     ircot = IRCOT(retriever=retriever, backend=backend)
     # Prompt config
     prompt_cfg = ircot._make_default_prompt_config()
-    assert prompt_cfg['model_name_or_path'] == backend.model_name_or_path
+    assert prompt_cfg['model_name_or_path'] == backend.model_id
     assert prompt_cfg['system_message'] == ircot_system_message
     assert prompt_cfg['instruction'] == ircot_prompt
     assert prompt_cfg['output_field'] == 'qanswer'
