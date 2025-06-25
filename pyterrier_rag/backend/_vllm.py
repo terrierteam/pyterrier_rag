@@ -8,6 +8,8 @@ class VLLMBackend(Backend):
     """
     Backend implementation using the vLLM library for text generation.
 
+    .. cite.dblp:: conf/sosp/KwonLZ0ZY0ZS23
+
     Parameters:
         model_name_or_path (str): Identifier or path of the vLLM model.
         model_args (dict, optional): Keyword arguments for LLM instantiation.

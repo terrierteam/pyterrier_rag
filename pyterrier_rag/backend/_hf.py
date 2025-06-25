@@ -15,6 +15,8 @@ class HuggingFaceBackend(Backend):
     """
         Backend implementation using a HuggingFace Transformer model.
 
+        .. cite.dblp:: journals/corr/abs-1910-03771
+
         Parameters:
             model_name_or_path (str): Identifier or path of the pretrained model.
             model_args (dict): Arguments passed to `from_pretrained` for model instantiation.
