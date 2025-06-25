@@ -20,7 +20,7 @@ class TestVllmBackend(test_backend.BaseTestBackend, unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        backend = self.backend
+        backend = cls.backend
         cls.backend = None
         del backend
         # Run garbage collection
