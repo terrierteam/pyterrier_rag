@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 
 import pyterrier as pt
 from more_itertools import chunked
@@ -27,10 +27,10 @@ class Backend(pt.Transformer, ABC):
     Attributes:
         model_name_or_path: model name or checkpoint directory
         supports_logprobs (bool): Flag indicating support for including the logprobs of generated tokens.
-        _api_type (str): If using API do not return string
+        supports_message_input (bool): Flag indicating support for message (chat)-formatted (``List[dict]``) inputs to ``generate``, in addition to ``str`` inputs.
     """
     supports_logprobs = False
-    _api_type = None
+    supports_message_input = False
 
     def __init__(
         self,
@@ -49,8 +49,9 @@ class Backend(pt.Transformer, ABC):
     # Abstract methods
 
     @abstractmethod
-    def generate(self,
-        inps: List[str],
+    def generate(
+        self,
+        inps: Union[List[str], List[List[dict]]],
         *,
         return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
@@ -58,7 +59,7 @@ class Backend(pt.Transformer, ABC):
         """ Generate text from input prompts.
 
         Parameters:
-            inps (List[str]): Input prompts to generate text for.
+            inps (Union[List[str], List[List[dict]]]): Input prompts as strings or dictionaries. When strings, represent the prompts directly. When a list of dictionaries, represents a sequence of messages (if ``backend.supports_message_input==True``).
             return_logprobs (bool): Whether to return logprobs of generated tokens along with text. (Only available if ``backend.supports_logprobs==True``.)
             max_new_tokens (Optional[int]): Override for max tokens to generate.
 

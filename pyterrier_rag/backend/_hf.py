@@ -76,12 +76,14 @@ class HuggingFaceBackend(Backend):
         self._generation_args = generation_args
 
     @torch.no_grad()
-    def generate(self,
-        inps: List[str],
+    def generate(
+        self,
+        inps: Union[List[str], List[List[dict]]],
         *,
         return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
     ) -> List[BackendOutput]:
+        assert isinstance(inps[0], str), f'{self!r} only supports str inputs to generate'
         # Tokenize inputs
         inputs = self.tokenizer(
             inps,

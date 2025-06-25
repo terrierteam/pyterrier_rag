@@ -21,6 +21,8 @@ class TestOpenAIBackend(test_backend.BaseTestBackend, unittest.TestCase):
             model_name_or_path="gpt-4o-mini",
             api_key=os.environ['TEST_OPENAI_KEY'],
             api='completions',
+            max_retries=2,
+            timeout=2,
         )
 
 
@@ -32,6 +34,8 @@ class TestOpenAIBackendChat(test_backend.BaseTestBackend, unittest.TestCase):
             model_name_or_path="gpt-4o-mini",
             api_key=os.environ['TEST_OPENAI_KEY'],
             api='chat/completions',
+            max_retries=2,
+            timeout=2,
         )
 
 
@@ -156,43 +160,3 @@ def test_api_key(monkeypatch, subtests):
         monkeypatch.setenv("OPENAI_API_KEY", 'sk-env')
         backend = OpenAIBackend("gpt-4o-mini", api_key="sk-test")
         assert backend.client.api_key == "sk-test"
-
-
-def test_init(monkeypatch):
-    OpenAIBackend("gpt-4o-mini", api_key="k")
-
-
-def test_generate_chat_completions(monkeypatch, httpserver):
-    httpserver.expect_request("/v1/chat/completions").respond_with_json({
-        "choices": [
-            {"message": {"content": "world"}},
-        ]
-    })
-
-    backend = OpenAIBackend("gpt-4o-mini", base_url=httpserver.url_for('/v1/'), api_key="k")
-    outputs = backend.generate(['hello', 'some message'])
-    assert outputs == [BackendOutput(text='world'), BackendOutput(text='world')]
-
-
-def test_generate_completions(monkeypatch, httpserver):
-    httpserver.expect_request("/v1/completions").respond_with_json({
-        "choices": [
-            {"text": "world"},
-            {"text": "universe"},
-        ]
-    })
-
-    backend = OpenAIBackend("gpt-4o-mini", base_url=httpserver.url_for('/v1/'), api_key="k", api='completions')
-    outputs = backend.generate(['hello', 'some message'])
-    assert outputs == [BackendOutput(text='world'), BackendOutput(text='universe')]
-
-TEST_OPENAI_BASE_URL = os.environ.get('TEST_OPENAI_BASE_URL')
-TEST_OPENAI_API_KEY = os.environ.get('TEST_OPENAI_API_KEY')
-
-@pytest.mark.skipif(not TEST_OPENAI_BASE_URL or not TEST_OPENAI_API_KEY, reason="TEST_OPENAI_BASE_URL and TEST_OPENAI_API_KEY not provided")
-def test_integration_basic():
-    backend = OpenAIBackend("gpt-4o-mini", base_url=TEST_OPENAI_BASE_URL, api_key=TEST_OPENAI_API_KEY)
-    result = backend.generate(['hello world', 'some text'])
-    assert len(result) == 2
-    assert len(result[0].text) > 0
-    assert len(result[1].text) > 0

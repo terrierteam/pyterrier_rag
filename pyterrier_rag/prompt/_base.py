@@ -83,17 +83,10 @@ class PromptTransformer(pt.Transformer):
     def answer_extraction(self, output):
         return output
 
-    def set_output_attribute(self, api_type: str = None):
-        self.output_attribute = (
-            {
-                "openai": "to_openai_api_messages",
-                "gemini": "to_gemini_api_messages",
-                "vertex": "to_vertex_api_messages",
-                "reka": "to_reka_api_messages",
-            }[api_type]
-            if api_type
-            else "get_prompt"
-        )
+    def set_output_attribute(self, supports_message_input: bool):
+        # ``output_attribute`` indicates the method to call on the prompt object
+        # In the future, we may support more message formats, but for now it's either a string or OpenAI-formatted messages
+        self.output_attribute = 'to_openai_api_messages' if supports_message_input else 'get_prompt'
 
     @property
     def prompt(self):

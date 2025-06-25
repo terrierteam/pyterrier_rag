@@ -44,7 +44,7 @@ class Reader(pt.Transformer):
                 model_name_or_path=self.backend.model_name_or_path,
             )
         if isinstance(self.prompt, PromptTransformer):
-            self.prompt.set_output_attribute(self.backend._api_type)
+            self.prompt.set_output_attribute(self.backend.supports_message_input)
             if self.prompt.expects_logprobs and not self.backend.supports_logprobs:
                 raise ValueError("The LLM does not support logprobs")
             elif self.prompt.expects_logprobs and self.backend.supports_logprobs:

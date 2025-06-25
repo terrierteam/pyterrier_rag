@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from pyterrier_rag.backend._base import Backend, BackendOutput
 from pyterrier_rag._optional import is_vllm_availible
@@ -53,12 +53,14 @@ class VLLMBackend(Backend):
         self.generation_args = generation_args
         self.to_params = SamplingParams
 
-    def generate(self,
-        inps: List[str],
+    def generate(
+        self,
+        inps: Union[List[str], List[List[dict]]],
         *,
         return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
     ) -> List[BackendOutput]:
+        assert isinstance(inps[0], str), f'{self!r} only supports str inputs to generate'
         generation_args = {}
         generation_args.update(self.generation_args)
         if max_new_tokens:

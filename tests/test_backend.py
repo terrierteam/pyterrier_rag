@@ -1,3 +1,4 @@
+import itertools
 import unittest
 import pandas as pd
 import pytest
@@ -84,29 +85,40 @@ class BaseTestBackend:
             self.assertIsInstance(output.text, str)
             self.assertEqual(output.logprobs, None)
 
-    def test_generate_logprobs(self):
-        if not self.backend.supports_logprobs:
-            self.skipTest(f"{self.backend!r} does not support logprobs")
-        prompts = ["Hello", "World"]
-        outputs = self.backend.generate(prompts, return_logprobs=True)
-        self.assertIsInstance(outputs, list)
-        self.assertEqual(len(outputs), len(prompts))
-        for output in outputs:
-            self.assertIsInstance(output, BackendOutput)
-            self.assertIsInstance(output.text, str)
-            self.assertIsInstance(output.logprobs, list)
-            self.assertIsInstance(output.logprobs[0], dict)
-
-    def test_generate_logprobs_1tok(self):
-        if not self.backend.supports_logprobs:
-            self.skipTest(f"{self.backend!r} does not support logprobs")
-        prompts = ["Hello", "World"]
-        outputs = self.backend.generate(prompts, return_logprobs=True, max_new_tokens=1)
-        self.assertIsInstance(outputs, list)
-        self.assertEqual(len(outputs), len(prompts))
-        for output in outputs:
-            self.assertIsInstance(output, BackendOutput)
-            self.assertIsInstance(output.text, str)
-            self.assertIsInstance(output.logprobs, list)
-            self.assertEqual(len(output.logprobs), 1)
-            self.assertIsInstance(output.logprobs[0], dict)
+    def test_generate(self):
+        for return_logprobs, max_new_tokens, message_input in itertools.product(
+            [False, True],
+            [None, 1],
+            [False, True]
+        ):
+            if max_new_tokens is not None and not return_logprobs:
+                continue # we can't really test this case unless we have logprobs
+            inp = ['Hello', 'World']
+            if message_input:
+                inp = [
+                    [
+                        {'role': 'system', 'content': 'You are an intelligent system.'},
+                        {'role': 'user', 'content': message},
+                    ] for message in inp
+                ]
+            with self.subTest(return_logprobs=return_logprobs, max_new_tokens=max_new_tokens, message_input=message_input):
+                if return_logprobs and not self.backend.supports_logprobs or message_input and not self.backend.supports_message_input:
+                    with self.assertRaises(ValueError):
+                        self.backend.generate(inp, return_logprobs=return_logprobs, max_new_tokens=max_new_tokens)
+                else:
+                    outputs = self.backend.generate(inp, return_logprobs=return_logprobs, max_new_tokens=max_new_tokens)
+                    self.assertIsInstance(outputs, list)
+                    self.assertEqual(len(outputs), len(inp))
+                    for output in outputs:
+                        self.assertIsInstance(output, BackendOutput)
+                        self.assertIsInstance(output.text, str)
+                        self.assertFalse(output.text.startswith('ERROR::'), f"output error: {output.text}")
+                        if return_logprobs:
+                            self.assertIsInstance(output.logprobs, list)
+                            if max_new_tokens is not None:
+                                self.assertEqual(len(output.logprobs), max_new_tokens)
+                            self.assertIsInstance(output.logprobs[0], dict)
+                            self.assertNotEqual(len(output.logprobs[0]), 0)
+                            first_logprob_key, first_logprob_value = list(output.logprobs[0].items())[0]
+                            self.assertIsInstance(first_logprob_key, str)
+                            self.assertIsInstance(first_logprob_value, float)
