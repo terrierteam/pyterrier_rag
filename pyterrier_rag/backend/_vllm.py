@@ -75,7 +75,10 @@ class VLLMBackend(Backend):
         text = map(lambda x: x.outputs[0].text, responses)
 
         if return_logprobs:
-            logprobs = map(lambda x: x.outputs[0].logprobs, responses)
+            logprobs = (
+                {lp.decoded_token: lp.logprob for lp in sorted(r.outputs[0].logprobs.values(), key=lambda x: x.rank)}
+                for r in responses
+            )
 
             return [BackendOutput(text=txt, logprobs=lp) for txt, lp in zip(text, logprobs)]
         return [BackendOutput(text=txt) for txt in text]
