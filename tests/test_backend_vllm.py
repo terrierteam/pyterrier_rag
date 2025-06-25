@@ -9,18 +9,8 @@ from pyterrier_rag.backend._vllm import VLLMBackend
 from pyterrier_rag.backend import BackendOutput
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="cuda not available")
-def test_vllmbackend_generate():
-    # instantiate backend
-    backend = VLLMBackend(
-        model_name_or_path="HuggingFaceTB/SmolLM-135M",
-        verbose=True,
-    )
-
-    # test generate
-    prompts = ["hello", "world"]
-    outputs = backend.generate(prompts)
-    assert isinstance(outputs, list)
-    assert len(outputs) == 2
-    for prompt, out in zip(prompts, outputs):
-        assert isinstance(out, BackendOutput)
+@unittest.skipIf(not torch.cuda.is_available(), "cuda not available")
+class TestVllmBackend(test_backend.BaseTestBackend, unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.backend = VLLMBackend('HuggingFaceTB/SmolLM-135M')
