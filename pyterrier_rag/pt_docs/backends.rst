@@ -6,6 +6,7 @@ PyTerrier RAG supports a variety of LLM backends for generating responses. This 
 :class:`~pyterrier_rag.backends.VllmBackend`, and :class:`~pyterrier_rag.backends.OpenAIBackend`. This architecture
 also allows different components to share the same backend, which is particularly useful for multi-stage RAG pipelines.
 
+
 Basics
 ------------------------
 
@@ -14,8 +15,8 @@ Start by creating an instance of a backend. For example, using the :class:`~pyte
 .. code-block:: python
     :caption: Create an instance of a :class:`~pyterrier_rag.backends.OpenAIBackend`
 
-    impirt pyterrier_rag as ptr
-    backend = ptr.OpenAIBackend(api_key="your_openai_api_key") # or loaded from OPENAI_API_KEY environment variable, if available
+    import pyterrier_rag as ptr
+    backend = ptr.OpenAIBackend('gpt-4o-mini', api_key="your_openai_api_key") # or loaded from OPENAI_API_KEY environment variable, if available
 
 The backend can be used to generate responses to prompts. For example, using the `generate` method:
 
@@ -42,6 +43,18 @@ to the ``qanswer`` column:
 
 Usually you won't use a backend directly though -- they are instead typically used by other components, such as
 Prompts and Frameworks.
+
+To set the global default backend, you can call :func:`pyterrier_rag.default_backend.set`. Note that this must be
+called before any components that use the default backend are used (i.e., if you are using ``default_backend``, we
+recommended setting it at the top of your script/notebook).
+
+.. code-block:: python
+    :caption: Set the default backend
+
+    import pyterrier_rag as ptr
+    ptr.default_backend.set(ptr.OpenAIBackend('gpt-4o-mini'))
+    ptr.default_backend.generate(['What is the capital of France?']) # -> uses the OpenAIBackend from above
+
 
 Token Probabilities
 ------------------------

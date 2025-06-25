@@ -1,4 +1,4 @@
-from ._base import Backend, BackendOutput, TextGenerator
+from ._base import Backend, BackendOutput, TextGenerator, default_backend
 from ._hf import HuggingFaceBackend, Seq2SeqLMBackend, StopWordCriteria
 from ._openai import OpenAIBackend
 from ._vllm import VLLMBackend
@@ -14,4 +14,5 @@ __all__ = [
     "OpenAIBackend",
     "VLLMBackend",
     "get_backend",
+    "default_backend",
 ]

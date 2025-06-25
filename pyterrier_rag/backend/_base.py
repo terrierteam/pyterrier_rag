@@ -1,3 +1,4 @@
+import sys
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Union
 
@@ -153,4 +154,73 @@ class TextGenerator(pt.Transformer):
                 yield result
 
 
-__all__ = ["Backend", "BackendOutput", "TextGenerator"]
+class _DefaultBackend(Backend):
+    def __init__(self):
+        self._backend = None
+
+    @property
+    def backend(self):
+        if self._backend is None:
+            raise RuntimeError("You need to run default_backend.set(backend) before using default_backend.")
+        return self._backend
+
+    @property
+    def supports_logprobs(self):
+        return self.backend.supports_logprobs
+
+    @property
+    def supports_message_input(self):
+        return self.backend.supports_message_input
+
+    @property
+    def model_name_or_path(self):
+        return self.backend.model_name_or_path
+
+    @property
+    def max_input_length(self):
+        return self.backend.max_input_length
+
+    @property
+    def max_new_tokens(self):
+        return self.backend.max_new_tokens
+
+    @property
+    def verbose(self):
+        return self.backend.verbose
+
+    def set(self, backend: Backend):
+        """ Set the default backend to use for text generation.
+        
+        Parameters:
+            backend (Backend): The backend instance to set.
+        """
+        if self._backend is None:
+            sys.stderr.write(f"set default backend to {backend!r}\n")
+        else:
+            sys.stderr.write(f"replaced default backend {self._backend!r} with {backend!r}\n")
+        self._backend = backend
+        self.model_name_or_path = backend.model_name_or_path
+        self.max_input_length = backend.max_input_length
+        self.max_new_tokens = backend.max_new_tokens
+        self.verbose = backend.verbose
+
+    def generate(
+        self,
+        inps: Union[List[str], List[List[dict]]],
+        *,
+        return_logprobs: bool = False,
+        max_new_tokens: Optional[int] = None,
+    ) -> List[BackendOutput]:
+        """ Delegate the generation to the set backend. """
+        return self.backend.generate(inps, return_logprobs=return_logprobs, max_new_tokens=max_new_tokens)
+
+    def __repr__(self):
+        if self._backend is None:
+            return "<DefaultBackend: not set>"
+        return repr(self._backend)
+
+
+default_backend = _DefaultBackend()
+
+
+__all__ = ["Backend", "BackendOutput", "TextGenerator", "default_backend"]

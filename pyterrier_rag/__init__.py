@@ -15,6 +15,7 @@ from pyterrier_rag.backend import (
     HuggingFaceBackend,
     Seq2SeqLMBackend,
     VLLMBackend,
+    default_backend,
 )
 
 __all__ = [
@@ -30,4 +31,5 @@ __all__ = [
     "HuggingFaceBackend",
     "Seq2SeqLMBackend",
     "VLLMBackend",
+    "default_backend",
 ]
