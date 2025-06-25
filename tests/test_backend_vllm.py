@@ -8,6 +8,7 @@ import numpy as np
 # assume the subclass is in vllm_backend.py in the same directory
 from pyterrier_rag.backend._vllm import VLLMBackend
 from pyterrier_rag.backend import BackendOutput
+from . import test_backend
 
 
 @unittest.skipIf(not torch.cuda.is_available(), "cuda not available")
