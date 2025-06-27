@@ -194,7 +194,7 @@ class TextGenerator(pt.Transformer):
     def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
         for chunk in chunked(inp, self.batch_size):
             chunk = list(chunk)
-            prompts = [i[self.input_field] for i in inp]
+            prompts = [i[self.input_field] for i in chunk]
             out = self.backend.generate(prompts, return_logprobs=self.logprobs_field is not None)
             for rec, o in zip(chunk, out):
                 result = {**rec, self.output_field: o.text}
