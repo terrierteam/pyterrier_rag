@@ -35,6 +35,7 @@ class Backend(pt.Transformer, ABC):
     """
     supports_logprobs = False
     supports_message_input = False
+    supports_num_responses = False
 
     def __init__(
         self,

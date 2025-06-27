@@ -86,10 +86,11 @@ class BaseTestBackend:
             self.assertEqual(output.logprobs, None)
 
     def test_generate(self):
-        for return_logprobs, max_new_tokens, message_input in itertools.product(
+        for return_logprobs, max_new_tokens, message_input, num_responses in itertools.product(
             [False, True],
             [None, 1],
-            [False, True]
+            [False, True],
+            [1, 2],
         ):
             if max_new_tokens is not None and not return_logprobs:
                 continue # we can't really test this case unless we have logprobs
@@ -101,14 +102,14 @@ class BaseTestBackend:
                         {'role': 'user', 'content': message},
                     ] for message in inp
                 ]
-            with self.subTest(return_logprobs=return_logprobs, max_new_tokens=max_new_tokens, message_input=message_input):
-                if return_logprobs and not self.backend.supports_logprobs or message_input and not self.backend.supports_message_input:
+            with self.subTest(return_logprobs=return_logprobs, max_new_tokens=max_new_tokens, message_input=message_input, num_responses=num_responses):
+                if return_logprobs and not self.backend.supports_logprobs or message_input and not self.backend.supports_message_input or num_responses > 1 and not self.backend.supports_num_responses:
                     with self.assertRaises(ValueError):
-                        self.backend.generate(inp, return_logprobs=return_logprobs, max_new_tokens=max_new_tokens)
+                        self.backend.generate(inp, return_logprobs=return_logprobs, max_new_tokens=max_new_tokens, num_responses=num_responses)
                 else:
-                    outputs = self.backend.generate(inp, return_logprobs=return_logprobs, max_new_tokens=max_new_tokens)
+                    outputs = self.backend.generate(inp, return_logprobs=return_logprobs, max_new_tokens=max_new_tokens, num_responses=num_responses)
                     self.assertIsInstance(outputs, list)
-                    self.assertEqual(len(outputs), len(inp))
+                    self.assertEqual(len(outputs), len(inp) * num_responses)
                     for output in outputs:
                         self.assertIsInstance(output, BackendOutput)
                         self.assertIsInstance(output.text, str)

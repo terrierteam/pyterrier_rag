@@ -83,11 +83,14 @@ class HuggingFaceBackend(Backend):
         *,
         return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
+        num_responses: int = 1,
     ) -> List[BackendOutput]:
         if not isinstance(inps[0], str):
             raise ValueError(f'{self!r} only supports str inputs to generate')
         if return_logprobs:
             raise ValueError(f'{self!r} does not support logprobs generation')
+        if num_responses != 1:
+            raise ValueError(f'{self!r} does not support num_responses > 1')
         # Tokenize inputs
         inputs = self.tokenizer(
             inps,
