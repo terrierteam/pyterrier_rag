@@ -59,6 +59,10 @@ class _DefaultBackend(Backend):
         return self.backend.supports_message_input
 
     @property
+    def supports_num_responses(self):
+        return self.backend.supports_num_responses
+
+    @property
     def model_id(self):
         return self.backend.model_id
 
