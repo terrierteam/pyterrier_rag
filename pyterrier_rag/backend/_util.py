@@ -93,9 +93,10 @@ class _DefaultBackend(Backend):
         *,
         return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
+        num_responses: int = 1,
     ) -> List[BackendOutput]:
         """ Delegate the generation to the set backend. """
-        return self.backend.generate(inps, return_logprobs=return_logprobs, max_new_tokens=max_new_tokens)
+        return self.backend.generate(inps, return_logprobs=return_logprobs, max_new_tokens=max_new_tokens, num_responses=num_responses)
 
     def __repr__(self):
         if self._backend is None:
