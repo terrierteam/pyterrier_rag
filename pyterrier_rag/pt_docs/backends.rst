@@ -106,6 +106,31 @@ a single token using ``max_new_tokens=1`` and a suitable prompt:
     # 1  What is the capital of Germany?    Berlin   [{'Berlin': -0.02, 'Paris': -2.29, ...}]
 
 
+Reasoning
+------------------------
+
+Some models output reasoning steps (contained within a ``<think>`` tag) before the final answer. If you want to
+extract these reasoning steps, you can use the ``ReasoningExtractor`` transformer in your pipeline.
+
+.. code-block:: python
+    :caption: Extract reasoning steps from a response
+
+    from pyterrier_rag import OpenAIBackend, ReasoningExtractor
+
+    # An example of a model that outputs reasoning steps in <think> tags:
+    backend = OpenAIBackend('deepseek-llama-3-8b-instruct', api_key="your_api_key", base_url="http://localhost:8000/v1")
+
+    pipeline = backend >> ReasoningExtractor() # extract reasoning after running the backend
+    inp = pd.DataFrame([
+        {'prompt': 'What is the capital of France?'},
+        {'prompt': 'What is the capital of Germany?'},
+    ])
+    reasoning_extractor(inp)
+    #                             prompt  qanswer                                                       reasoning
+    # 0   What is the capital of France?    Paris    Ok, let me think about this. The capital of France is Paris.
+    # 1  What is the capital of Germany?   Berlin  Ok, let me think about this. The capital of Germany is Berlin.
+
+
 
 API Documentation
 ------------------------
@@ -121,6 +146,10 @@ General
 
 .. autoclass:: pyterrier_rag.backend.BackendOutput
    :members:
+
+.. autoclass:: pyterrier_rag.backend.BackendLogprobsGenerator
+    :members:
+
 
 Implementations
 ~~~~~~~~~~~~~~~~~~~~~~~~
