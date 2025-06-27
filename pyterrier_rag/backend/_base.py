@@ -78,6 +78,7 @@ class Backend(pt.Transformer, ABC):
         *,
         input_field: str = 'prompt',
         output_field: str = 'qanswer',
+        reasoning_field: Optional[Union[str, bool]] = None,
         batch_size: int = 4,
         max_new_tokens: Optional[int] = None,
     ) -> pt.Transformer:
@@ -86,16 +87,18 @@ class Backend(pt.Transformer, ABC):
         Parameters:
             input_field (str): Name of the field containing input prompts.
             output_field (str): Name of the field to store generated text.
+            reasoning_field (Optional[str|bool]): Name of the field to store reasoning steps (or if True, "qreasoning"). If None or False, reasoning is not extracted from responses.
             batch_size (int): Number of prompts to process in each batch.
             max_new_tokens (Optional[int]): Override for max tokens to generate. If None, uses the backend's max_new_tokens.
         """
-        return TextGenerator(self, input_field=input_field, output_field=output_field, max_new_tokens=max_new_tokens)
+        return TextGenerator(self, input_field=input_field, output_field=output_field, max_new_tokens=max_new_tokens, reasoning_field=reasoning_field)
 
     def logprobs_generator(self,
         *,
         input_field: str = 'prompt',
         output_field: str = 'qanswer',
         logprobs_field: str = 'qanswer_logprobs',
+        reasoning_field: Optional[Union[str, bool]] = None,
         batch_size: int = 4,
         max_new_tokens: Optional[int] = None,
     ) -> pt.Transformer:
@@ -105,6 +108,7 @@ class Backend(pt.Transformer, ABC):
             input_field (str): Name of the field containing input prompts.
             output_field (str): Name of the field to store generated text.
             logprobs_field (str): Name of the field to store logprobs.
+            reasoning_field (Optional[str|bool]): Name of the field to store reasoning steps (or if True, "qreasoning"). If None or False, reasoning is not extracted from responses.
             batch_size (int): Number of prompts to process in each batch.
             max_new_tokens (Optional[int]): Override for max tokens to generate. If None, uses the backend's max_new_tokens.
         """
@@ -171,6 +175,7 @@ class TextGenerator(pt.Transformer):
         input_field: str = 'prompt',
         output_field: str = 'qanswer',
         logprobs_field: Optional[str] = None,
+        reasoning_field: Optional[Union[str, bool]] = None,
         batch_size: int = 4,
         max_new_tokens: Optional[int] = None,
     ):
@@ -180,6 +185,7 @@ class TextGenerator(pt.Transformer):
             input_field (str): Name of the field containing input prompts.
             output_field (str): Name of the field to store generated text.
             logprobs_field (Optional[str]): Name of the field to store generated logprobs. If None, logprobs are not returned.
+            reasoning_field (Optional[str|bool]): Name of the field to store reasoning steps (or if True, "qreasoning"). If None or False, reasoning is not extracted from responses.
             batch_size (int): Number of prompts to process in each batch.
             max_new_tokens (Optional[int]): Override for max tokens to generate. If None, uses the backend's max_new_tokens.
         """
@@ -189,6 +195,9 @@ class TextGenerator(pt.Transformer):
         self.input_field = input_field
         self.output_field = output_field
         self.logprobs_field = logprobs_field
+        if isinstance(reasoning_field, bool):
+            reasoning_field = 'qreasoning' if reasoning_field else None
+        self.reasoning_field = reasoning_field
         self.batch_size = batch_size
 
     def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
@@ -200,6 +209,15 @@ class TextGenerator(pt.Transformer):
                 result = {**rec, self.output_field: o.text}
                 if self.logprobs_field is not None:
                     result[self.logprobs_field] = o.logprobs
+                if self.reasoning_field is not None:
+                    # extract <think>...</think> as reasoning and everything else as qanswer
+                    reasoning_match = re.search(r'<think>(.*?)</think>', o.text, re.DOTALL)
+                    if reasoning_match:
+                        result[self.reasoning_field] = reasoning_match.group(1).strip()
+                        result[self.output_field] = o.text.replace(reasoning_match.group(0), '').strip()
+                    else:
+                        result[self.reasoning_field] = None
+
                 yield result
 
 
