@@ -6,8 +6,7 @@ import pyterrier as pt
 from more_itertools import chunked
 from dataclasses import dataclass
 
-import pyterrier_rag as ptr
-import pyterrier_rag.backend
+from pyterrier_rag import backend as _backend
 
 
 @dataclass
@@ -146,9 +145,9 @@ class Backend(pt.Transformer, ABC):
 
         backend = match.group("backend")
         backend_cls = {
-            'openai': pyterrier_rag.backend.OpenAIBackend,
-            'huggingface': pyterrier_rag.backend.HuggingFaceBackend,
-            'vllm': pyterrier_rag.backend.VLLMBackend,
+            'openai': _backend.OpenAIBackend,
+            'huggingface': _backend.HuggingFaceBackend,
+            'vllm': _backend.VLLMBackend,
         }.get(backend)
         if backend_cls is None:
             raise ValueError(f'unknown backend {backend}')
