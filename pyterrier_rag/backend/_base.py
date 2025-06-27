@@ -81,6 +81,7 @@ class Backend(pt.Transformer, ABC):
         output_field: str = 'qanswer',
         batch_size: int = 4,
         max_new_tokens: Optional[int] = None,
+        num_responses: int = 1,
     ) -> pt.Transformer:
         """ Create a text generator transformer using this backend.
 
@@ -89,8 +90,9 @@ class Backend(pt.Transformer, ABC):
             output_field (str): Name of the field to store generated text.
             batch_size (int): Number of prompts to process in each batch.
             max_new_tokens (Optional[int]): Override for max tokens to generate. If None, uses the backend's max_new_tokens.
+            num_responses (int): Number of responses to generate for each prompt.
         """
-        return TextGenerator(self, input_field=input_field, output_field=output_field, max_new_tokens=max_new_tokens)
+        return TextGenerator(self, input_field=input_field, output_field=output_field, max_new_tokens=max_new_tokens, num_responses=num_responses)
 
     def logprobs_generator(self,
         *,
@@ -99,6 +101,7 @@ class Backend(pt.Transformer, ABC):
         logprobs_field: str = 'qanswer_logprobs',
         batch_size: int = 4,
         max_new_tokens: Optional[int] = None,
+        num_responses: int = 1,
     ) -> pt.Transformer:
         """ Create a text generator transformer that also returns the logprobs of each token using this backend.
 
@@ -108,10 +111,11 @@ class Backend(pt.Transformer, ABC):
             logprobs_field (str): Name of the field to store logprobs.
             batch_size (int): Number of prompts to process in each batch.
             max_new_tokens (Optional[int]): Override for max tokens to generate. If None, uses the backend's max_new_tokens.
+            num_responses (int): Number of responses to generate for each prompt.
         """
         if not self.supports_logprobs:
             raise ValueError("This model cannot return logprobs")
-        return TextGenerator(self, input_field=input_field, output_field=output_field, logprobs_field=logprobs_field, max_new_tokens=max_new_tokens)
+        return TextGenerator(self, input_field=input_field, output_field=output_field, logprobs_field=logprobs_field, max_new_tokens=max_new_tokens, num_responses=num_responses)
 
     def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
         return self.text_generator().transform_iter(inp)
@@ -174,6 +178,7 @@ class TextGenerator(pt.Transformer):
         logprobs_field: Optional[str] = None,
         batch_size: int = 4,
         max_new_tokens: Optional[int] = None,
+        num_responses: int = 1,
     ):
         """
         Parameters:
@@ -183,25 +188,35 @@ class TextGenerator(pt.Transformer):
             logprobs_field (Optional[str]): Name of the field to store generated logprobs. If None, logprobs are not returned.
             batch_size (int): Number of prompts to process in each batch.
             max_new_tokens (Optional[int]): Override for max tokens to generate. If None, uses the backend's max_new_tokens.
+            num_responses (int): Number of responses to generate for each prompt.
         """
         if logprobs_field is not None and not backend.supports_logprobs:
             raise ValueError("Backend does not support logprobs")
+        if num_responses != 1 and not backend.supports_num_responses:
+            raise ValueError("Backend does not support multiple responses per input")
         self.backend = backend
         self.input_field = input_field
         self.output_field = output_field
         self.logprobs_field = logprobs_field
         self.batch_size = batch_size
+        self.num_responses = num_responses
 
     def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
         for chunk in chunked(inp, self.batch_size):
             chunk = list(chunk)
             prompts = [i[self.input_field] for i in chunk]
-            out = self.backend.generate(prompts, return_logprobs=self.logprobs_field is not None)
-            for rec, o in zip(chunk, out):
-                result = {**rec, self.output_field: o.text}
-                if self.logprobs_field is not None:
-                    result[self.logprobs_field] = o.logprobs
-                yield result
+            out = self.backend.generate(
+                prompts,
+                return_logprobs=self.logprobs_field is not None,
+                num_responses=self.num_responses
+            )
+            for i, rec in enumerate(chunk):
+                for j in range(self.num_responses):
+                    o = out[i * self.num_responses + j]
+                    result = {**rec, self.output_field: o.text}
+                    if self.logprobs_field is not None:
+                        result[self.logprobs_field] = o.logprobs
+                    yield result
 
 
 __all__ = ["Backend", "BackendOutput", "TextGenerator"]
