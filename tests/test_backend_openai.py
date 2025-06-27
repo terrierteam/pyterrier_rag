@@ -17,28 +17,28 @@ from . import test_backend
 class TestOpenAIBackend(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.backend = Backend.from_dsn('openai:gpt-4o-mini api_key=$TEST_OPENAI_KEY api=completions max_retries=2 timeout=2')
+        cls.backend = Backend.from_dsn('openai:gpt-4o-mini api_key=$TEST_OPENAI_KEY api=completions max_retries=2 timeout=2 parallel=2')
 
 
 @unittest.skipIf(os.environ.get('TEST_OPENAI_KEY') is None, "TEST_OPENAI_KEY not set")
 class TestOpenAIBackendChat(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.backend = Backend.from_dsn('openai:gpt-4o-mini api_key=$TEST_OPENAI_KEY api=chat/completions max_retries=2 timeout=2')
+        cls.backend = Backend.from_dsn('openai:gpt-4o-mini api_key=$TEST_OPENAI_KEY api=chat/completions max_retries=2 timeout=2 parallel=2')
 
 
 @unittest.skipIf(os.environ.get('TEST_IDA_KEY') is None, "TEST_IDA_KEY not set")
 class TestOpenAIBackendLlama(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.backend = Backend.from_dsn('openai:llama-3-8b-instruct api_key=$TEST_IDA_KEY base_url=http://api.llm.apps.os.dcs.gla.ac.uk/v1/ api=completions max_retries=2 timeout=2')
+        cls.backend = Backend.from_dsn('openai:llama-3-8b-instruct api_key=$TEST_IDA_KEY base_url=http://api.llm.apps.os.dcs.gla.ac.uk/v1/ api=completions max_retries=2 timeout=2 parallel=2')
 
 
 @unittest.skipIf(os.environ.get('TEST_IDA_KEY') is None, "TEST_IDA_KEY not set")
 class TestOpenAIBackendLlamaChat(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.backend = Backend.from_dsn('openai:llama-3-8b-instruct api_key=$TEST_IDA_KEY base_url=http://api.llm.apps.os.dcs.gla.ac.uk/v1/ api=chat/completions max_retries=2 timeout=2')
+        cls.backend = Backend.from_dsn('openai:llama-3-8b-instruct api_key=$TEST_IDA_KEY base_url=http://api.llm.apps.os.dcs.gla.ac.uk/v1/ api=chat/completions max_retries=2 timeout=2 parallel=2')
 
 class TestOpenAIBackendMock(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod

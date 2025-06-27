@@ -1,6 +1,7 @@
 import sys
 import os
 from typing import List, Optional, Literal, Union, Dict
+from concurrent.futures import ThreadPoolExecutor
 
 from pyterrier_rag._optional import is_openai_availible
 from pyterrier_rag.backend._base import Backend, BackendOutput
@@ -20,6 +21,7 @@ class OpenAIBackend(Backend):
         api (str): Which API endpoint to use.
         base_url (str): Base API URL
         timeout (float): Timeout for API calls
+        parallel (int): Number of parallel requests to issue to the API.
         verbose (bool): Enable verbose logging.
     """
     supports_logprobs = True
@@ -40,6 +42,7 @@ class OpenAIBackend(Backend):
         base_url: str = None,
         timeout: float = 30.,
         logprobs_topk: int = 20,
+        parallel: int = 4,
         verbose: bool = False,
     ):
         super().__init__(
@@ -69,17 +72,17 @@ class OpenAIBackend(Backend):
         self._generation_args = generation_args
         self.timeout = timeout
         self.logprobs_topk = logprobs_topk
+        self.thread_pool = ThreadPoolExecutor(max_workers=parallel)
         self.api = api
 
     def _call_completion(
         self,
-        prompts: List[str],
+        prompt: str,
         max_new_tokens: Optional[int] = None,
         return_logprobs: bool = False,
     ) -> List[int]:
-        prompts = list(prompts)
-        if not isinstance(prompts[0], str):
-            raise ValueError("prompts must be str when using the completions API")
+        if not isinstance(prompt, str):
+            raise ValueError("prompt must be str when using the completions API")
         args = {
             'model': self.model_id,
             'timeout': self.timeout,
@@ -90,24 +93,23 @@ class OpenAIBackend(Backend):
         if return_logprobs:
             args['logprobs'] = self.logprobs_topk
         try:
-            completions = self.client.completions.create(prompt=prompts, **args)
+            completions = self.client.completions.create(prompt=prompt, **args)
         except Exception as e:
             sys.stderr.write(str(e) + '\n')
             if "This model's maximum context length is" in str(e):
-                return [BackendOutput(text="ERROR::reduce_length")] * len(prompts)
+                return BackendOutput(text="ERROR::reduce_length")
             if "The response was filtered" in str(e):
-                return [BackendOutput(text="ERROR::response_filtered")] * len(prompts)
-            return [BackendOutput(text="ERROR::other")] * len(prompts)
-        results = []
-        for choice in completions.choices:
-            results.append(BackendOutput(text=choice.text))
-            if return_logprobs and choice.logprobs is not None:
-                results[-1].logprobs = choice.logprobs.top_logprobs
-        return results
+                return BackendOutput(text="ERROR::response_filtered")
+            return BackendOutput(text="ERROR::other")
+        choice = completions.choices[0]
+        result = BackendOutput(text=choice.text)
+        if return_logprobs and choice.logprobs is not None:
+            result.logprobs = choice.logprobs.top_logprobs
+        return result
 
     def _call_chat_completion(
         self,
-        messages: List[List[dict]],
+        messages: List[dict],
         max_new_tokens: Optional[int] = None,
         return_logprobs: bool = False,
     ) -> List[int]:
@@ -145,24 +147,26 @@ class OpenAIBackend(Backend):
         results = []
         if self.api == 'completions':
             for inp in inps:
-                results.append(self._call_completion(
-                    [inp],
+                results.append(self.thread_pool.submit(
+                    self._call_completion,
+                    inp,
                     max_new_tokens=max_new_tokens,
                     return_logprobs=return_logprobs,
-                )[0])
+                ))
         elif self.api == 'chat/completions':
             for inp in inps:
                 if isinstance(inp, str):
                     # treat plain str inputs as simple messages
                     inp = [{"role": "user", "content": inp}]
-                results.append(self._call_chat_completion(
+                results.append(self.thread_pool.submit(
+                    self._call_chat_completion,
                     inp,
                     max_new_tokens=max_new_tokens,
                     return_logprobs=return_logprobs,
                 ))
         else:
             raise ValueError(f'api {self.api!r} not supported')
-        return results
+        return [r.result() for r in results]
 
     @staticmethod
     def from_params(params: Dict[str, str]) -> 'OpenAIBackend':
@@ -176,6 +180,7 @@ class OpenAIBackend(Backend):
             - base_url: str, base URL for the OpenAI API (default: None)
             - timeout: float, timeout for API calls in seconds (default: 30.0)
             - logprobs_topk: int, number of top log probabilities to return (default: 20)
+            - parallel: int, number of parallel requests to issue to the API (default: 4)
             - verbose: bool, enable verbose logging (default: False)
         
         Returns:
@@ -195,11 +200,18 @@ class OpenAIBackend(Backend):
             base_url=params.get("base_url"),
             timeout=float(params.get("timeout", 30.0)),
             logprobs_topk=int(params.get("logprobs_topk", 20)),
+            parallel=int(params.get("parallel", 4)),
             verbose=bool(params.get("verbose", False)),
         )
 
     def __repr__(self):
         return f"OpenAIBackend({self.model_id!r})"
+
+    def __del__(self):
+        if hasattr(self, 'thread_pool') and self.thread_pool is not None:
+            self.thread_pool.shutdown(wait=True)
+            self.thread_pool = None
+        super().__del__()
 
 
 __all__ = ["OpenAIBackend"]

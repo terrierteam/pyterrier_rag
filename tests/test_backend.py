@@ -93,7 +93,7 @@ class BaseTestBackend:
         ):
             if max_new_tokens is not None and not return_logprobs:
                 continue # we can't really test this case unless we have logprobs
-            inp = ['Hello', 'World']
+            inp = ['Hello', 'World', 'Some input']
             if message_input:
                 inp = [
                     [
