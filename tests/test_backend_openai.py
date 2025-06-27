@@ -43,17 +43,18 @@ class TestOpenAIBackendLlamaChat(test_backend.BaseTestBackend, unittest.TestCase
 class TestOpenAIBackendMock(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
     def completions(self, **kwargs):
+        n = kwargs.get('n', 1)
         if kwargs.get('logprobs'):
             return Completion.construct(**{
                 "choices": [
                     {"text": "world", "logprobs": {"top_logprobs": [{"a": 1, "b": 2}]}},
-                ] * len(kwargs['prompt'])
+                ] * n
             })
         else:
             return Completion.construct(**{
                 "choices": [
                     {"text": "world"},
-                ] * len(kwargs['prompt'])
+                ] * n
             })
 
     @classmethod
@@ -72,17 +73,18 @@ class TestOpenAIBackendMock(test_backend.BaseTestBackend, unittest.TestCase):
 class TestOpenAIBackendMockChat(test_backend.BaseTestBackend, unittest.TestCase):
     @classmethod
     def chat_completions(self, **kwargs):
+        n = kwargs.get('n', 1)
         if kwargs.get('logprobs'):
             return ChatCompletion.construct(**{
                 "choices": [
                     {"message": {"content": "world"}, "logprobs": {'content': [{"top_logprobs": [{'token': 'a', 'logprob': 1}, {'token': 'b', 'logprob': 2}]}]}},
-                ]
+                ] * n
             })
         else:
             return ChatCompletion.construct(**{
                 "choices": [
                     {"message": {"content": "world"}},
-                ]
+                ] * n
             })
 
     @classmethod
