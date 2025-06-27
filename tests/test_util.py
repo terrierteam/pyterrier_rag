@@ -12,6 +12,7 @@ from pyterrier_rag._util import (
     intermediate_formatting,
     concat,
     dataframe_concat,
+    ReasoningExtractor,
 )
 
 
@@ -170,3 +171,22 @@ def test_dataframe_concat_by_query(monkeypatch):
     ctx = dict(zip(out_df['qid'], out_df['qcontext']))
     assert ctx[1] == 'a\nb'
     assert ctx[2] == 'c'
+
+
+def test_reasoning_extractor():
+    df = pd.DataFrame([
+        {"qanswer": "prefix <think>First, I considered the question.</think>The answer is 42."},
+        {"qanswer": "<think>Then I thought about it more.</think>\n\nAnother answer."},
+    ])
+    extractor = ReasoningExtractor()
+    result = extractor.transform(df)
+    
+    assert 'reasoning' in result.columns
+    assert result['qanswer'].tolist() == [
+        "prefix The answer is 42.",
+        "Another answer."
+    ]
+    assert result['reasoning'].tolist() == [
+        "First, I considered the question.",
+        "Then I thought about it more."
+    ]
