@@ -211,7 +211,6 @@ class OpenAIBackend(Backend):
         if hasattr(self, 'thread_pool') and self.thread_pool is not None:
             self.thread_pool.shutdown(wait=True)
             self.thread_pool = None
-        super().__del__()
 
 
 __all__ = ["OpenAIBackend"]
