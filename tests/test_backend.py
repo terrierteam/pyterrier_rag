@@ -15,16 +15,17 @@ class DummyBackend(Backend):
     def __init__(self, **kwargs):
         super().__init__("dummy-model", **kwargs)
 
-    def generate(self, inp, return_logprobs=False, max_new_tokens=None) -> Iterable[BackendOutput]:
+    def generate(self, inp, return_logprobs=False, max_new_tokens=None, num_responses=1) -> Iterable[BackendOutput]:
         outputs = []
         for prompt in inp:
-            logprobs = [{'a': 1, 'b': 2}]
-            outputs.append(
-                BackendOutput(
-                    text=f"resp:{prompt}",
-                    logprobs=logprobs,
+            for _ in range(num_responses):
+                logprobs = [{'a': 1, 'b': 2}]
+                outputs.append(
+                    BackendOutput(
+                        text=f"resp:{prompt}",
+                        logprobs=logprobs,
+                    )
                 )
-            )
         return outputs
 
 
