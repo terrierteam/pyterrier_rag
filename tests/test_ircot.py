@@ -16,15 +16,11 @@ class DummyTokenizer:
         return [len(w) for w in text.split()]
     
 class FakeBackend(Backend):
-    _model_name_or_path = 'fake_model'
-    _support_logits = True
-    _logit_type = None
-    _api_type = None
-    _remove_prompt = False
+    supports_logprobs = True
 
     def __init__(self, **kwargs):
         # initialize with default parameters
-        super().__init__(**kwargs)
+        super().__init__('fake_model', **kwargs)
         # add missing tokenizer attribute for context config
         self.tokenizer = DummyTokenizer()
 
@@ -32,7 +28,7 @@ class FakeBackend(Backend):
         # Generate BackendOutput instances for each input query
         outputs = []
         for _ in inp:
-            outputs.append(BackendOutput(text="So the answer is: fake answer", logits=None, prompt_length=0))
+            outputs.append(BackendOutput(text="So the answer is: fake answer"))
         return outputs
 
 class DummyRetriever:
@@ -84,7 +80,7 @@ class SimpleConvTemplate:
 def patch_transformers_and_reader(monkeypatch):
     # Fake prompt and context transformers
     class FakePromptTransformer(pt.Transformer):
-        expect_logits=False
+        expects_logprobs=False
         def __init__(self, **kwargs):
             self.kwargs = kwargs
         def set_output_attribute(self, attr):
@@ -119,7 +115,7 @@ def test_make_default_configs():
     ircot = IRCOT(retriever=retriever, backend=backend)
     # Prompt config
     prompt_cfg = ircot._make_default_prompt_config()
-    assert prompt_cfg['model_name_or_path'] == backend.model_name_or_path
+    assert prompt_cfg['model_name_or_path'] == backend.model_id
     assert prompt_cfg['system_message'] == ircot_system_message
     assert prompt_cfg['instruction'] == ircot_prompt
     assert prompt_cfg['output_field'] == 'qanswer'

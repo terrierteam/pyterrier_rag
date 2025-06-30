@@ -18,10 +18,3 @@ def is_outlines_availible():
         return True
     except ImportError:
         return False
-
-def is_tiktoken_availible():
-    try:
-        import tiktoken # noqa: F401
-        return True
-    except ImportError:
-        return False

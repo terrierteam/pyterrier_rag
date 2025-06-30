@@ -66,24 +66,29 @@ def test_post_init_and_system_message():
     assert tf.output_attribute == "get_prompt"
 
 
-@pytest.mark.parametrize("api,attr,method", [
-    ("openai", "to_openai_api_messages", DummyTemplate.to_openai_api_messages),
-    ("gemini", "to_gemini_api_messages", DummyTemplate.to_gemini_api_messages),
-    ("vertex", "to_vertex_api_messages", DummyTemplate.to_vertex_api_messages),
-    ("reka", "to_reka_api_messages", DummyTemplate.to_reka_api_messages),
-    (None, "get_prompt", DummyTemplate.get_prompt),
-])
-def test_set_output_attribute(api, attr, method):
+def test_set_output_attribute():
     tf = PromptTransformer(instruction=lambda **f: "i")
-    tf.set_output_attribute(api)
-    assert tf.output_attribute == attr
+    tf.set_output_attribute(False)
+    assert tf.output_attribute == 'get_prompt'
 
     # build a dummy prompt and call to_output
     dt = DummyTemplate()
     dt.append_message("user", "hello")
     out = tf.to_output(dt)
     # ensure dispatch is correct by comparing method result
-    expected = getattr(dt, attr)()
+    expected = dt.get_prompt()
+    assert out == expected
+
+    tf = PromptTransformer(instruction=lambda **f: "i")
+    tf.set_output_attribute(True)
+    assert tf.output_attribute == 'to_openai_api_messages'
+
+    # build a dummy prompt and call to_output
+    dt = DummyTemplate()
+    dt.append_message("user", "hello")
+    out = tf.to_output(dt)
+    # ensure dispatch is correct by comparing method result
+    expected = dt.to_openai_api_messages()
     assert out == expected
 
 

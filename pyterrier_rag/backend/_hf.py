@@ -1,4 +1,4 @@
-from typing import Iterable, List
+from typing import Optional, List, Union, Dict
 
 from transformers import (
     AutoModelForCausalLM,
@@ -13,59 +13,59 @@ from pyterrier_rag.backend._base import Backend, BackendOutput
 
 class HuggingFaceBackend(Backend):
     """
-        Backend implementation using HuggingFace Transformer models for text and logit generation.
+        Backend implementation using a HuggingFace Transformer model.
+
+        .. cite.dblp:: journals/corr/abs-1910-03771
 
         Parameters:
-            model_name_or_path (str): Identifier or path of the pretrained model.
+            model_id (str): Identifier or path of the pretrained model.
             model_args (dict): Arguments passed to `from_pretrained` for model instantiation.
-            output_format (str): Format for text output (e.g., 'text').
             generation_args (dict): Parameters controlling text generation.
-            batch_size (int): Number of inputs to process per batch.
             max_input_length (int): Maximum token length for inputs (defaults to model config).
             max_new_tokens (int): Maximum number of tokens to generate per input.
             verbose (bool): Flag to enable verbose logging.
-            **kwargs: Additional keyword arguments passed to `Backend` base class.
-        """
+    """
+    supports_logprobs = False # TODO: add support for logprobs
     _model_class = AutoModelForCausalLM
-    _support_logits = True
-    _logit_type = "dense"
     _remove_prompt = True
 
     def __init__(
         self,
-        model_name_or_path: str,
+        model_id: str,
+        *,
         model_args: dict = {},
-        output_format: str = "text",
         generation_args: dict = None,
-        batch_size: int = 4,
         max_input_length: int = None,
         max_new_tokens: int = 32,
-        return_logits: bool = False,
+        logprobs_topk: int = 20,
         verbose: bool = False,
-        **kwargs,
+        device: Union[str, torch.device] = None,
     ):
         super().__init__(
-            output_format=output_format,
-            batch_size=batch_size,
+            model_id=model_id,
             max_new_tokens=max_new_tokens,
-            return_logits=return_logits,
-            generation_config=None,
             verbose=verbose,
-            **kwargs,
         )
-        self._model_name_or_path = model_name_or_path
+
+        if device is None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        if isinstance(device, str):
+            device = torch.device(device)
+        self.device = device
+
         self._model = (
             None
             if self._model_class is None
-            else self._model_class.from_pretrained(model_name_or_path, **model_args).to(self.device).eval()
+            else self._model_class.from_pretrained(model_id, **model_args).to(self.device).eval()
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
             self._model.generation_config.pad_token_id = self.tokenizer.pad_token_id
 
         max_position_embeddings = getattr(self._model.config, "max_position_embeddings", None)
         self.max_input_length = max_input_length or max_position_embeddings
+        self.logprobs_topk = logprobs_topk
 
         if generation_args is None:
             generation_args = {
@@ -75,12 +75,22 @@ class HuggingFaceBackend(Backend):
                 "num_beams": 1,
             }
         self._generation_args = generation_args
-        self.model = self._model
 
     @torch.no_grad()
-    def generate(self, inps: Iterable[str], **kwargs) -> List[BackendOutput]:
-        assert self.model is not None, "Model is not loaded, instantiate a subclass of HFModel"
-
+    def generate(
+        self,
+        inps: Union[List[str], List[List[dict]]],
+        *,
+        return_logprobs: bool = False,
+        max_new_tokens: Optional[int] = None,
+        num_responses: int = 1,
+    ) -> List[BackendOutput]:
+        if not isinstance(inps[0], str):
+            raise ValueError(f'{self!r} only supports str inputs to generate')
+        if return_logprobs:
+            raise ValueError(f'{self!r} does not support logprobs generation')
+        if num_responses != 1:
+            raise ValueError(f'{self!r} does not support num_responses > 1')
         # Tokenize inputs
         inputs = self.tokenizer(
             inps,
@@ -91,8 +101,13 @@ class HuggingFaceBackend(Backend):
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
+        generation_args = {}
+        generation_args.update(self._generation_args)
+        if max_new_tokens:
+            generation_args['max_new_tokens'] = max_new_tokens
+
         # Generate outputs
-        outputs = self.model.generate(**inputs, return_dict_in_generate=True, output_scores=self.return_logits, **self._generation_args, **kwargs)
+        outputs = self._model.generate(**inputs, return_dict_in_generate=True, output_scores=return_logprobs, **generation_args)
 
         # Compute prompt lengths (non-padding tokens per input)
         pad_token_id = self.tokenizer.pad_token_id
@@ -110,18 +125,36 @@ class HuggingFaceBackend(Backend):
 
         # Decode outputs
         texts = self.tokenizer.batch_decode(sequences, skip_special_tokens=True)
-        if self.return_logits:
-            logits = outputs['scores']
-            logits = torch.stack(logits, dim=1)
-            return [
-                BackendOutput(text=text, logits=logits[i], prompt_length=length)
-                for i, (text, length) in enumerate(zip(texts, prompt_lengths))
-            ]
-        else:
-            return [
-                BackendOutput(text=text, prompt_length=length)
-                for text, length in zip(texts, prompt_lengths)
-            ]
+        return [
+            BackendOutput(text=text)
+            for text, length in zip(texts, prompt_lengths)
+        ]
+
+    @staticmethod
+    def from_params(params: Dict[str, str]) -> 'HuggingFaceBackend':
+        """Create a HuggingFaceBackend instance from parameters.
+
+        Supported params:
+
+            - model_id (str): Identifier or path of the HuggingFace model.
+            - max_input_length (int): Maximum tokens per input prompt.
+            - max_new_tokens (int): Tokens to generate per prompt.
+            - logprobs_topk (int): Number of top logprobs to return.
+            - verbose (bool): Enable verbose output.
+
+        Returns:
+            HuggingFaceBackend: An instance of HuggingFaceBackend.
+        """
+        return HuggingFaceBackend(
+            model_id=params['model_id'],
+            max_input_length=int(params.get('max_input_length', 512)),
+            max_new_tokens=int(params.get('max_new_tokens', 32)),
+            logprobs_topk=int(params.get('logprobs_topk', 20)),
+            verbose=params.get('verbose', False) in ['True', 'true', '1'],
+        )
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.model_id!r})"
 
 
 class Seq2SeqLMBackend(HuggingFaceBackend):

@@ -1,5 +1,6 @@
 from typing import Union, Iterable, Tuple, List, Optional, Any, Callable
 import pandas as pd
+import pyterrier as pt
 import pyterrier_alpha as pta
 import itertools
 
@@ -231,3 +232,69 @@ def dataframe_concat(
     if by_query:
         return per_query_concat(input_frame)
     return _concat(input_frame)
+
+
+class ReasoningExtractor(pt.Transformer):
+    """A transformer that extracts reasoning from a 'qanswer' field in a DataFrame.
+
+    This transformer processes the 'qanswer' field to separate the reasoning enclosed in `<think>` tags from the main answer text.
+    It returns the frame with a new 'reasoning' field containing the extracted reasoning text, and removes the `<think>` tags from the 'qanswer' field.
+
+    This is useful when using reasoning models that include reasoning steps in their output.
+
+    .. code-block:: python
+
+        import pandas as pd
+        import pyterrier_rag as ptr
+        extractor = ptr.ReasoningExtractor()
+        extractor(pd.DataFrame([
+            {"qanswer": "<think>First, I considered the question.</think>The answer is 42."},
+            {"qanswer": "<think>Then I thought about it more.</think>\n\nAnother answer."},
+        ]))
+        #               qanswer                          reasoning
+        # 0   The answer is 42.  First, I considered the question.
+        # 1     Another answer.      Then I thought about it more.
+    """
+    def __init__(
+        self,
+        *,
+        qanswer_field: str = 'qanswer',
+        reasoning_field: Optional[str] = 'reasoning',
+        verbose: bool = False
+    ):
+        """
+        Parameters:
+            qanswer_field (str): Name of the field containing the answers with reasoning. Defaults to 'qanswer'.
+            reasoning_field (Optional[str]): Name of the field to store extracted reasoning. If None, reasoning is removed from qanswer but not returned.
+            verbose (bool): If True, prints progress during processing. Defaults to False.
+        """
+        self.qanswer_field = qanswer_field
+        self.reasoning_field = reasoning_field
+        self.verbose = verbose
+
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
+        """Transforms the input DataFrame by extracting reasoning from the 'qanswer' field."""
+        pta.validate.columns(inp, includes=[self.qanswer_field])
+        qanswers = []
+        reasonings = []
+        it = inp[self.qanswer_field]
+        if self.verbose:
+            it = pt.tqdm(it, desc="Extracting reasoning")
+        for qanswer in it:
+            reasoning = ''
+            while '<think>' in qanswer:
+                qanswer, reasoning2 = qanswer.split('<think>', 1)
+                if '</think>' in reasoning2:
+                    reasoning2, qanswer2 = reasoning2.split('</think>', 1)
+                    qanswer += qanswer2
+                reasoning += reasoning2
+            qanswers.append(qanswer.strip())
+            reasonings.append(reasoning.strip())
+        res = inp.copy()
+        res[self.qanswer_field] = qanswers
+        if self.reasoning_field:
+            res[self.reasoning_field] = reasonings
+        return res
+
+    def __repr__(self) -> str:
+        return "ReasoningExtractor()"

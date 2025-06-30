@@ -38,7 +38,7 @@ PointwiseLLMJudgePrompt = prompt("""
 backend_obj, prompt_obj = None, None
 
 
-def llmjudge_fn(qrels, res, backend_type: str, model_name: str, rel=3, agg="max") -> int:
+def llmjudge_fn(qrels, res, backend_type: str, model_id: str, rel=3, agg="max") -> int:
     """
     Evaluate system output against references using an LLM as judge.
 
@@ -48,7 +48,7 @@ def llmjudge_fn(qrels, res, backend_type: str, model_name: str, rel=3, agg="max"
         qrels (DataFrame): Contains columns 'query_id', 'relevance', and 'text' for references.
         res (DataFrame): Contains columns 'query_id' and 'qanswer' for predictions.
         backend_type (str): Identifier of the backend (e.g., 'openai', 'hf').
-        model_name (str): Model name or path for the backend.
+        model_id (str): Model name or path for the backend.
         rel (int): Minimum relevance threshold for references (default 3).
         agg (str): Aggregation method: 'max', 'min', 'avg', 'sum', or 'none'.
 
@@ -71,10 +71,10 @@ def llmjudge_fn(qrels, res, backend_type: str, model_name: str, rel=3, agg="max"
     global backend_obj
     global prompt_obj
     if backend_obj is None:
-        backend_obj = get_backend(backend_type, model_name)
+        backend_obj = get_backend(backend_type, model_id)
         prompt_obj = PromptTransformer(
             PointwiseLLMJudgePrompt,
-            backend_obj.model_name_or_path,
+            backend_obj.model_id,
             system_message=PointwiseLLMJudgeSystemMessage,
         )
 
@@ -116,19 +116,19 @@ def llmjudge_fn(qrels, res, backend_type: str, model_name: str, rel=3, agg="max"
         raise ValueError(f"Unknown aggregation method: {agg}")
 
 
-def LLMasJudge(backend_type, model_name_or_path):
+def LLMasJudge(backend_type, model_id):
     """
     Create an `ir_measures` by-query measure using an LLM as the judge.
 
     Parameters:
         backend_type (str): Identifier of the backend.
-        model_name_or_path (str): Model name or path.
+        model_id (str): Model name or path.
 
     Returns:
         Measure: An `ir_measures` by-query measure invoking `llmjudge_fn`.
     """
     return ir_measures.define_byquery(
-        lambda qrels, res: llmjudge_fn(qrels, res, backend_type=backend_type, model_name=model_name_or_path),
+        lambda qrels, res: llmjudge_fn(qrels, res, backend_type=backend_type, model_id=model_id),
         name="LLMasJudge",
         support_cutoff=False,
     )
