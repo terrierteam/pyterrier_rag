@@ -199,6 +199,7 @@ class TextGenerator(pt.Transformer):
         self.output_field = output_field
         self.logprobs_field = logprobs_field
         self.batch_size = batch_size
+        self.max_new_tokens = max_new_tokens
         self.num_responses = num_responses
 
     def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
@@ -208,7 +209,8 @@ class TextGenerator(pt.Transformer):
             out = self.backend.generate(
                 prompts,
                 return_logprobs=self.logprobs_field is not None,
-                num_responses=self.num_responses
+                num_responses=self.num_responses,
+                max_new_tokens=self.max_new_tokens,
             )
             for i, rec in enumerate(chunk):
                 for j in range(self.num_responses):
