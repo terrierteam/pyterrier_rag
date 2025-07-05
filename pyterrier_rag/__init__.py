@@ -19,6 +19,15 @@ from pyterrier_rag.backend import (
     default_backend,
 )
 
+from pyterrier_rag.prompt import (
+    Prompt,
+    JinjaPromptMixin,
+    RegexOutputMixin,
+    SystemPromptMixin,
+    BasicPrompt,
+)
+
+
 __all__ = [
     "Iterative",
     "model",
@@ -34,4 +43,9 @@ __all__ = [
     "Seq2SeqLMBackend",
     "VLLMBackend",
     "default_backend",
+    "Prompt",
+    "JinjaPromptMixin",
+    "RegexOutputMixin",
+    "SystemPromptMixin",
+    "BasicPrompt",
 ]
