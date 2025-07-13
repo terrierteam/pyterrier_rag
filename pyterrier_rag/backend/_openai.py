@@ -203,8 +203,8 @@ class OpenAIBackend(Backend):
             - parallel: int, number of parallel requests to issue to the API (default: 4)
             - verbose: bool, enable verbose logging (default: False)
         
-        Returns:
-            OpenAIBackend: An instance of OpenAIBackend.
+            Returns:
+                OpenAIBackend: An instance of OpenAIBackend.
         """
         api_key = params.get("api_key")
         if api_key and api_key.startswith("$"):
