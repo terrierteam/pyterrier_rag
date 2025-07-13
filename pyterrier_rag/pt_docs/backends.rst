@@ -147,17 +147,13 @@ General
 .. autoclass:: pyterrier_rag.backend.BackendOutput
    :members:
 
-.. autoclass:: pyterrier_rag.backend.BackendLogprobsGenerator
-    :members:
-
-
 Implementations
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: pyterrier_rag.HuggingFaceBackend
    :members:
 
-.. autoclass:: pyterrier_rag.VllmBackend
+.. autoclass:: pyterrier_rag.VLLMBackend
    :members:
 
 .. autoclass:: pyterrier_rag.OpenAIBackend

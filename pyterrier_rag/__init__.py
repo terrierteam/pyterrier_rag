@@ -12,6 +12,7 @@ from pyterrier_rag.r1_searcher import R1Searcher
 from pyterrier_rag._util import ReasoningExtractor
 
 from pyterrier_rag.backend import (
+    Backend,
     OpenAIBackend,
     HuggingFaceBackend,
     Seq2SeqLMBackend,
@@ -29,6 +30,7 @@ __all__ = [
     "SearchR1",
     "R1Searcher",
     "ReasoningExtractor",
+    "Backend",
     "OpenAIBackend",
     "HuggingFaceBackend",
     "Seq2SeqLMBackend",
