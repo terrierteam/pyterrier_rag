@@ -276,7 +276,7 @@ class SearchO1(pt.Transformer):
         return prompt 
     
     def tokenizer_encode(self, prompts: List[str]) -> List[torch.Tensor]:
-        inputs = self.tokenizer(prompts, padding=True, truncation=True, max_length=self.generator.text_max_length, return_tensors="pt")
+        inputs = self.tokenizer(prompts, padding=True, truncation=True, max_length=self.generator.max_input_length, return_tensors="pt")
         input_ids = inputs["input_ids"].to(self.device)
         attention_mask = inputs["attention_mask"].to(self.device)
         return input_ids, attention_mask
@@ -294,15 +294,15 @@ class SearchO1(pt.Transformer):
             temperature=self.temperature, 
             top_p=self.top_p, 
             top_k=self.top_k,
-            max_new_tokens=self.generator.max_new_tokens,
+            max_input_length=self.generator.max_input_length,
             pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id,
             stopping_criteria=[StopWordCriteria(self.tokenizer, prompt_length, [END_SEARCH_QUERY, self.tokenizer.eos_token])]
         )
-        generated_token_ids = token_ids[:, prompt_length:] 
+        generated_token_ids = token_ids[:, prompt_length:]
         generated_texts = self.tokenizer.batch_decode(generated_token_ids, skip_special_tokens=True)
         return generated_texts
     
-    def extract_search_query(self, text: str) -> str: 
+    def extract_search_query(self, text: str) -> str:
 
         pattern = re.escape(BEGIN_SEARCH_QUERY) + r'(.*?)' + re.escape(END_SEARCH_QUERY)
         matches = re.findall(pattern, text, flags=re.DOTALL)
@@ -368,7 +368,7 @@ class SearchO1(pt.Transformer):
             temperature=self.temperature, 
             top_p=self.top_p, 
             top_k=self.top_k,
-            max_new_tokens=self.generator.max_new_tokens,
+            max_input_length=self.generator.max_input_length,
             pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id,
         )
         generated_token_ids = token_ids[:, input_ids.shape[-1]:]  
@@ -532,7 +532,7 @@ class SearchO1ForceRetrieval(SearchO1):
                 temperature=self.temperature, 
                 top_p=self.top_p, 
                 top_k=self.top_k,
-                max_new_tokens=self.generator.max_new_tokens,
+                max_input_length=self.generator.max_input_length,
                 pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id,
                 stopping_criteria=[StopWordCriteria(self.tokenizer, input_ids.shape[-1], ["\n\n", END_SEARCH_QUERY, self.tokenizer.eos_token])]
             )
@@ -594,7 +594,7 @@ class SearchO1ForceRetrieval(SearchO1):
                 temperature=self.temperature, 
                 top_p=self.top_p, 
                 top_k=self.top_k,
-                max_new_tokens=self.generator.max_new_tokens,
+                max_input_length=self.generator.max_input_length,
                 pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id,
                 stopping_criteria=[StopWordCriteria(self.tokenizer, input_ids.shape[-1], [END_SEARCH_QUERY, self.tokenizer.eos_token])]
             )

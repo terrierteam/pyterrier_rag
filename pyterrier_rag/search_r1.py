@@ -157,7 +157,7 @@ class SearchR1(pt.Transformer):
             outputs = self.model.generate(
                 input_ids,
                 attention_mask=attention_mask,
-                max_new_tokens=1024,
+                max_input_length=1024,
                 stopping_criteria=self.stopping_criteria,
                 pad_token_id=self.tokenizer.eos_token_id,
                 do_sample=True,
