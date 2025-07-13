@@ -27,11 +27,14 @@ class Backend(pt.Transformer, ABC):
         max_new_tokens (int): Maximum number of tokens to generate.
         verbose (bool): Flag to enable detailed logging.
         device (Union[str, torch.device]): Device for model execution.
+    
+    The following class attributes are available:
 
     Attributes:
-        model_id: model name or checkpoint path
-        supports_logprobs (bool): Flag indicating support for including the logprobs of generated tokens.
-        supports_message_input (bool): Flag indicating support for message (chat)-formatted (``List[dict]``) inputs to ``generate``, in addition to ``str`` inputs.
+        model_id (str): Model name or checkpoint path.
+        supports_logprobs (bool): Indicates support for including the logprobs of generated tokens.
+        supports_message_input (bool): Indicates support for message (chat)-formatted (``List[dict]``) inputs to ``generate``, in addition to ``str`` inputs.
+
     """
     supports_logprobs = False
     supports_message_input = False
