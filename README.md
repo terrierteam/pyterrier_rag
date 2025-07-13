@@ -12,8 +12,8 @@ Installation is as easy as `pip install pyterrier-rag`.
 
 ## Example Notebooks
 Try it out here on Google Colab now by clicking the "Open in Colab" button!
-- Sparse Retrieval with FiD and FlanT5 readers: [sparse_retrieval_FiD_FlanT5.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/stable/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/stable/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb)
-- SearchR1 with Sparse Retrieval and MonoT5: [examples/search-r1.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/stable/examples/search-r1.ipyn) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/stable/examples/search-r1.ipyn) 
+- Sparse Retrieval with FiD and FlanT5 readers: [sparse_retrieval_FiD_FlanT5.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/main/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb)
+- SearchR1 with Sparse Retrieval and MonoT5: [examples/search-r1.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipyn) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipyn) 
 
 ## RAG Readers
 
@@ -31,7 +31,7 @@ monoT5_rag = bm25 % 10 >> MonoT5() >> fid
 monoT5_rag.search("What are chemical reactions?")
 ```
 
-Try it out now with the example notebook: [sparse_retrieval_FiD_FlanT5.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/stable/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/stable/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb).
+Try it out now with the example notebook: [sparse_retrieval_FiD_FlanT5.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/main/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb).
 
 ## Agentic RAG
 
