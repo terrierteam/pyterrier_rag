@@ -45,11 +45,6 @@ bm25 = pt.Artifact.from_hf('pyterrier/ragwiki-terrier').bm25(include_fields=['do
 monoT5 = pyterrier_t5.MonoT5()
 r1_monoT5 = pyterrier_rag.SearchR1(bm25 % 20 >> monoT5)
 r1_monoT5.search("What are chemical reactions?")
-
-o1_monoT5 = pyterrier_rag.SearchO1(
-    pyterrier_rag.readers.CausalLMReader("deepseek-ai/DeepSeek-R1-Distill-Qwen-14B"), 
-    bm25 % 20 >> monoT5)
-o1_monoT5.search("What are chemical reactions?")
 ```
 
 Try these frameworks out now with our example notebooks: 
