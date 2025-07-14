@@ -21,7 +21,7 @@ As well as access to all of the retrievers (sparse, learned sparse, and dense) a
 Example Notebooks
 ---------------------------------
 
-Try it out here on Google Colab now!
+Try out the following example notebooks to get started with PyTerrier RAG:
 
 - Sparse Retrieval on Natural Questions with FiD and FlanT5 readers: `sparse_retrieval_FiD_FlanT5.ipynb <https://github.com/terrierteam/pyterrier_rag/blob/main/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb>`_  
 - Sparse Retrieval on Natural Questions with Mistral: `sparse_retrieval_Mistral.ipynb <https://github.com/terrierteam/pyterrier_rag/blob/main/examples/nq/sparse_retrieval_Mistral.ipynb>`_
