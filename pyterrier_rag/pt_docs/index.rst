@@ -19,18 +19,19 @@ As well as access to all of the retrievers (sparse, learned sparse, and dense) a
     backends
 
 Example Notebooks
-=================
+---------------------------------
 
 Try it out here on Google Colab now!
 
-- Sparse Retrieval with FiD and FlanT5 readers: `sparse_retrieval_FiD_FlanT5.ipynb <sparse_retrieval_FiD_FlanT5.ipynb>`_  
-  |Colab Badge|  
-
-  .. |Colab Badge| image:: https://colab.research.google.com/assets/colab-badge.svg
-     :target: https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/main/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb
+- Sparse Retrieval on Natural Questions with FiD and FlanT5 readers: `sparse_retrieval_FiD_FlanT5.ipynb <https://github.com/terrierteam/pyterrier_rag/blob/main/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb>`_  
+- Sparse Retrieval on Natural Questions with Mistral: `sparse_retrieval_Mistral.ipynb <https://github.com/terrierteam/pyterrier_rag/blob/main/examples/nq/sparse_retrieval_Mistral.ipynb>`_
+- E5 Dense Retrieval with FiD on Natural Questions: `dense_e5_retrieval_FiD.ipynb <https://github.com/terrierteam/pyterrier_rag/blob/main/examples/nq/dense_e5_retrieval_FiD.ipynb>`_
+- Agentic RAG: R1-Searcher `r1searcher.ipynb <https://github.com/terrierteam/pyterrier_rag/blob/main/examples/r1searcher.ipynb>`_
+- Agentic RAG: Search-R1 `search-r1.ipynb <https://github.com/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipynb>`_
+- Agentic RAG: Search-O1 `search-o1.ipynb <https://github.com/terrierteam/pyterrier_rag/blob/main/examples/search-o1.ipynb>`_
 
 Credits
-=======
+---------------------------------
 
 - Craig Macdonald, University of Glasgow
 - Jinyuan Fang, University of Glasgow
