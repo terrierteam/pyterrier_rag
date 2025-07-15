@@ -17,9 +17,16 @@ Try it out here on Google Colab now by clicking the "Open in Colab" button!
 
 ## RAG Readers
 
- - Fusion in Decoder: `pyterrier_rag.readers.T5FiD`, `pyterrier_rag.readers.BARTFiD`
- - OpenAI: `pyterrier_rag.readers.OpenAIReader`
- - VLLM: `pyterrier_rag.readers.VLLMReader`
+Reader can be constructed using a Reader class using different Backend implementations:
+```python
+from pyterrier_rag.readers import Reader
+from pyterrier_rag.backends import Seq2SeqBackend, OpenAIBackend, VLLMBackend
+flanT5 = Reader(Seq2SeqBackend("google/flan-t5"))
+llamma = Reader(OpenAIBackend("llama-3-8b-instruct", api_key="your_api_key", base_url="your_api_url"))
+deepseek = Reader(VLLMBackend("deepseek-ai/DeepSeek-R1-Distill-Llama-8B"))
+```
+
+We also have specialist reader classes, such as Fusion in Decoder (FiD): `pyterrier_rag.readers.T5FiD`, `pyterrier_rag.readers.BARTFiD`.
 
 RAG pipelines can be formulated as easily as:
 
