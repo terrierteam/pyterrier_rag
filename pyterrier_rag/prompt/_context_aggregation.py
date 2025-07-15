@@ -1,4 +1,4 @@
-from typing import List, Optional, Iterable, Any
+from typing import List, Optional, Iterable, Any, Callable
 
 import pyterrier as pt
 import pyterrier_alpha as pta
@@ -20,17 +20,18 @@ class Concatenator(pt.Transformer):
     At query time, orders, loads text (if needed), and aggregates records into a single context.
 
     Parameters:
-        in_fields (List[str]): Fields to extract from each record.
-        out_field (str): Name of the output context field.
-        text_loader (callable, optional): Function to load document text by doc ID.
-        intermediate_format (callable, optional): Formatter for individual records.
+        in_fields (List[str]): Fields to extract from each record. Defaults to ["text"].
+        out_field (str): Name of the output context field. Defaults to "qcontext". 
+        text_loader (Callable, optional): Function to load document text by doc ID.
+        intermediate_format (Callable, optional): Formatter for individual records.
         tokenizer (Any, optional): Tokenizer used for length-based truncation.
-        max_length (int): Max total token length of the context.
-        max_elements (int): Max number of records to include.
+        max_length (int): Max total token length of the context. Defaults to -1 (no limit).
+        max_elements (int): Max number of records to include. Defaults to -1 (no limit).
         max_per_context (int): Max tokens per record.
-        truncation_rate (int): Token drop rate during truncation.
-        aggregate_func (callable, optional): Custom aggregation function.
-        ordering_func (callable): Record ordering function before aggregation.
+        truncation_rate (int): Token drop rate during truncation. Defaults to 50.
+        aggregate_func (Callable, optional): Custom aggregation function.
+        ordering_func (Callable): Record ordering function before aggregation. 
+            Defaults to score_sort, which sorts by "score" descending.
 
     Raises:
         ValueError: If 'text' is in in_fields but no text_loader is set.
@@ -39,15 +40,15 @@ class Concatenator(pt.Transformer):
         self,
         in_fields: Optional[List[str]] = ["text"],
         out_field: Optional[str] = "qcontext",
-        text_loader: Optional[callable] = None,
-        intermediate_format: Optional[callable] = None,
+        text_loader: Optional[Callable] = None,
+        intermediate_format: Optional[Callable] = None,
         tokenizer: Optional[Any] = None,
         max_length: Optional[int] = -1,
         max_elements: Optional[int] = -1,
         max_per_context: Optional[int] = -1,
         truncation_rate: Optional[int] = 50,
-        aggregate_func: Optional[callable] = None,
-        ordering_func: Optional[callable] = score_sort,
+        aggregate_func: Optional[Callable] = None,
+        ordering_func: Optional[Callable] = score_sort,
     ):
         super().__init__()
 
