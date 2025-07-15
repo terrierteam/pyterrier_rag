@@ -518,7 +518,7 @@ class T5FiD(FiD):
 
 
 class BARTFiD(FiD):
-     """
+    """
     BART FiD Reader for PyTerrier-RAG"
     """
 
