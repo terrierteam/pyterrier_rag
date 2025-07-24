@@ -58,6 +58,51 @@ recommended setting it at the top of your script/notebook).
 The default backend is automatically loaded via the ``PYTERRIER_RAG_DEFAULT_BACKEND`` (using :meth:`pyterrier_rag.Backend.from_dsn`)
 if it is set when PyTerrier RAG is first loaded.
 
+Readers from Backends
+------------------------
+
+.. code-block:: python
+    :caption: Create a reader from a backend
+
+    system_message = """You are an expert Q&A system that is trusted around the world. 
+        Always answer the query using the provided context information,
+        and not prior knowledge.
+        Some rules to follow:
+        1. Never directly reference the given context in your answer
+        2. Avoid statements like 'Based on the context, ...' or 
+        'The context information ...' or anything along those lines."""
+    prompt_text = """Context information is below.
+                ---------------------
+                {{ qcontext }}
+                ---------------------
+                Given the context information and not prior knowledge, answer the query.
+                Query: {{ query }}
+                "Answer: """
+
+    template = get_conversation_template("meta-llama-3.1-sp")
+    prompt = PromptTransformer(
+        conversation_template=template,
+        system_message=system_message,
+        instruction=prompt_text,
+        api_type="openai"
+    )
+
+    generation_args={
+        "temperature": 0.1,
+        "max_tokens": 128,
+    }
+
+    # this could equally be a real OpenAI model, or a HuggingFace model, or a vLLM model, etc.
+    llama = OpenAIBackend(model_name, 
+                        api_key="xxx", 
+                        generation_args=generation_args,
+                        base_url="http://yyyy:8000/v1",)
+
+    llama_reader = Reader(llama, prompt=prompt)
+    bm25_llama = bm25_ret % 5 >> Concatenator() >> llama_reader
+
+See :ref:`_pyterrier_rag.readers` for more information on how to use the :class:`~pyterrier_rag.readers.Reader` class with Backends.
+
 Token Probabilities
 ------------------------
 
