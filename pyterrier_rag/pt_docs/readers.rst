@@ -1,3 +1,5 @@
+.. _pyterrier_rag.readers:
+
 Readers
 ==========================
 
