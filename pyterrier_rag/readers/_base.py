@@ -25,6 +25,28 @@ class Reader(pt.Transformer):
 
     Raises:
         ValueError: If the prompt expects logprobs but the backend does not support logprobs.
+
+    Example using a local LLM::
+
+        from pyterrier_rag.backend import Seq2SeqLMBackend
+        from pyterrier_rag.prompt import Concatenator
+        from pyterrier_rag.readers import Reader
+
+        flant5 = Reader(Seq2SeqLMBackend('google/flan-t5-base'))
+        bm25_flant5 = bm25_ret % 10 >> Concatenator() >> flant5
+        bm25_flant5.search("What is the capital of France?")
+
+    Example using a remote LLM::
+
+        from pyterrier_rag.backend import OpenAIBackend
+        from pyterrier_rag.prompt import Concatenator
+        from pyterrier_rag.readers import Reader
+
+        llamma = Reader(OpenAIBackend("llama-3-8b-instruct", api_key="your_api_key", base_url="your_base_url"))
+        bm25_llamma = bm25_ret % 10 >> Concatenator() >> llamma
+        bm25_llamma.search("What is the capital of Italy?")
+
+
     """
     def __init__(
         self,
