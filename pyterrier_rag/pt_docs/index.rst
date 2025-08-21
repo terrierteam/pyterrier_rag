@@ -17,6 +17,8 @@ As well as access to all of the retrievers (sparse, learned sparse, and dense) a
     datamodel
     measures
     backends
+    prompts
+    readers
 
 Example Notebooks
 ---------------------------------
