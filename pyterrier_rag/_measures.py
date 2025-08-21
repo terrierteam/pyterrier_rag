@@ -47,18 +47,20 @@ def f1_score(prediction : str, ground_truth : List[str]) -> float:
 
 AnswerLen = ir_measures.define_byquery(
     lambda qrels, res: len(res.iloc[0]['qanswer']),
-    name='AnswerLen', support_cutoff=False)
+    name='AnswerLen', support_cutoff=False, run_inputs=['qanswer'])
 
 AnswerZeroLen = ir_measures.define_byquery(
     lambda qrels, res: 1 if len(res.iloc[0]['qanswer']) == 0 else 0,
-    name='AnswerZeroLen', support_cutoff=False)
+    name='AnswerZeroLen', support_cutoff=False, run_inputs=['qanswer'])
 
 # we aggregate across multiple gold_answer values using max().
 F1 = ir_measures.define_byquery(
-    lambda qrels, res: max([f1_score(res.iloc[0]['qanswer'], gold) for gold in qrels['gold_answer']]), support_cutoff=False, name="F1")
+    lambda qrels, res: max([f1_score(res.iloc[0]['qanswer'], gold) for gold in qrels['gold_answer']]), 
+    support_cutoff=False, name="F1", run_inputs=['qanswer'], qrel_inputs=['gold_answer'])
 # ems function handles the max()
 EM = ir_measures.define_byquery(
-    lambda qrels, res: ems(res.iloc[0]['qanswer'], qrels['gold_answer']), support_cutoff=False, name="EM")
+    lambda qrels, res: ems(res.iloc[0]['qanswer'], qrels['gold_answer']), 
+    support_cutoff=False, name="EM", run_inputs=['qanswer'], qrel_inputs=['gold_answer'])
 
 def _rouge(measure : Literal['precision', 'recall', 'fmeaure'], type : Literal['rouge1', 'rouge2', 'rougeL'] ='rouge1', use_stemmer : bool = True):
     from rouge_score import rouge_scorer
@@ -94,7 +96,7 @@ def _rouge(measure : Literal['precision', 'recall', 'fmeaure'], type : Literal['
         )
         return getattr(res[type], measure)
     
-    return ir_measures.define_byquery(_measure, name=name, support_cutoff=False)
+    return ir_measures.define_byquery(_measure, name=name, support_cutoff=False, run_inputs=['qanswer'], qrel_inputs=['gold_answer'])
 
 ROUGE1P = _rouge('precision', 'rouge1')
 ROUGE1R = _rouge('recall', 'rouge1')
@@ -152,4 +154,6 @@ def BERTScore(rel=3, submeasure : str = 'f1', agg : str = 'max'):
     Returns:
      An IR measures measure object that can be used in pt.Evaluate or pt.Experiment
     '''
-    return ir_measures.define_byquery( lambda qrels, res: _bertscore(qrels, res, rel=rel, agg=agg), name='BERTScore', support_cutoff=False)
+    return ir_measures.define_byquery( 
+        lambda qrels, res: _bertscore(qrels, res, rel=rel, agg=agg), name='BERTScore', 
+        support_cutoff=False, run_inputs=['qanswer'], qrel_inputs=['relevance', 'text'])
