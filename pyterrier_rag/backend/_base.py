@@ -207,6 +207,12 @@ class TextGenerator(pt.Transformer):
         self.batch_size = batch_size
         self.max_new_tokens = max_new_tokens
         self.num_responses = num_responses
+    
+    def transform_inputs(self) -> List[List[str]]:
+        return [[self.input_field]]
+    
+    def transform_outputs(self, inp_cols):
+        return inp_cols + [self.output_field]
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         pta.validate.columns(inp, includes=[self.input_field])

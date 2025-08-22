@@ -103,6 +103,12 @@ class PromptTransformer(pt.Transformer):
             return instruction
         current_prompt.append_message(self.user_role, instruction)
         return self.to_output(current_prompt)
+    
+    def transform_outputs(self, inp_cols : List[str]) -> List[str]:
+        return [self.output_field, 'qid', 'query_0']
+
+    def transform_inputs(self) -> List[List[str]]:
+        return [self.input_fields]
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         pta.validate.columns(inp, includes=["qid"] + self.input_fields)

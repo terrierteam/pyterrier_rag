@@ -98,6 +98,12 @@ class IRCOT(pt.Transformer):
             "max_elements": self.max_docs,
             "intermediate_format": ircot_example_format,
         }
+    
+    def transform_inputs(self):
+        return [['qid', 'query']]
+    
+    def transform_outputs(self, inp_cols):
+        return ['qid', 'query', 'qanswer']
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         pta.validate.columns(inp, includes=["qid", self.input_field])
