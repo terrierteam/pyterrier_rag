@@ -131,7 +131,7 @@ class Backend(pt.Transformer, ABC):
 
         The DSN format is: ``<provider>:<model_id> [key1=value1 key2=value2 ...]``.
 
-        Examples: ``"openai:gpt-3.5-turbo"``, ``"openai:meta-llama/Llama-4-Scout-17B-16E-Instruct base_path=http://localhost:8080/v1"``,
+        Examples: ``"openai:gpt-3.5-turbo"``, ``"openai:meta-llama/Llama-4-Scout-17B-16E-Instruct base_url=http://localhost:8080/v1"``,
         ``"vllm:meta-llama/Llama-4-Scout-17B-16E-Instruct"``, ands ``"huggingface:meta-llama/Llama-4-Scout-17B-16E-Instruct"``.
 
         See each backend implementation ``from_params`` method for their supported keys.

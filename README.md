@@ -13,15 +13,15 @@ Installation is as easy as `pip install pyterrier-rag`.
 ## Example Notebooks
 Try it out here on Google Colab now by clicking the "Open in Colab" button!
 - Sparse Retrieval with FiD and FlanT5 readers: [sparse_retrieval_FiD_FlanT5.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/main/examples/nq/sparse_retrieval_FiD_FlanT5.ipynb)
-- SearchR1 with Sparse Retrieval and MonoT5: [examples/search-r1.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipyn) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipyn) 
+- SearchR1 with Sparse Retrieval and MonoT5: [examples/search-r1.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/terrierteam/pyterrier_rag/blob/main/examples/search-r1.ipynb) 
 
 ## RAG Readers
 
 Reader can be constructed using a Reader class using different Backend implementations:
 ```python
 from pyterrier_rag.readers import Reader
-from pyterrier_rag.backends import Seq2SeqBackend, OpenAIBackend, VLLMBackend
-flanT5 = Reader(Seq2SeqBackend("google/flan-t5"))
+from pyterrier_rag import Seq2SeqLMBackend, OpenAIBackend, VLLMBackend
+flanT5 = Reader(Seq2SeqLMBackend("google/flan-t5-base"))
 llamma = Reader(OpenAIBackend("llama-3-8b-instruct", api_key="your_api_key", base_url="your_api_url"))
 deepseek = Reader(VLLMBackend("deepseek-ai/DeepSeek-R1-Distill-Llama-8B"))
 ```
