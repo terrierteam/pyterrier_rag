@@ -20,8 +20,8 @@ Try it out here on Google Colab now by clicking the "Open in Colab" button!
 Reader can be constructed using a Reader class using different Backend implementations:
 ```python
 from pyterrier_rag.readers import Reader
-from pyterrier_rag.backends import Seq2SeqBackend, OpenAIBackend, VLLMBackend
-flanT5 = Reader(Seq2SeqBackend("google/flan-t5"))
+from pyterrier_rag import Seq2SeqLMBackend, OpenAIBackend, VLLMBackend
+flanT5 = Reader(Seq2SeqLMBackend("google/flan-t5-base"))
 llamma = Reader(OpenAIBackend("llama-3-8b-instruct", api_key="your_api_key", base_url="your_api_url"))
 deepseek = Reader(VLLMBackend("deepseek-ai/DeepSeek-R1-Distill-Llama-8B"))
 ```
