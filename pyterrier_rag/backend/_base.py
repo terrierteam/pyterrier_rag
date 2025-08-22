@@ -204,6 +204,12 @@ class TextGenerator(pt.Transformer):
         self.batch_size = batch_size
         self.max_new_tokens = max_new_tokens
         self.num_responses = num_responses
+    
+    def transform_inputs(self) -> List[List[str]]:
+        return [[self.input_field]]
+    
+    def transform_outputs(self, inp_cols):
+        return inp_cols + [self.output_field]
 
     def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
         for chunk in chunked(inp, self.batch_size):

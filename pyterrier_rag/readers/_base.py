@@ -52,6 +52,13 @@ class Reader(pt.Transformer):
             else:
                 self.backend = self.backend.text_generator()
 
+    def transform_inputs(self):
+        return pt.inspect.transformer_inputs(self.prompt)
+    
+    def transform_outputs(self, inp_cols):
+        out = pt.inspect.transformer_outputs(self.prompt, inp_cols)
+        return out + [self.output_field]
+
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         prompts = self.prompt(inp)
         outputs = self.backend(prompts)
