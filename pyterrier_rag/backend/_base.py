@@ -63,6 +63,7 @@ class Backend(pt.Transformer, ABC):
         *,
         return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
+        stop_tokens : Optional[List[str]] = None,
     ) -> List[BackendOutput]:
         """ Generate text from input prompts.
 
@@ -70,6 +71,7 @@ class Backend(pt.Transformer, ABC):
             inps (Union[List[str], List[List[dict]]]): Input prompts as strings or dictionaries. When strings, represent the prompts directly. When a list of dictionaries, represents a sequence of messages (if ``backend.supports_message_input==True``).
             return_logprobs (bool): Whether to return logprobs of generated tokens along with text. (Only available if ``backend.supports_logprobs==True``.)
             max_new_tokens (Optional[int]): Override for max tokens to generate.
+            stop_tokens : Optional[List[str]]: List of tokens at which to stop generation. If None, generation is unconstrained.
 
         Returns:
             List[BackendOutput]: An output for each ``inp``, each containing the generated text and optionally logprobs.
