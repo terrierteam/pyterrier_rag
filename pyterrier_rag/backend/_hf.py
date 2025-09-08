@@ -86,7 +86,7 @@ class HuggingFaceBackend(Backend):
         *,
         return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
-        stop_tokens : Optional[List[str]] = None,
+        stop_sequences : Optional[List[str]] = None,
         num_responses: int = 1,
     ) -> List[BackendOutput]:
         if not isinstance(inps[0], str):
@@ -110,9 +110,9 @@ class HuggingFaceBackend(Backend):
         if max_new_tokens:
             generation_args['max_new_tokens'] = max_new_tokens
 
-        if stop_tokens is not None:
+        if stop_sequences is not None:
             generation_args['stopping_criteria'] = StoppingCriteriaList([
-                StopOnSequence(stop_tokens, self.tokenizer)])
+                StopOnSequence(stop_sequences, self.tokenizer)])
 
         # Generate outputs
         outputs = self._model.generate(**inputs, return_dict_in_generate=True, output_scores=return_logprobs, **generation_args)
