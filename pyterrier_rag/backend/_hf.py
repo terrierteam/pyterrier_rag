@@ -110,9 +110,10 @@ class HuggingFaceBackend(Backend):
         if max_new_tokens:
             generation_args['max_new_tokens'] = max_new_tokens
 
+        stop_sequences_criteria = None
         if stop_sequences is not None:
-            generation_args['stopping_criteria'] = StoppingCriteriaList([
-                StopOnSequence(stop_sequences, self.tokenizer)])
+            stop_sequences_criteria = StopOnSequence(stop_sequences, self.tokenizer)
+            generation_args['stopping_criteria'] = StoppingCriteriaList([stop_sequences_criteria])
 
         # Generate outputs
         outputs = self._model.generate(**inputs, return_dict_in_generate=True, output_scores=return_logprobs, **generation_args)
@@ -130,6 +131,10 @@ class HuggingFaceBackend(Backend):
             for i, prompt_length in enumerate(prompt_lengths):
                 sliced_sequences.append(sequences[i, prompt_length:])
             sequences = sliced_sequences
+
+        # for uniformity with the OpenAI and VLLM backends, remove stop sequences from the end of the outputs, annoying as it is.
+        if stop_sequences_criteria is not None:
+            sequences = stop_sequences_criteria.remove_suffix(sequences)
 
         # Decode outputs
         texts = self.tokenizer.batch_decode(sequences, skip_special_tokens=True)
@@ -189,6 +194,28 @@ class StopOnSequence(StoppingCriteria):
                 return True
 
         return False
+    
+    def _remove_suffix_torch(self, output_ids : List[torch.Tensor]) -> List[torch.Tensor]:
+        rtr = []
+        for tokens in output_ids:
+            for stop_seq in self.target_ids:
+                stop_seq = torch.Tensor(stop_seq).int()
+                if tokens[-len(stop_seq):] == stop_seq:
+                    tokens = tokens[:-len(stop_seq)]
+            rtr.append(tokens)
+        return rtr
+    
+    def remove_suffix(self, output_ids : List[List[int]]) -> List[List[int]]:
+        if isinstance(output_ids[0], torch.Tensor):
+            return self._remove_suffix_torch(output_ids)
+        rtr = []
+        for tokens in output_ids:
+            for stop_seq in self.target_ids:
+                if tokens[-len(stop_seq):] == stop_seq:
+                    tokens = tokens[:-len(stop_seq)]
+            rtr.append(tokens)
+        return rtr
+        
 
 class StopWordCriteria(StoppingCriteria):
     def __init__(
