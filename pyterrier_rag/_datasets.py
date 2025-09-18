@@ -48,7 +48,7 @@ pt.datasets.DATASET_MAP['rag:web_questions'] = FlashRAGDataset(
 pt.datasets.DATASET_MAP['rag:wow'] = FlashRAGDataset(
     {'train': 'wow/train.jsonl', 'dev': 'wow/dev.jsonl'})
 pt.datasets.DATASET_MAP['rag:popqa'] = FlashRAGDataset(
-    {'test': 'popqa/dev.jsonl'})
+    {'test': 'popqa/test.jsonl'})
 
 
 def _hotspot_files(dataset: Dataset, components: str, variant: str, **kwargs):
