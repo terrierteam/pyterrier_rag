@@ -39,6 +39,7 @@ class Concatenator(pt.Transformer):
         self,
         in_fields: Optional[List[str]] = ["text"],
         out_field: Optional[str] = "qcontext",
+        additional_fields: Optional[List[str]] = None,
         text_loader: Optional[callable] = None,
         intermediate_format: Optional[callable] = None,
         tokenizer: Optional[Any] = None,
@@ -53,6 +54,7 @@ class Concatenator(pt.Transformer):
 
         self.in_fields = in_fields
         self.out_field = out_field
+        self.additional_fields = additional_fields
         self.aggregate_func = aggregate_func
         self.text_loader = text_loader
         self.intermediate_format = intermediate_format
@@ -93,7 +95,12 @@ class Concatenator(pt.Transformer):
                 max_per_context=self.max_per_context,
                 truncation_rate=self.truncation_rate,
             )
-        return [{self.out_field: context, "qid": qid, "query": query}]
+        
+        # If additional fields are specified, include them in the output
+        if self.additional_fields is not None:
+            additional_fields = {field: inp[0].get(field, None) for field in self.additional_fields}
+
+        return [{self.out_field: context, "qid": qid, "query": query, **additional_fields} if self.additional_fields else {self.out_field: context, "qid": qid, "query": query}]
 
 
 __all__ = ["Concatenator"]
