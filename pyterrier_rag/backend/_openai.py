@@ -137,9 +137,9 @@ class OpenAIBackend(Backend):
         except Exception as e:
             print(str(e))
             if "This model's maximum context length is" in str(e):
-                return [BackendOutput(text="ERROR::reduce_length")] * args.num_responses
+                return [BackendOutput(text="ERROR::reduce_length")] * num_responses
             if "The response was filtered" in str(e):
-                return [BackendOutput(text="ERROR::response_filtered")] * args.num_responses
+                return [BackendOutput(text="ERROR::response_filtered")] * num_responses
             return [BackendOutput(text="ERROR::other")] * num_responses
         results = []
         for choice in completions.choices[:num_responses]:
