@@ -24,10 +24,14 @@ class FlashRAGDataset(RAGDataset):
         # TODO: we should cache the df?
 
     def get_topics(self, variant : Optional[str] = None) -> pd.DataFrame:
+        if variant is None:
+            raise ValueError("Variant must be specified for %s: %s" % (self.name, str(self.splits.keys())))
         df = pd.read_json("hf://datasets/RUC-NLPIR/FlashRAG_datasets/" + self.splits[variant], lines=True)
         return df[['id', 'question']].rename(columns={'id' : 'qid', 'question' : 'query'})
 
     def get_answers(self, variant : Optional[str] = None) -> pd.DataFrame:
+        if variant is None:
+            raise ValueError("Variant must be specified for %s: %s" % (self.name, str(self.splits.keys())))
         df = pd.read_json("hf://datasets/RUC-NLPIR/FlashRAG_datasets/" + self.splits[variant], lines=True)
         return df[['id', 'golden_answers']] \
             .rename(columns={'id' : 'qid', 'golden_answers' : 'gold_answer'}) \

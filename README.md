@@ -62,7 +62,7 @@ Try these frameworks out now with our example notebooks:
 
 ## Datasets
 
-Queries and gold answers of common datasets can be accessed through the PyTerrier datasets API: `pt.get_dataset("rag:nq").get_topics()` and `pt.get_dataset("rag:nq").get_answers()`. The following QA datasets are available:
+Queries and gold answers of common datasets can be accessed through the PyTerrier datasets API, e.g.: `pt.get_dataset("rag:nq").get_topics('dev')` and `pt.get_dataset("rag:nq").get_answers('dev')`. The following QA datasets are available:
 
  - Natural Questions: `"rag:nq"`
  - HotpotQA: `"rag:hotpotqa"`
@@ -72,7 +72,7 @@ Queries and gold answers of common datasets can be accessed through the PyTerrie
  - WoW: `"rag:wow"`
  - PopQA: `"rag:popqa"`
 
-We also provide pre-built indices for standard RAG corpora. For instance, a BM25 retriever for the Wikipedia corpus for NQ can be obtained from an pre-existing index autoamticallty downloaded from HuggingFace:
+We also provide pre-built indices for some standard RAG corpora. For instance, a BM25 retriever for the Wikipedia corpus for NQ can be obtained from an pre-existing index autoamticallty downloaded from HuggingFace:
 
 ```python
 sparse_index = pt.Artifact.from_hf('pyterrier/ragwiki-terrier')
