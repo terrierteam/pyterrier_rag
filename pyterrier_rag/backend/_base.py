@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Union
 
 import pyterrier as pt
+import pyterrier_alpha as pta
 from more_itertools import chunked
 from dataclasses import dataclass
 
@@ -174,15 +175,15 @@ class TextGenerator(pt.Transformer):
     """ Transformer that generates text from the specified backend.
     """
     def __init__(self,
-        backend: Backend,
-        *,
-        input_field: str = 'prompt',
-        output_field: str = 'qanswer',
-        logprobs_field: Optional[str] = None,
-        batch_size: int = 4,
-        max_new_tokens: Optional[int] = None,
-        num_responses: int = 1,
-    ):
+                 backend: Backend,
+                 *,
+                 input_field: str = 'prompt',
+                 output_field: str = 'qanswer',
+                 logprobs_field: Optional[str] = None,
+                 batch_size: int = 4,
+                 max_new_tokens: Optional[int] = None,
+                 num_responses: int = 1,
+                 ):
         """
         Parameters:
             backend (Backend): The backend to use for text generation.
@@ -206,6 +207,8 @@ class TextGenerator(pt.Transformer):
         self.num_responses = num_responses
 
     def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
+        inp = pta.utils.peekable(inp)
+        pta.validate.columns_iter(inp, includes=[self.input_field])
         for chunk in chunked(inp, self.batch_size):
             chunk = list(chunk)
             prompts = [i[self.input_field] for i in chunk]

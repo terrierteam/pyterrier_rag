@@ -105,6 +105,8 @@ class PromptTransformer(pt.Transformer):
 
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
+        inp = pta.utils.peekable(inp)
+        pta.validate.columns_iter(inp, includes=['qid', *self.input_fields])
         return self.transform_by_query(inp)
 
     def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
