@@ -1,5 +1,6 @@
-from typing import Iterable, Optional
+from typing import Optional
 
+import pandas as pd
 import pyterrier as pt
 import pyterrier_alpha as pta
 
@@ -98,41 +99,42 @@ class IRCOT(pt.Transformer):
             "intermediate_format": ircot_example_format,
         }
 
-    @pta.transform.by_query(add_ranks=False)
-    def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
-        return self.transform_by_query(inp)
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
+        pta.validate.columns(inp, includes=["qid", self.input_field])
+        output_frame = pta.DataFrameBuilder(["qanswer", "qid", "query"])
 
-    def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
-        inp = list(inp)
-        qid = inp[0]["qid"]
-        query = inp[0]["query"]
-        for row in inp:
-            assert row["query"] == query, "All rows must have the same query for `transform_by_query`"
+        for qid, group in inp.groupby("qid"):
+            inp = group.to_dict(orient="records")
+            qid = inp[0]["qid"]
+            query = inp[0]["query"]
+            for row in inp:
+                assert row["query"] == query, "All rows must have the same query for `transform_by_query`"
 
-        prev = []
-        top_k_docs = self.retriever.search(query)
-        top_k_docs["prev"] = ""
-        iter = 1
-        stop = False
+            prev = []
+            top_k_docs = self.retriever.search(query)
+            top_k_docs["prev"] = ""
+            iter = 1
+            stop = False
 
-        while not stop:
-            context = self.context_aggregation(top_k_docs)
-            output = self.reader(context)
+            while not stop:
+                context = self.context_aggregation(top_k_docs)
+                output = self.reader(context)
 
-            if self.exit_condition(output) or self._exceeded_max_iterations(iter):
-                stop = True
-                break
-            else:
-                prev.append(output[self.output_field].iloc[0])
-                top_k_docs.append(self.retriever.search(output[self.output_field].iloc[0]))
-                top_k_docs.sort_values(by="score", ascending=False, inplace=True)
-                top_k_docs.drop_duplicates(subset=["docno"], inplace=True)
-                top_k_docs = top_k_docs.head(self.max_docs)
-                top_k_docs["prev"] = "\n\n".join(prev)
-                iter += 1
+                if self.exit_condition(output) or self._exceeded_max_iterations(iter):
+                    stop = True
+                    break
+                else:
+                    prev.append(output[self.output_field].iloc[0])
+                    top_k_docs.append(self.retriever.search(output[self.output_field].iloc[0]))
+                    top_k_docs.sort_values(by="score", ascending=False, inplace=True)
+                    top_k_docs.drop_duplicates(subset=["docno"], inplace=True)
+                    top_k_docs = top_k_docs.head(self.max_docs)
+                    top_k_docs["prev"] = "\n\n".join(prev)
+                    iter += 1
 
-        qanswer = output[self.output_field].iloc[0]
-        return [{"qid": qid, "query": query, "qanswer": qanswer}]
+            qanswer = output[self.output_field].iloc[0]
+            output_frame.extend({"qid": qid, "query": query, "qanswer": qanswer})
+        return output_frame.to_df()
 
 
 __all__ = ["IRCOT"]

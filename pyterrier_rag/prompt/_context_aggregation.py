@@ -1,5 +1,6 @@
-from typing import List, Optional, Iterable, Any, Callable
+from typing import List, Optional, Any, Callable
 
+import pandas as pd
 import pyterrier as pt
 import pyterrier_alpha as pta
 
@@ -64,37 +65,38 @@ class Concatenator(pt.Transformer):
         self.truncation_rate = truncation_rate
         self.ordering_func = ordering_func
 
-    @pta.transform.by_query(add_ranks=False)
-    def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
-        return self.transform_by_query(inp)
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
+        pta.validate.columns(inp, includes=["qid"] + self.in_fields)
+        output_frame = pta.DataFrameBuilder([self.out_field, "qid", "query"])
 
-    def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
-        inp = list(inp)
-        qid = inp[0].get("qid", None)
-        query = inp[0].get("query", None)
-        if self.ordering_func is not None:
-            inp = self.ordering_func(inp)
-        relevant = [{k: v for k, v in i.items() if k in self.in_fields} for i in inp]
-        if "text" in self.in_fields and "text" not in inp[0].keys():
-            if self.text_loader is None:
-                raise ValueError("Cannot retrieve text without a text loader")
+        for qid, group in inp.groupby("qid"):
+            inp = group.to_dict(orient="records")
+            qid = inp[0].get("qid", None)
+            query = inp[0].get("query", None)
+            if self.ordering_func is not None:
+                inp = self.ordering_func(inp)
+            relevant = [{k: v for k, v in i.items() if k in self.in_fields} for i in inp]
+            if "text" in self.in_fields and "text" not in inp[0].keys():
+                if self.text_loader is None:
+                    raise ValueError("Cannot retrieve text without a text loader")
+                else:
+                    for d, t in zip(relevant, inp):
+                        d["text"] = self.text_loader(t["docno"])
+
+            if self.aggregate_func is not None:
+                context = self.aggregate_func(relevant)
             else:
-                for d, t in zip(relevant, inp):
-                    d["text"] = self.text_loader(t["docno"])
-
-        if self.aggregate_func is not None:
-            context = self.aggregate_func(relevant)
-        else:
-            context = concat(
-                relevant,
-                intermediate_format=self.intermediate_format,
-                tokenizer=self.tokenizer,
-                max_length=self.max_length,
-                max_elements=self.max_elements,
-                max_per_context=self.max_per_context,
-                truncation_rate=self.truncation_rate,
-            )
-        return [{self.out_field: context, "qid": qid, "query": query}]
+                context = concat(
+                    relevant,
+                    intermediate_format=self.intermediate_format,
+                    tokenizer=self.tokenizer,
+                    max_length=self.max_length,
+                    max_elements=self.max_elements,
+                    max_per_context=self.max_per_context,
+                    truncation_rate=self.truncation_rate,
+                )
+            output_frame.extend({self.out_field: context, "qid": qid, "query": query})
+        return output_frame.to_df()
 
 
 __all__ = ["Concatenator"]

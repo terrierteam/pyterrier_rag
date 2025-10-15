@@ -1,10 +1,12 @@
 import re
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Union
-
-import pyterrier as pt
-from more_itertools import chunked
 from dataclasses import dataclass
+
+import pandas as pd
+import pyterrier as pt
+import pyterrier_alpha as pta
+from more_itertools import chunked
 
 from pyterrier_rag import backend as _backend
 
@@ -120,8 +122,9 @@ class Backend(pt.Transformer, ABC):
             raise ValueError("This model cannot return logprobs")
         return TextGenerator(self, input_field=input_field, output_field=output_field, logprobs_field=logprobs_field, max_new_tokens=max_new_tokens, num_responses=num_responses)
 
-    def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
-        return self.text_generator().transform_iter(inp)
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
+        pta.validate.columns(inp, includes=["qid", self.text_generator().input_field])
+        return self.text_generator().transform(inp)
 
     # factory methods
 
@@ -174,15 +177,15 @@ class TextGenerator(pt.Transformer):
     """ Transformer that generates text from the specified backend.
     """
     def __init__(self,
-        backend: Backend,
-        *,
-        input_field: str = 'prompt',
-        output_field: str = 'qanswer',
-        logprobs_field: Optional[str] = None,
-        batch_size: int = 4,
-        max_new_tokens: Optional[int] = None,
-        num_responses: int = 1,
-    ):
+                 backend: Backend,
+                 *,
+                 input_field: str = 'prompt',
+                 output_field: str = 'qanswer',
+                 logprobs_field: Optional[str] = None,
+                 batch_size: int = 4,
+                 max_new_tokens: Optional[int] = None,
+                 num_responses: int = 1,
+                 ):
         """
         Parameters:
             backend (Backend): The backend to use for text generation.
@@ -205,8 +208,15 @@ class TextGenerator(pt.Transformer):
         self.max_new_tokens = max_new_tokens
         self.num_responses = num_responses
 
-    def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
-        for chunk in chunked(inp, self.batch_size):
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
+        pta.validate.columns(inp, includes=[self.input_field])
+        input_columns = inp.columns.tolist()
+        output_columns = [*input_columns, self.output_field]
+        if self.logprobs_field is not None:
+            output_columns.append(self.logprobs_field)
+        output_frame = pta.DataFrameBuilder(output_columns)
+
+        for chunk in chunked(inp.to_dict(orient="records"), self.batch_size):
             chunk = list(chunk)
             prompts = [i[self.input_field] for i in chunk]
             out = self.backend.generate(
@@ -221,7 +231,8 @@ class TextGenerator(pt.Transformer):
                     result = {**rec, self.output_field: o.text}
                     if self.logprobs_field is not None:
                         result[self.logprobs_field] = o.logprobs
-                    yield result
+                    output_frame.extend({k: v for k, v in result.items() if k in output_columns})
+        return output_frame.to_df()
 
 
 __all__ = ["Backend", "BackendOutput", "TextGenerator"]

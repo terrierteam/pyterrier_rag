@@ -1,6 +1,7 @@
 import pytest
 from typing import List, Optional, Dict
 
+import pandas as pd
 import pyterrier as pt
 import fastchat.model as fc_model
 
@@ -103,14 +104,15 @@ def test_create_prompt_appends_and_returns():
     assert "Q-C" in out
 
 
-def test_transform_by_query_basic():
+def test_transform_basic():
     # instruction uses both fields
     instr = lambda query, qcontext: f"ask: {query} | {qcontext}"
     tf = PromptTransformer(instruction=instr, input_fields=["query", "qcontext"])
-    inp = [{"qid": "1", "query": "foo", "qcontext": "bar"}]
-    result = tf.transform_by_query(inp)
+    inp = pd.DataFrame.from_records([{"qid": "1", "query": "foo", "qcontext": "bar"}])
+    result = tf.transform(inp)
     # only one output dict
-    assert isinstance(result, list) and len(result) == 1
+    assert len(result) == 1
+    result = result.to_dict(orient="records")
     row = result[0]
     # output_field defaults to "prompt"
     assert "prompt" in row and row["qid"] == "1" and row["query_0"] == "foo"
