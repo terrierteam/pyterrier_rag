@@ -4,7 +4,6 @@ import pytest
 import sys
 import types
 import gc
-import numpy as np
 
 # assume the subclass is in vllm_backend.py in the same directory
 from pyterrier_rag.backend._vllm import VLLMBackend

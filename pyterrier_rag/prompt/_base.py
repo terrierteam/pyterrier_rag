@@ -1,4 +1,4 @@
-from typing import Optional, Union, Iterable, List, Any
+from typing import Optional, Union, List, Any
 
 import pandas as pd
 import pyterrier as pt

@@ -1,12 +1,8 @@
 import itertools
-import unittest
-import pandas as pd
 import pytest
 import torch
-import numpy as np
 from typing import Iterable
 from pyterrier_rag.backend import Backend, BackendOutput, TextGenerator
-from transformers import GenerationConfig
 
 # A minimal subclass implementing `generate` for testing
 class DummyBackend(Backend):
