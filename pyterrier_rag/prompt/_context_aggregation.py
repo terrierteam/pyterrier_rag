@@ -63,14 +63,6 @@ class Concatenator(pt.Transformer):
         self.truncation_rate = truncation_rate
         self.ordering_func = ordering_func
 
-    def transform_inputs(self):
-        if self.in_fields is None:
-            return [['qid', 'query']]
-        return [['qid', 'query'] + self.in_fields]
-
-    def transform_outputs(self, inp_cols):
-        return [self.out_field, 'qid', 'query']
-
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
         return self.transform_by_query(inp)

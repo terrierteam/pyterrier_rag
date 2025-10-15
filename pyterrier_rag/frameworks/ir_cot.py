@@ -97,12 +97,6 @@ class IRCOT(pt.Transformer):
             "max_elements": self.max_docs,
             "intermediate_format": ircot_example_format,
         }
-    
-    def transform_inputs(self):
-        return [['qid', 'query']]
-    
-    def transform_outputs(self, inp_cols):
-        return ['qid', 'query', 'qanswer']
 
     @pta.transform.by_query(add_ranks=False)
     def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
