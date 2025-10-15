@@ -97,7 +97,7 @@ class Backend(pt.Transformer, ABC):
             max_new_tokens (Optional[int]): Override for max tokens to generate. If None, uses the backend's max_new_tokens.
             num_responses (int): Number of responses to generate for each prompt.
         """
-        return TextGenerator(self, input_field=input_field, output_field=output_field, max_new_tokens=max_new_tokens, num_responses=num_responses)
+        return TextGenerator(self, input_field=input_field, output_field=output_field, max_new_tokens=max_new_tokens, num_responses=num_responses, batch_size=batch_size)
 
     def logprobs_generator(self,
         *,
@@ -120,7 +120,7 @@ class Backend(pt.Transformer, ABC):
         """
         if not self.supports_logprobs:
             raise ValueError("This model cannot return logprobs")
-        return TextGenerator(self, input_field=input_field, output_field=output_field, logprobs_field=logprobs_field, max_new_tokens=max_new_tokens, num_responses=num_responses)
+        return TextGenerator(self, input_field=input_field, output_field=output_field, logprobs_field=logprobs_field, max_new_tokens=max_new_tokens, num_responses=num_responses, batch_size=batch_size)
 
     def transform_iter(self, inp: pt.model.IterDict) -> pt.model.IterDict:
         return self.text_generator().transform_iter(inp)
