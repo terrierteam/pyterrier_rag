@@ -4,7 +4,7 @@
 from collections import defaultdict
 import re 
 import torch 
-from typing import List, Dict, Iterable
+from typing import List, Dict
 
 import pyterrier as pt
 import pyterrier_alpha as pta
