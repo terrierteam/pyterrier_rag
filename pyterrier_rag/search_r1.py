@@ -1,8 +1,8 @@
 import transformers
 import torch
+import pandas as pd
 import pyterrier as pt
 import pyterrier_alpha as pta
-import pyterrier.model
 
 # Define the custom stopping criterion
 class StopOnSequence(transformers.StoppingCriteria):
@@ -133,53 +133,56 @@ class SearchR1(pt.Transformer):
         rtr.retrieval_top_k = self.retrieval_top_k
         return rtr
 
-    @pta.transform.by_query(add_ranks=False)
-    def transform_iter(self, inp : pyterrier.model.IterDict) -> pyterrier.model.IterDict:
-        inp = next(inp)
-        cnt = 0
-        question = inp['query']
-        qid = inp['qid']
-        question = question.strip()
-        if question[-1] != '?':
-            question += '?'
+    def transform(self, inp : pd.DataFrame) -> pd.DataFrame:
+        pta.validate.columns(inp, includes=["qid", "query"])
+        output_frame = pta.DataFrameBuilder(["qid", "query", "output", "qanswer", "iteration", "all_queries"])
 
-        all_queries = []
-        
-        prompt = R1_PROMPT + question + "\n"
-        if self.tokenizer.chat_template:
-            prompt = self.tokenizer.apply_chat_template([{"role": "user", "content": prompt}], add_generation_prompt=True, tokenize=False)
+        for _, row in inp.iterrows():
+            inp = row
+            cnt = 0
+            question = inp['query']
+            qid = inp['qid']
+            question = question.strip()
+            if question[-1] != '?':
+                question += '?'
 
-        while True:
-            input_ids = self.tokenizer.encode(prompt, return_tensors='pt').to(self.device)
-            attention_mask = torch.ones_like(input_ids)
+            all_queries = []
             
-            # Generate text with the stopping criteria
-            outputs = self.model.generate(
-                input_ids,
-                attention_mask=attention_mask,
-                max_new_tokens=1024,
-                stopping_criteria=self.stopping_criteria,
-                pad_token_id=self.tokenizer.eos_token_id,
-                do_sample=True,
-                temperature=0.7
-            )
+            prompt = R1_PROMPT + question + "\n"
+            if self.tokenizer.chat_template:
+                prompt = self.tokenizer.apply_chat_template([{"role": "user", "content": prompt}], add_generation_prompt=True, tokenize=False)
 
-            if outputs[0][-1].item() in self.curr_eos:
+            while True:
+                input_ids = self.tokenizer.encode(prompt, return_tensors='pt').to(self.device)
+                attention_mask = torch.ones_like(input_ids)
+                
+                # Generate text with the stopping criteria
+                outputs = self.model.generate(
+                    input_ids,
+                    attention_mask=attention_mask,
+                    max_new_tokens=1024,
+                    stopping_criteria=self.stopping_criteria,
+                    pad_token_id=self.tokenizer.eos_token_id,
+                    do_sample=True,
+                    temperature=0.7
+                )
+
+                if outputs[0][-1].item() in self.curr_eos:
+                    generated_tokens = outputs[0][input_ids.shape[1]:]
+                    output_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
+                    answer = get_answer(output_text)
+                    output_frame.extend({'qid' : qid, 'query' : question, 'qanswer' : answer, 'output': prompt + "\n" + output_text, 'iteration' : cnt, 'all_queries' : all_queries})
+
                 generated_tokens = outputs[0][input_ids.shape[1]:]
                 output_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
-                answer = get_answer(output_text)
-                return [{'qid' : qid, 'query' : question, 'qanswer' : answer, 'output': prompt + "\n" + output_text, 'iteration' : cnt, 'all_queries' : all_queries}]
+                
+                this_query = get_query(self.tokenizer.decode(outputs[0], skip_special_tokens=True))
+                if this_query:
+                    search_results = search(self.retriever, this_query, qid="%s-%d" % (qid, cnt))
+                    all_queries.append((cnt, this_query))
+                else:
+                    search_results = ''
 
-            generated_tokens = outputs[0][input_ids.shape[1]:]
-            output_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
-            
-            this_query = get_query(self.tokenizer.decode(outputs[0], skip_special_tokens=True))
-            if this_query:
-                search_results = search(self.retriever, this_query, qid="%s-%d" % (qid, cnt))
-                all_queries.append((cnt, this_query))
-            else:
-                search_results = ''
-
-            search_text = curr_search_template.format(output_text=output_text, search_results=search_results)
-            prompt += search_text
-            cnt += 1
+                search_text = curr_search_template.format(output_text=output_text, search_results=search_results)
+                prompt += search_text
+                cnt += 1

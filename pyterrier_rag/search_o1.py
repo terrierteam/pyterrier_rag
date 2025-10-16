@@ -1,12 +1,15 @@
 # Modified from https://github.com/sunnynexus/Search-o1
 # Changes made by Jinyuan on 2025-04-14
 
+from collections import defaultdict
 import re 
 import torch 
-from typing import List, Dict, Iterable
+from typing import List, Dict
 
 import pyterrier as pt
 import pyterrier_alpha as pta
+import pandas as pd
+
 from pyterrier_rag.backend import HuggingFaceBackend, StopWordCriteria
 
 # Define special tokens
@@ -403,116 +406,126 @@ class SearchO1(pt.Transformer):
         
         return sequence.strip()
         
-    @pta.transform.by_query(add_ranks=False)
-    def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
-        sequences = [
-            {
-                "qid" : row['qid'],
-                "question": row['query'], 
-                "prompt": self.get_init_prompt(row['query'], self.multihop_qa), 
-                "output": "", 
-                "finished": False,
-                "history": [], 
-                "search_count": 0, 
-                "search_queries": set(), 
-                "retrieval_results": {}
-            }
-            for row in inp
-        ]
-        
-        turn = 0 
-        while True:
-            sequences_not_finished = [seq for seq in sequences if not seq["finished"]]
-            if sequences_not_finished:
-                turn += 1 
-                outputs: List[str] = self.generate(sequences_not_finished)
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
+        pta.validate.columns(inp, includes=["qid", "query"])
+        output_frame = pta.DataFrameBuilder(["qanswer", "qid", "query", "history", "search_count", "retrieval_results"])
 
-                # extract search queries
-                queries = [] 
-                prev_reasonings = [] 
-                sequences_require_retrieval = [] 
-                for seq, output in zip(sequences_not_finished, outputs):
-                    seq["history"].append(output)
-                    seq["prompt"] += output 
-                    seq["output"] += output
-                    query = self.extract_search_query(output)
+        for _, row in inp.iterrows():
+            sequences = [
+                {
+                    "qid" : row['qid'],
+                    "question": row['query'], 
+                    "prompt": self.get_init_prompt(row['query'], self.multihop_qa), 
+                    "output": "", 
+                    "finished": False,
+                    "history": [], 
+                    "search_count": 0, 
+                    "search_queries": set(), 
+                    "retrieval_results": {}
+                }
+                for row in inp
+            ]
 
-                    if query is not None and seq["output"].rstrip().endswith(END_SEARCH_QUERY):
+            turn = 0 
+            while True:
+                sequences_not_finished = [seq for seq in sequences if not seq["finished"]]
+                if sequences_not_finished:
+                    turn += 1 
+                    outputs: List[str] = self.generate(sequences_not_finished)
 
-                        if seq['search_count'] < self.max_retrieval_step and query not in seq['search_queries']:
-                            all_reasoning_steps = seq["output"] 
-                            all_reasoning_steps = all_reasoning_steps.replace('\n\n', '\n').split("\n")
-                            truncated_prev_reasoning = ""
-                            for i, step in enumerate(all_reasoning_steps):
-                                truncated_prev_reasoning += f"Step {i + 1}: {step}\n\n"
-                            
-                            prev_steps = truncated_prev_reasoning.split('\n\n')
-                            if len(prev_steps) <= 5:
-                                truncated_prev_reasoning = '\n\n'.join(prev_steps)
-                            else:
-                                truncated_prev_reasoning = ''
-                                for i, step in enumerate(prev_steps):
-                                    if i == 0 or i >= len(prev_steps) - 4 or BEGIN_SEARCH_QUERY in step or BEGIN_SEARCH_RESULT in step:
-                                        truncated_prev_reasoning += step + '\n\n'
-                                    else:
-                                        if truncated_prev_reasoning[-len('\n\n...\n\n'):] != '\n\n...\n\n':
-                                            truncated_prev_reasoning += '...\n\n'
-                            truncated_prev_reasoning = truncated_prev_reasoning.strip('\n')
+                    # extract search queries
+                    queries = [] 
+                    prev_reasonings = [] 
+                    sequences_require_retrieval = [] 
+                    for seq, output in zip(sequences_not_finished, outputs):
+                        seq["history"].append(output)
+                        seq["prompt"] += output 
+                        seq["output"] += output
+                        query = self.extract_search_query(output)
 
-                            queries.append(query)
-                            prev_reasonings.append(truncated_prev_reasoning)
-                            sequences_require_retrieval.append(seq) 
-                            seq["search_count"] += 1 
-                            seq["search_queries"].add(query)
+                        if query is not None and seq["output"].rstrip().endswith(END_SEARCH_QUERY):
 
-                        elif seq['search_count'] >= self.max_retrieval_step:
-                            limit_message = f"\n{BEGIN_SEARCH_RESULT}\nThe maximum search limit is exceeded. You are not allowed to search.\n{END_SEARCH_RESULT}\n"
-                            seq['prompt'] += limit_message
-                            seq['output'] += limit_message
-                            seq['history'].append(limit_message)
+                            if seq['search_count'] < self.max_retrieval_step and query not in seq['search_queries']:
+                                all_reasoning_steps = seq["output"] 
+                                all_reasoning_steps = all_reasoning_steps.replace('\n\n', '\n').split("\n")
+                                truncated_prev_reasoning = ""
+                                for i, step in enumerate(all_reasoning_steps):
+                                    truncated_prev_reasoning += f"Step {i + 1}: {step}\n\n"
+                                
+                                prev_steps = truncated_prev_reasoning.split('\n\n')
+                                if len(prev_steps) <= 5:
+                                    truncated_prev_reasoning = '\n\n'.join(prev_steps)
+                                else:
+                                    truncated_prev_reasoning = ''
+                                    for i, step in enumerate(prev_steps):
+                                        if i == 0 or i >= len(prev_steps) - 4 or BEGIN_SEARCH_QUERY in step or BEGIN_SEARCH_RESULT in step:
+                                            truncated_prev_reasoning += step + '\n\n'
+                                        else:
+                                            if truncated_prev_reasoning[-len('\n\n...\n\n'):] != '\n\n...\n\n':
+                                                truncated_prev_reasoning += '...\n\n'
+                                truncated_prev_reasoning = truncated_prev_reasoning.strip('\n')
 
-                        elif query in seq['search_queries']: 
-                            limit_message = f"\n{BEGIN_SEARCH_RESULT}\nYou have searched this query. Please refer to previous results.\n{END_SEARCH_RESULT}\n"
-                            seq['prompt'] += limit_message
-                            seq['output'] += limit_message
-                            seq['history'].append(limit_message)
-                    
-                    else:
-                        seq["finished"] = True 
+                                queries.append(query)
+                                prev_reasonings.append(truncated_prev_reasoning)
+                                sequences_require_retrieval.append(seq) 
+                                seq["search_count"] += 1 
+                                seq["search_queries"].add(query)
 
-                if sequences_require_retrieval:
-                    retrieval_results: List[List[dict]] = self.retrieve_docs(queries)
-                    doc_analyses_outputs = self.analyze_docs(
-                        sequences=sequences_require_retrieval, 
-                        prev_reasonings=prev_reasonings, 
-                        queries=queries, 
-                        retrieval_results=retrieval_results
-                    )
-                    
-                    doc_analyses = [item["extracted_info"] for item in doc_analyses_outputs]
-                    for seq, query, retrieval_result, analysis in zip(sequences_require_retrieval, queries, retrieval_results, doc_analyses):
-                        if isinstance(analysis, str):
-                            text = f"\n\n{BEGIN_SEARCH_RESULT}{analysis}{END_SEARCH_RESULT}\n\n" 
+                            elif seq['search_count'] >= self.max_retrieval_step:
+                                limit_message = f"\n{BEGIN_SEARCH_RESULT}\nThe maximum search limit is exceeded. You are not allowed to search.\n{END_SEARCH_RESULT}\n"
+                                seq['prompt'] += limit_message
+                                seq['output'] += limit_message
+                                seq['history'].append(limit_message)
+
+                            elif query in seq['search_queries']: 
+                                limit_message = f"\n{BEGIN_SEARCH_RESULT}\nYou have searched this query. Please refer to previous results.\n{END_SEARCH_RESULT}\n"
+                                seq['prompt'] += limit_message
+                                seq['output'] += limit_message
+                                seq['history'].append(limit_message)
+                        
                         else:
-                            text = replace_recent_steps(seq['output'], analysis)
-                        seq["prompt"] += text 
-                        seq["output"] += text 
-                        seq["history"].append(text)
-                        seq["retrieval_results"][query] = retrieval_result
+                            seq["finished"] = True 
 
-            unfinished = [seq for seq in sequences if not seq["finished"]]
-            if not unfinished:
-                break 
-            else:
-                if turn >= self.max_turn:
-                    print(f"The maximum number of turns {self.max_turn} is exceeded, stopping...")
+                    if sequences_require_retrieval:
+                        retrieval_results: List[List[dict]] = self.retrieve_docs(queries)
+                        doc_analyses_outputs = self.analyze_docs(
+                            sequences=sequences_require_retrieval, 
+                            prev_reasonings=prev_reasonings, 
+                            queries=queries, 
+                            retrieval_results=retrieval_results
+                        )
+                        
+                        doc_analyses = [item["extracted_info"] for item in doc_analyses_outputs]
+                        for seq, query, retrieval_result, analysis in zip(sequences_require_retrieval, queries, retrieval_results, doc_analyses):
+                            if isinstance(analysis, str):
+                                text = f"\n\n{BEGIN_SEARCH_RESULT}{analysis}{END_SEARCH_RESULT}\n\n" 
+                            else:
+                                text = replace_recent_steps(seq['output'], analysis)
+                            seq["prompt"] += text 
+                            seq["output"] += text 
+                            seq["history"].append(text)
+                            seq["retrieval_results"][query] = retrieval_result
+
+                unfinished = [seq for seq in sequences if not seq["finished"]]
+                if not unfinished:
                     break
-            
-        # extract answer
-        for seq in sequences:
-            # seq["qanswer"] = extract_answer(seq["output"], mode="qa")
-            seq["qanswer"] = self.get_answer(seq["output"])
-        return sequences
+                else:
+                    if turn >= self.max_turn:
+                        print(f"The maximum number of turns {self.max_turn} is exceeded, stopping...")
+                        break
+
+            # extract answer
+            for seq in sequences:
+                # seq["qanswer"] = extract_answer(seq["output"], mode="qa")
+                seq["qanswer"] = self.get_answer(seq["output"])
+
+            # convert from List[Dict[str, Any]] to Dict[str, List]
+            sequences_dict = defaultdict(list)
+            for seq in sequences:
+                for k, v in seq.items():
+                    sequences_dict[k].append(v)
+            output_frame.extend(sequences_dict)
+        return output_frame.to_df()
 
 
 class SearchO1ForceRetrieval(SearchO1):

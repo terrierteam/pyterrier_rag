@@ -142,7 +142,7 @@ def test_init_with_provided_transformers():
     assert ircot.prompt is fake_prompt
 
 
-def test_transform_by_query_with_exit_condition():
+def test_transform_with_exit_condition():
     backend = FakeBackend()
     retriever = DummyRetriever()
     ircot = IRCOT(retriever=retriever, backend=backend)
@@ -150,9 +150,9 @@ def test_transform_by_query_with_exit_condition():
     ircot.reader = DummyReader(backend, ircot.prompt)
     # Exit immediately
     ircot.exit_condition = lambda output: True
-    result = ircot.transform_by_query([{'qid': 'q1', 'query': 'test'}])
-    assert isinstance(result, list) and len(result) == 1
-    rec = result[0]
+    result = ircot.transform(pd.DataFrame.from_records([{'qid': 'q1', 'query': 'test'}]))
+    assert len(result) == 1
+    rec = result.iloc[0]
     assert rec['qid'] == 'q1'
     assert rec['query'] == 'test'
     assert rec['qanswer'] == 'So the answer is: dummy answer'
@@ -173,20 +173,8 @@ def test_transform_by_query_max_iterations():
             return self.transform(df)
     ircot.reader = ReaderNoExit(None, None)
     ircot.exit_condition = lambda output: False
-    result = ircot.transform_by_query([{'qid': 'q2', 'query': 'init'}])
+    result = ircot.transform(pd.DataFrame.from_records([{'qid': 'q2', 'query': 'init'}]))
+    result = result.to_dict(orient='records')
     assert result[0]['qanswer'] == 'intermediate'
     # Only initial search
     assert retriever.search_calls == ['init']
-
-
-def test_transform_by_query_query_mismatch_error():
-    backend = FakeBackend()
-    retriever = DummyRetriever()
-    ircot = IRCOT(retriever=retriever, backend=backend)
-    ircot.reader = DummyReader(backend, ircot.prompt)
-    # Provide two different queries should raise assertion
-    with pytest.raises(AssertionError):
-        list(ircot.transform_by_query([
-            {'qid': 'x', 'query': 'one'},
-            {'qid': 'x', 'query': 'two'}
-        ]))
