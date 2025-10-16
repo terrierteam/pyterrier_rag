@@ -118,3 +118,10 @@ def test_transform_basic():
     assert "prompt" in row and row["qid"] == "1" and row["query_0"] == "foo"
     # ensure the prompt contains our instruction
     assert "ask: foo | bar" in row["prompt"]
+
+
+@pt.testing.transformer_test_class
+def test_transformer_basic():
+    # instruction uses both fields
+    instr = lambda query, qcontext: f"ask: {query} | {qcontext}"
+    return PromptTransformer(instruction=instr, input_fields=["query", "qcontext"])

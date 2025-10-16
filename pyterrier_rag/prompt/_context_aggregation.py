@@ -69,6 +69,9 @@ class Concatenator(pt.Transformer):
         pta.validate.columns(inp, includes=["qid"] + self.in_fields)
         output_frame = pta.DataFrameBuilder([self.out_field, "qid", "query"])
 
+        if inp is None or inp.empty:
+            return output_frame.to_df()
+
         for qid, group in inp.groupby("qid"):
             inp = group.to_dict(orient="records")
             qid = inp[0].get("qid", None)

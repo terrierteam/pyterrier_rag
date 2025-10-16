@@ -210,11 +210,15 @@ class TextGenerator(pt.Transformer):
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         pta.validate.columns(inp, includes=[self.input_field])
+
         input_columns = inp.columns.tolist()
         output_columns = [*input_columns, self.output_field]
         if self.logprobs_field is not None:
             output_columns.append(self.logprobs_field)
         output_frame = pta.DataFrameBuilder(output_columns)
+
+        if inp is None or inp.empty:
+            return output_frame.to_df()
 
         for chunk in chunked(inp.to_dict(orient="records"), self.batch_size):
             chunk = list(chunk)

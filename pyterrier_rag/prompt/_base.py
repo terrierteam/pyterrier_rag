@@ -108,6 +108,9 @@ class PromptTransformer(pt.Transformer):
         pta.validate.columns(inp, includes=["qid"] + self.input_fields)
         output_frame = pta.DataFrameBuilder([self.output_field, "qid", "query_0"])
 
+        if inp is None or inp.empty:
+            return output_frame.to_df()
+
         for qid, group in inp.groupby("qid"):
             inp = group.to_dict(orient="records")
             query = inp[0].get("query", None)
