@@ -65,7 +65,7 @@ class AgenticRAG(pt.Transformer):
                 'context': self.prompt.format(question=row["query"]) if self.prompt else row["query"],
                 'search_history': [],
                 'search_iterations' : 0,
-                'qanswer' : None,
+                'qanswer' : '',
                 'output' : '',
                 'stop_reason' : None,
             }

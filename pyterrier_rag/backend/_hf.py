@@ -199,8 +199,8 @@ class StopOnSequence(StoppingCriteria):
         rtr = []
         for tokens in output_ids:
             for stop_seq in self.target_ids:
-                stop_seq = torch.Tensor(stop_seq).int()
-                if tokens[-len(stop_seq):] == stop_seq:
+                stop_seq = torch.tensor(stop_seq, device=tokens.device, dtype=tokens.dtype)
+                if (tokens[-len(stop_seq):] == stop_seq).all():
                     tokens = tokens[:-len(stop_seq)]
             rtr.append(tokens)
         return rtr
