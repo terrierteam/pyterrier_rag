@@ -10,7 +10,7 @@ class R1Searcher(AgenticRAG):
         from ... import VLLMBackend
         backend = VLLMBackend.from_dsn(f"vllm:{model}")
         return R1Searcher(*args, backend=backend, **kwargs)
-    
+
     @staticmethod 
     def from_hf(*args, model=DEFAULT_MODEL, **kwargs):
         from ... import HuggingFaceBackend
@@ -35,11 +35,17 @@ class R1Searcher(AgenticRAG):
              max_tokens=512,
              prompt_type : Literal['v1', 'v2', 'v3']='v1',
              **kwargs):
-        super().__init__(retriever, backend, temperature=temperature,
-                         top_k=top_k, top_p=top_p, max_turn=max_turn,
-                         max_tokens=max_tokens, model_id=None, model_kw_args={},
-                         prompt=self.get_prompt(prompt_type)
-                         )
+        super().__init__(
+            retriever,
+            backend,
+            temperature=temperature,
+            top_k=top_k,
+            top_p=top_p,
+            max_turn=max_turn,
+            max_tokens=max_tokens,
+            prompt=self.get_prompt(prompt_type),
+            **kwargs,
+        )
 
         self.start_search_tag = "<|begin_of_query|>"
         self.end_search_tag = "<|end_of_query|>"
@@ -55,7 +61,7 @@ class R1Searcher(AgenticRAG):
             return V2_PROMPT
         elif prompt_type == 'v3':
             return V3_PROMPT
-    
+
 
 V0_PROMPT = """The User asks a question, and the Assistant solves it.
 The Assistant first thinks about the reasoning process in the mind and then provides the User with the final answer.
