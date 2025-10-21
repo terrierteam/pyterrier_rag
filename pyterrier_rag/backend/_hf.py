@@ -56,11 +56,12 @@ class HuggingFaceBackend(Backend):
             device = torch.device(device)
         self.device = device
 
-        self._model = (
-            None
-            if self._model_class is None
-            else self._model_class.from_pretrained(model_id, **model_args).to(self.device).eval()
-        )
+        self._model = None
+        if self._model_class:
+            self._model = self._model_class.from_pretrained(model_id, **model_args).eval()
+            if model_args.get("device_map") is None:
+                self._model = self._model.to(self.device)
+
         self.tokenizer = AutoTokenizer.from_pretrained(model_id)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -215,7 +216,7 @@ class StopOnSequence(StoppingCriteria):
                     tokens = tokens[:-len(stop_seq)]
             rtr.append(tokens)
         return rtr
-        
+
 
 class StopWordCriteria(StoppingCriteria):
     def __init__(
