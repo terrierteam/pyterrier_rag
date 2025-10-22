@@ -5,12 +5,8 @@ import pyterrier as pt
 import pyterrier_alpha as pta
 
 from pyterrier_rag.backend import Backend
-from pyterrier_rag.prompt import PromptTransformer
-
-
-GENERIC_PROMPT = (
-    "Use the context information to answer the Question: \n Context: {{ qcontext }} \n Question: {{ query }} \n Answer:"
-)
+from pyterrier_rag.prompt.default import DefaultPrompt
+from pyterrier_rag.prompt.jinja import jinja_formatter
 
 
 class Reader(pt.Transformer):
@@ -31,21 +27,19 @@ class Reader(pt.Transformer):
     Example using a local LLM::
 
         from pyterrier_rag.backend import Seq2SeqLMBackend
-        from pyterrier_rag.prompt import Concatenator
         from pyterrier_rag.readers import Reader
 
         flant5 = Reader(Seq2SeqLMBackend('google/flan-t5-base'))
-        bm25_flant5 = bm25_ret % 10 >> Concatenator() >> flant5
+        bm25_flant5 = bm25_ret % 10 >> flant5
         bm25_flant5.search("What is the capital of France?")
 
     Example using a remote LLM::
 
         from pyterrier_rag.backend import OpenAIBackend
-        from pyterrier_rag.prompt import Concatenator
         from pyterrier_rag.readers import Reader
 
-        llamma = Reader(OpenAIBackend("llama-3-8b-instruct", api_key="your_api_key", base_url="your_base_url"))
-        bm25_llamma = bm25_ret % 10 >> Concatenator() >> llamma
+        llamma = Reader(OpenAIBackend("llama-3-8b-instruct", api_key="your_api_key", base_url="your_base_url"). 
+        bm25_llamma = bm25_ret % 10 >> llamma
         bm25_llamma.search("What is the capital of Italy?")
 
 
@@ -53,37 +47,27 @@ class Reader(pt.Transformer):
     def __init__(
         self,
         backend: Union[Backend, str],
-        prompt: Union[PromptTransformer, str] = GENERIC_PROMPT,
+        prompt: Union[callable, str] = DefaultPrompt,
+        answer_extraction: callable = lambda outputs: outputs,
         output_field: str = "qanswer",
     ):
-        self.prompt = prompt
         self.backend = backend
+        self.prompt = prompt if callable(prompt) else jinja_formatter(prompt)
+        self.answer_extraction = answer_extraction
         self.output_field = output_field
-        self.__post_init__()
-
-    def __post_init__(self):
-        if isinstance(self.prompt, str):
-            self.prompt = PromptTransformer(
-                instruction=self.prompt,
-                model_name_or_path=self.backend.model_id,
-            )
-        if isinstance(self.prompt, PromptTransformer):
-            self.prompt.set_output_attribute(self.backend.supports_message_input)
-            if self.prompt.expects_logprobs and not self.backend.supports_logprobs:
-                raise ValueError("The LLM does not support logprobs")
-            elif self.prompt.expects_logprobs and self.backend.supports_logprobs:
-                self.backend = self.backend.logprobs_generator()
-            else:
-                self.backend = self.backend.text_generator()
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
-        pta.validate.columns(inp, includes=['qid', *self.prompt.input_fields])
+        pta.validate.columns(inp, includes=['qid', 'query', 'docno', 'text'])
 
         if inp is None or inp.empty:
-            return pd.DataFrame(columns=[self.output_field, self.prompt.output_field, "qid"])
-        prompts = self.prompt(inp)
-        outputs = self.backend(prompts)
-        answers = self.prompt.answer_extraction(outputs)
+            return pd.DataFrame(columns=["qid", self.output_field, 'qprompt'])
 
-        prompts[self.output_field] = answers[self.output_field]
-        return prompts
+        prompt_frame = pta.DataFrameBuilder(['qid', 'query', 'qprompt'])
+        for qid, group in inp.groupby('qid'):
+            prompt = self.prompt(docs=group.iterrows(), **group[pt.model.query_columns(inp)].iloc[0])
+            prompt_frame.extend({'qid': qid, 'query': group['query'].iloc[0], 'qprompt': prompt})
+
+        output = self.backend(prompt_frame.to_df())
+        output[self.output_field] = output[self.backend.output_fields].apply(self.answer_extraction)
+
+        return output
