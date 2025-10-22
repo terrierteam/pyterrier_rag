@@ -85,6 +85,7 @@ def test_stopwordcriteria_basic_behavior():
     # latest decode yields 'foo_stop', so criteria True
     assert res[0]
 
-    @pt.testing.transformer_test_class
-    def test_inspect():
-        return Backend.from_dsn('huggingface:HuggingFaceTB/SmolLM-135M')
+
+@pt.testing.transformer_test_class
+def test_inspect():
+    return Backend.from_dsn('huggingface:HuggingFaceTB/SmolLM-135M')
