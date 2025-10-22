@@ -1,7 +1,10 @@
+from typing import Dict, Any
+
+import pandas as pd
 import pyterrier as pt
 import pyterrier_alpha as pta
 from transformers import AutoTokenizer
-from typing import Dict, Any
+
 
 def process_text(examples,tokenizer,type=None):
 
@@ -112,92 +115,98 @@ class R1Searcher(pt.Transformer):
         rtr.verbose = self.verbose
         return rtr
 
-    @pta.transform.by_query(add_ranks=False)
-    def transform_iter(self, inp):
-        inp = next(inp)
-        question = inp["query"]
-        qid = inp["qid"]
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
+        pta.validate.columns(inp, includes=["qid", "query"])
+        output_frame = pta.DataFrameBuilder(["qid", "query", "output", "qanswer", "iteration", "all_queries", "stop_reason_final"])
         
-        ds = process_text({'question' : question}, self.tokenizer, type=self.prompt_type)
-        continued_answer = dict(ds) #copy.deepcopy?
-        continued_answer["gen_text_store"] = ""
-        queries = []
-
-        for k in range(self.max_iterations):
-            output = self.llm.generate([continued_answer['chat_prompt']], self.sampling_params, use_tqdm = self.verbose)[0]
-            prompt = output.prompt
-            gen_text_store = continued_answer["gen_text_store"]
-            stop_reason = output.outputs[0].stop_reason
-            generated_text = output.outputs[0].text
+        for qid, group in inp.groupby("qid"):
+            inp = list(map(lambda x: x[1], group.to_dict(orient="records")))
+            question = inp[0]["query"]
+            qid = inp[0]["qid"]
             
-            if k == 9: # original code breaks out here. 
-                original_data = {
-                        "qid" : qid,
-                        "query":question,
-                        "all_queries" : queries,
-                        'iteration' : k,
-                        "output":generated_text,
-                        "stop_reason_final": "many_retrieve",
-                        "qanswer": "I don't know."
-                }
+            ds = process_text({'question' : question}, self.tokenizer, type=self.prompt_type)
+            continued_answer = dict(ds) #copy.deepcopy?
+            continued_answer["gen_text_store"] = ""
+            queries = []
 
-                return [original_data]
+            for k in range(self.max_iterations):
+                output = self.llm.generate([continued_answer['chat_prompt']], self.sampling_params, use_tqdm = self.verbose)[0]
+                prompt = output.prompt
+                gen_text_store = continued_answer["gen_text_store"]
+                stop_reason = output.outputs[0].stop_reason
+                generated_text = output.outputs[0].text
+                
+                if k == 9: # original code breaks out here. 
+                    original_data = {
+                            "qid" : qid,
+                            "query":question,
+                            "all_queries" : queries,
+                            'iteration' : k,
+                            "output":generated_text,
+                            "stop_reason_final": "many_retrieve",
+                            "qanswer": "I don't know."
+                    }
 
-            if "<answer>" in generated_text and stop_reason=="</answer>":
-                original_data = {
-                    "qid" : qid,
-                    "query":question,
-                    'iteration' : k,
-                    "all_queries" : queries,
-                    "qanswer": generated_text.split("<answer>")[-1].split("</answer>")[0],
-                    "stop_reason_final": "finished",
-                    "output": gen_text_store + generated_text + "</answer>",
-                }
-                return [original_data]
-        
-            elif "<|begin_of_query|>" in generated_text and stop_reason=="<|end_of_query|>":
-                query = generated_text.split("<|begin_of_query|>")[-1].split("<|end_of_query|>")[0]
-                query = query.replace('"',"").replace("'","").replace("\t"," ").replace("...","")
-                if query:
-                        queries.append((k, query))
-                        original_data = {
-                            "chat_prompt":prompt + generated_text.strip(), #+ "<|end_of_query|> "+ "\n\nThe retrieved content are:\n<tool_call>\n"  +  doc_content + "\n</tool_call>\n\n",
-                            "stop_reason": stop_reason,
-                            "gen_text_store": gen_text_store + generated_text.strip() #+ "<|end_of_query|> "+ "\n\nThe retrieved content are:\n<tool_call>\n"  +  doc_content + "\n</tool_call>\n\n",
-                            }
-                        
-                        results = (self.retriever % self.top_k).search(query, qid="%s-%d" % (qid, k))
-                        if len(results) > 0:                
-                            doc_content_list = [f"({j+1}){doc_content}\n" for j, doc_content in enumerate(results["text"])]
-                            doc_content = ''.join(doc_content_list)
-                        else:
-                            doc_content = 'None'
-                        continued_text_now = original_data
-                        continued_text_now["chat_prompt"] = continued_text_now["chat_prompt"] + "<|end_of_query|>\n\n"+ "<|begin_of_documents|>\n" +  doc_content + "<|end_of_documents|>\n\n"
-                        continued_text_now["gen_text_store"] = continued_text_now["gen_text_store"] + "<|end_of_query|>\n\n"+ "<|begin_of_documents|>\n" +  doc_content + "<|end_of_documents|>\n\n"
-                        
-                        continued_answer = continued_text_now
-                        continue
-                else: # we saw begin_of_query and end_of_query, but no valid query found.
+                    output_frame.extend(original_data)
+                    break
+                if "<answer>" in generated_text and stop_reason=="</answer>":
                     original_data = {
                         "qid" : qid,
                         "query":question,
-                        "output": gen_text_store + generated_text.strip(),
                         'iteration' : k,
                         "all_queries" : queries,
-                        "stop_reason_final": "query_inst_error",
+                        "qanswer": generated_text.split("<answer>")[-1].split("</answer>")[0],
+                        "stop_reason_final": "finished",
+                        "output": gen_text_store + generated_text + "</answer>",
+                    }
+                    output_frame.extend(original_data)
+                    break
+            
+                elif "<|begin_of_query|>" in generated_text and stop_reason=="<|end_of_query|>":
+                    query = generated_text.split("<|begin_of_query|>")[-1].split("<|end_of_query|>")[0]
+                    query = query.replace('"',"").replace("'","").replace("\t"," ").replace("...","")
+                    if query:
+                            queries.append((k, query))
+                            original_data = {
+                                "chat_prompt":prompt + generated_text.strip(), #+ "<|end_of_query|> "+ "\n\nThe retrieved content are:\n<tool_call>\n"  +  doc_content + "\n</tool_call>\n\n",
+                                "stop_reason": stop_reason,
+                                "gen_text_store": gen_text_store + generated_text.strip() #+ "<|end_of_query|> "+ "\n\nThe retrieved content are:\n<tool_call>\n"  +  doc_content + "\n</tool_call>\n\n",
+                                }
+                            
+                            results = (self.retriever % self.top_k).search(query, qid="%s-%d" % (qid, k))
+                            if len(results) > 0:                
+                                doc_content_list = [f"({j+1}){doc_content}\n" for j, doc_content in enumerate(results["text"])]
+                                doc_content = ''.join(doc_content_list)
+                            else:
+                                doc_content = 'None'
+                            continued_text_now = original_data
+                            continued_text_now["chat_prompt"] = continued_text_now["chat_prompt"] + "<|end_of_query|>\n\n"+ "<|begin_of_documents|>\n" +  doc_content + "<|end_of_documents|>\n\n"
+                            continued_text_now["gen_text_store"] = continued_text_now["gen_text_store"] + "<|end_of_query|>\n\n"+ "<|begin_of_documents|>\n" +  doc_content + "<|end_of_documents|>\n\n"
+                            
+                            continued_answer = continued_text_now
+                            continue
+                    else: # we saw begin_of_query and end_of_query, but no valid query found.
+                        original_data = {
+                            "qid" : qid,
+                            "query":question,
+                            "output": gen_text_store + generated_text.strip(),
+                            'iteration' : k,
+                            "all_queries" : queries,
+                            "stop_reason_final": "query_inst_error",
+                            "qanswer": "I don't know."
+                        }
+                        output_frame.extend(original_data)
+                        break
+                else:
+                    original_data = {
+                        "qid" : qid,
+                        "query": question,
+                        'iteration' : k,
+                        "all_queries" : queries,
+                        'output' : gen_text_store + generated_text.strip(),
+                        "stop_reason_final": "shot_down",
                         "qanswer": "I don't know."
                     }
-                    return [original_data]
-            else:
-                original_data = {
-                    "qid" : qid,
-                    "query": question,
-                    'iteration' : k,
-                    "all_queries" : queries,
-                    'output' : gen_text_store + generated_text.strip(),
-                    "stop_reason_final": "shot_down",
-                    "qanswer": "I don't know."
-                }
-                return [original_data]
-        
+                    output_frame.extend(original_data)
+                    break
+        return output_frame.to_df()

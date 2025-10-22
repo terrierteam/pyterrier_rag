@@ -1,5 +1,6 @@
-from typing import Optional, Union, Iterable, List, Any
+from typing import Optional, Union, List, Any
 
+import pandas as pd
 import pyterrier as pt
 import pyterrier_alpha as pta
 from pyterrier_rag.prompt.wrapper import prompt
@@ -103,20 +104,24 @@ class PromptTransformer(pt.Transformer):
         current_prompt.append_message(self.user_role, instruction)
         return self.to_output(current_prompt)
 
-    @pta.transform.by_query(add_ranks=False)
-    def transform_iter(self, inp: Iterable[dict]) -> Iterable[dict]:
-        return self.transform_by_query(inp)
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
+        pta.validate.columns(inp, includes=["qid"] + self.input_fields)
+        output_frame = pta.DataFrameBuilder([self.output_field, "qid", "query_0"])
 
-    def transform_by_query(self, inp: Iterable[dict]) -> Iterable[dict]:
-        inp = list(inp)
-        qid = inp[0].get("qid", None)
-        query = inp[0].get("query", None)
-        fields = {k: v for k, v in inp[0].items() if k in self.input_fields}
-        if any([f not in fields for f in self.input_fields]):
-            message = f"Expected {self.input_fields} but recieved {fields}"
-            raise ValueError(message)
-        prompt = self.create_prompt(fields)
-        return [{self.output_field: prompt, "qid": qid, "query_0": query}]
+        if inp is None or inp.empty:
+            return output_frame.to_df()
+
+        for qid, group in inp.groupby("qid"):
+            inp = group.to_dict(orient="records")
+            query = inp[0].get("query", None)
+            fields = {k: v for k, v in inp[0].items() if k in self.input_fields}
+            if any([f not in fields for f in self.input_fields]):
+                message = f"Expected {self.input_fields} but recieved {fields}"
+                raise ValueError(message)
+            prompt = self.create_prompt(fields)
+            output_frame.extend({self.output_field: prompt, "qid": qid, "query_0": query})
+
+        return output_frame.to_df()
 
 
 __all__ = ["PromptTransformer"]
