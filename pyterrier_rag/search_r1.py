@@ -172,10 +172,10 @@ class SearchR1(pt.Transformer):
                     output_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
                     answer = get_answer(output_text)
                     output_frame.extend({'qid' : qid, 'query' : question, 'qanswer' : answer, 'output': prompt + "\n" + output_text, 'iteration' : cnt, 'all_queries' : all_queries})
-
+                    break
                 generated_tokens = outputs[0][input_ids.shape[1]:]
                 output_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
-                
+
                 this_query = get_query(self.tokenizer.decode(outputs[0], skip_special_tokens=True))
                 if this_query:
                     search_results = search(self.retriever, this_query, qid="%s-%d" % (qid, cnt))
@@ -186,3 +186,4 @@ class SearchR1(pt.Transformer):
                 search_text = curr_search_template.format(output_text=output_text, search_results=search_results)
                 prompt += search_text
                 cnt += 1
+        return output_frame.to_dataframe()
