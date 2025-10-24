@@ -58,7 +58,7 @@ class HuggingFaceBackend(Backend):
             if self._model_class is None
             else self._model_class.from_pretrained(model_id, **model_args).to(self.device).eval()
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id)
+        self._tokenizer = AutoTokenizer.from_pretrained(model_id)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
             self._model.generation_config.pad_token_id = self.tokenizer.pad_token_id
@@ -76,6 +76,10 @@ class HuggingFaceBackend(Backend):
             }
         self._generation_args = generation_args
 
+    @property
+    def tokenizer(self) -> AutoTokenizer:
+        return self._tokenizer
+
     @torch.no_grad()
     def generate(
         self,
@@ -92,13 +96,23 @@ class HuggingFaceBackend(Backend):
         if num_responses != 1:
             raise ValueError(f'{self!r} does not support num_responses > 1')
         # Tokenize inputs
-        inputs = self.tokenizer(
-            inps,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            max_length=self.max_input_length,
-        )
+
+        if type(inps[0]) is not str:
+            inputs = self.tokenizer.apply_chat_template(
+                inps,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=self.max_input_length,
+            )
+        else:
+            inputs = self.tokenizer(
+                inps,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=self.max_input_length,
+            )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         generation_args = {}
