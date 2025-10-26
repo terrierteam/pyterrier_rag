@@ -5,6 +5,7 @@ from transformers import (
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
     StoppingCriteria,
+    StoppingCriteriaList
 )
 import torch
 
@@ -14,6 +15,8 @@ from pyterrier_rag.backend._base import Backend, BackendOutput
 class HuggingFaceBackend(Backend):
     """
         Backend implementation using a HuggingFace Transformer model.
+        This backend assumes the class can be opened using AutoModelForCausalLM.
+        If your class needs AutoModelForSeq2SeqLM, then use Seq2SeqLMBackend.
 
         .. cite.dblp:: journals/corr/abs-1910-03771
 
@@ -83,6 +86,7 @@ class HuggingFaceBackend(Backend):
         *,
         return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
+        stop_tokens : Optional[List[str]] = None,
         num_responses: int = 1,
     ) -> List[BackendOutput]:
         if not isinstance(inps[0], str):
@@ -105,6 +109,10 @@ class HuggingFaceBackend(Backend):
         generation_args.update(self._generation_args)
         if max_new_tokens:
             generation_args['max_new_tokens'] = max_new_tokens
+
+        if stop_tokens is not None:
+            generation_args['stopping_criteria'] = StoppingCriteriaList([
+                StopOnSequence(stop_tokens, self.tokenizer)])
 
         # Generate outputs
         outputs = self._model.generate(**inputs, return_dict_in_generate=True, output_scores=return_logprobs, **generation_args)
@@ -161,6 +169,26 @@ class Seq2SeqLMBackend(HuggingFaceBackend):
     _model_class = AutoModelForSeq2SeqLM
     _remove_prompt = False
 
+class StopOnSequence(StoppingCriteria):
+    def __init__(self, target_sequences, tokenizer):
+        # Encode the string so we have the exact token-IDs pattern
+        self.target_ids = [tokenizer.encode(target_sequence, add_special_tokens=False) for target_sequence in target_sequences]
+        self.target_lengths = [len(target_id) for target_id in self.target_ids]
+        self._tokenizer = tokenizer
+
+    def __call__(self, input_ids, scores, **kwargs):
+        # Make sure the target IDs are on the same device
+        targets = [torch.as_tensor(target_id, device=input_ids.device) for target_id in self.target_ids]
+
+        if input_ids.shape[1] < min(self.target_lengths):
+            return False
+
+        # Compare the tail of input_ids with our target_ids
+        for i, target in enumerate(targets):
+            if torch.equal(input_ids[0, -self.target_lengths[i]:], target):
+                return True
+
+        return False
 
 class StopWordCriteria(StoppingCriteria):
     def __init__(

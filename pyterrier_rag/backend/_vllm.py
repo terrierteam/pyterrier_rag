@@ -61,6 +61,7 @@ class VLLMBackend(Backend):
         *,
         return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
+        stop_tokens : Optional[List[str]] = None,
         num_responses: int = 1,
     ) -> List[BackendOutput]:
         if not isinstance(inps[0], str):
@@ -73,6 +74,8 @@ class VLLMBackend(Backend):
             generation_args['max_tokens'] = max_new_tokens
         if return_logprobs:
             generation_args['logprobs'] = self.logprobs_topk
+        if stop_tokens is not None:
+            generation_args['stop'] = stop_tokens
         args = self.to_params(**generation_args)
         responses = self.model.generate(inps, args)
         text = map(lambda x: x.outputs[0].text, responses)
