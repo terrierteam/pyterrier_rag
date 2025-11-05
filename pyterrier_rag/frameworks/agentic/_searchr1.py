@@ -20,10 +20,15 @@ class SearchR1(AgenticRAG):
     ) -> "SearchR1":
         if not backend_args:
             backend_args = {
+                "model_args": {
+                    "gpu_memory_utilization": 0.8,
+                    "dtype": "bfloat16",
+                    "max_model_len": 10240,
+                },
                 "generation_args": {
-                    "temperature": 0.7, 
+                    "temperature": 0.7,
                     "max_tokens": 1024,
-                }
+                },
             }
 
         backend = VLLMBackend(model, **backend_args)
