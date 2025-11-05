@@ -12,11 +12,8 @@ class AgenticRAG(pt.Transformer):
         retriever : pt.Transformer, 
         backend : Backend,
         prompt:str = "{question}",
-        temperature:float = 0.7,
         top_k:int = 5,
-        top_p:float = 0.95,
         max_turn:int = 10,
-        max_tokens:int = None, #max tokens for the generator when using r1searcher
         start_search_tag:str = None,
         end_search_tag:str = None,
         start_results_tag:str = None,
@@ -35,11 +32,8 @@ class AgenticRAG(pt.Transformer):
         self.retriever = retriever
         self.backend = backend
         self.prompt = prompt
-        self.temperature = temperature
         self.top_k = top_k
-        self.top_p = top_p
         self.max_turn = max_turn
-        self.max_tokens = max_tokens
 
         # implement in subclasses
         self.start_search_tag = start_search_tag

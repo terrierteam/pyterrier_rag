@@ -28,21 +28,15 @@ class R1Searcher(AgenticRAG):
     def __init__(self, 
              retriever,
              backend,
-             temperature=0.3,
              top_k=8,
-             top_p=0.95,
              max_turn=6,
-             max_tokens=512,
              prompt_type : Literal['v1', 'v2', 'v3']='v1',
              **kwargs):
         super().__init__(
             retriever,
             backend,
-            temperature=temperature,
             top_k=top_k,
-            top_p=top_p,
             max_turn=max_turn,
-            max_tokens=max_tokens,
             prompt=self.get_prompt(prompt_type),
             **kwargs,
         )

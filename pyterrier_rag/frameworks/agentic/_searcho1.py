@@ -52,30 +52,29 @@ def get_multiqa_search_o1_instruction(MAX_SEARCH_LIMIT):
     )
 
 class SearchO1(AgenticRAG):
-    
+
     def __init__(self, 
             retriever,
             backend,
-            temperature=0.3,
             top_k=8,
-            top_p=0.95,
             max_turn=6,
-            max_tokens=512,
             analyse_results : bool = False,
             prompt_type : Union[Literal['single'], Literal['multi']]='single',
             **kwargs):
-        super().__init__(retriever, backend, temperature=temperature,
-                         top_k=top_k, top_p=top_p, max_turn=max_turn,
-                         max_tokens=max_tokens, 
-                         prompt=self.get_prompt(prompt_type, max_turn, backend.model_id),
-                         **kwargs
-                         )
+        super().__init__(
+            retriever,
+            backend,
+            top_k=top_k,
+            max_turn=max_turn,
+            prompt=self.get_prompt(prompt_type, max_turn, backend.model_id),
+            **kwargs,
+        )
         self.start_search_tag = "<|begin_search_query|>"
         self.end_search_tag = "<|end_search_query|>"
         self.start_results_tag = "<|begin_of_documents|>"
         self.end_results_tag = "<|end_of_documents|>"
 
-        # TODO: plug in analyser() as a replacement of super.format_docs(). I think 
+        # TODO: plug in analyser() as a replacement of super.format_docs(). I think
         # format_docs() could be a transformer
         assert not analyse_results, "analyse_results not yet implemented"
 
@@ -85,7 +84,7 @@ class SearchO1(AgenticRAG):
             rtr = get_singleqa_search_o1_instruction(max_turns)
         elif prompt_type == 'multi':
             rtr = get_multiqa_search_o1_instruction(max_turns)
-        
+
         if 'qwq' in model_name.lower():
             # qwq models are tuned for thinking step by step
             rtr += (
@@ -99,7 +98,7 @@ class SearchO1(AgenticRAG):
                 'You should provide your final answer in the format <answer>YOUR ANSWER</answer>.\n\n' #'Provide your final answer in the format \\boxed{YOUR_ANSWER}.\n\n'
                 'Question:\n{question}\n\n'
             )
-        
+
         return rtr
 
 
@@ -111,7 +110,7 @@ def analyser(backend):
                                         documents="\n\n".join(df_res['text'].tolist()))
         return pd.DataFrame([df_res.iloc[0]['qid'], prompt], columns=['qid', 'output'])
     return pt.apply.by_query(_analyser) >> backend.text_generator()
-    
+
 
 ANALYSIS_PROMPT = """**Task Instruction:**
 You are tasked with reading and analyzing web pages based on the following inputs: **Previous Reasoning Steps**, **Current Search Query**, and **Searched Web Pages**. 

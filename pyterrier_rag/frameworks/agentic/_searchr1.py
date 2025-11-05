@@ -58,7 +58,14 @@ class SearchR1(AgenticRAG):
 
         return SearchR1(retriever, backend, **kwargs)
 
-    def __init__(self, retriever, backend, temperature=0.7, top_k=3, max_turn=10, max_tokens=1024, **kwargs):
+    def __init__(
+        self,
+        retriever,
+        backend,
+        top_k=3,
+        max_turn=4,
+        **kwargs,
+    ):
 
         super().__init__(
             retriever,
@@ -66,8 +73,6 @@ class SearchR1(AgenticRAG):
             prompt=self._get_prompt(backend),
             top_k=top_k,
             max_turn=max_turn,
-            max_tokens=max_tokens,
-            temperature=temperature,
             start_search_tag="<search>",
             end_search_tag="</search>",
             start_results_tag="<information>",
