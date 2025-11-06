@@ -37,7 +37,7 @@ class R1Searcher(AgenticRAG):
             backend,
             top_k=top_k,
             max_turn=max_turn,
-            prompt=self.get_prompt(prompt_type),
+            prompt_template=self._get_prompt_template(prompt_type),
             **kwargs,
         )
 
@@ -46,7 +46,7 @@ class R1Searcher(AgenticRAG):
         self.start_results_tag = "<|begin_of_documents|>"
         self.end_results_tag = "<|end_of_documents|>"
 
-    def get_prompt(self, prompt_type: str):
+    def _get_prompt_template(self, prompt_type: str):
         if prompt_type == 'v0':
             return V0_PROMPT
         elif prompt_type == 'v1':

@@ -2,6 +2,7 @@ from typing import Optional
 
 import torch
 import pyterrier as pt
+import pandas as pd
 
 from ._base import AgenticRAG
 from ... import VLLMBackend, HuggingFaceBackend
@@ -68,14 +69,14 @@ class SearchR1(AgenticRAG):
         retriever,
         backend,
         top_k=3,
-        max_turn=4,
+        max_turn=10,
         **kwargs,
     ):
 
         super().__init__(
             retriever,
             backend,
-            prompt=self._get_prompt(backend),
+            prompt_template=self._get_prompt_template(backend),
             top_k=top_k,
             max_turn=max_turn,
             start_search_tag="<search>",
@@ -85,7 +86,27 @@ class SearchR1(AgenticRAG):
             **kwargs,
         )
 
-    def _get_prompt(self, backend: HuggingFaceBackend | VLLMBackend) -> str:
+    def wrap_search_results(self, docs: pd.DataFrame) -> str:
+        if not isinstance(docs, pd.DataFrame) or docs.empty:
+            return f"{self.start_results_tag}{self.end_results_tag}"
+
+        def _format_doc(idx, doc) -> str:
+            title = doc.title.strip('"')
+            text = doc.text
+            return f'Doc {idx}(Title: "{title}") {text.removeprefix(title).lstrip()}'
+
+        docs_str = "\n".join(_format_doc(idx, doc) for idx, doc in enumerate(docs.itertuples(), start=1))
+        return f"\n\n{self.start_results_tag}{docs_str}{self.end_results_tag}\n\n"
+
+    def get_prompt(self, question: str) -> str:
+        # Search-R1 was trained with this preprocessing
+        question = question.strip()
+        if question[-1] != '?':
+            question += '?'
+
+        return self.prompt_template.format(question=question)
+
+    def _get_prompt_template(self, backend: HuggingFaceBackend | VLLMBackend) -> str:
         if isinstance(backend, HuggingFaceBackend):
             tokenizer = backend.tokenizer
         elif isinstance(backend, VLLMBackend):

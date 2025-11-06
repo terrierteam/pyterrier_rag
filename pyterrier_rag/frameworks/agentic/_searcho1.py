@@ -66,7 +66,7 @@ class SearchO1(AgenticRAG):
             backend,
             top_k=top_k,
             max_turn=max_turn,
-            prompt=self.get_prompt(prompt_type, max_turn, backend.model_id),
+            prompt_template=self._get_prompt_template(prompt_type, max_turn, backend.model_id),
             **kwargs,
         )
         self.start_search_tag = "<|begin_search_query|>"
@@ -78,7 +78,7 @@ class SearchO1(AgenticRAG):
         # format_docs() could be a transformer
         assert not analyse_results, "analyse_results not yet implemented"
 
-    def get_prompt(self, prompt_type: str, max_turns, model_name):
+    def _get_prompt_template(self, prompt_type: str, max_turns, model_name):
         rtr = None
         if prompt_type == 'single':
             rtr = get_singleqa_search_o1_instruction(max_turns)
