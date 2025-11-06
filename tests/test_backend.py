@@ -1,12 +1,8 @@
 import itertools
-import unittest
-import pandas as pd
 import pytest
 import torch
-import numpy as np
 from typing import Iterable
 from pyterrier_rag.backend import Backend, BackendOutput, TextGenerator
-from transformers import GenerationConfig
 
 # A minimal subclass implementing `generate` for testing
 class DummyBackend(Backend):
@@ -72,7 +68,7 @@ def test_logprobgenerator_transform_iter_success(monkeypatch):
     result = lb.transform_iter(inputs)
     for out_dict, inp in zip(result, inputs):
         assert out_dict['qanswer'].startswith('resp:')
-        assert out_dict['qanswer_logprobs'] == [{'a': 1, 'b': 2}]
+        assert out_dict['qanswer_logprobs'] == {'a': 1, 'b': 2}
 
 
 class BaseTestBackend:

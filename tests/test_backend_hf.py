@@ -1,6 +1,7 @@
 import unittest
 import pytest
 import torch
+import pyterrier as pt
 
 from pyterrier_rag.backend._hf import HuggingFaceBackend, Seq2SeqLMBackend, StopWordCriteria
 from pyterrier_rag.backend import BackendOutput, Backend
@@ -83,3 +84,8 @@ def test_stopwordcriteria_basic_behavior():
     res = crit(input_ids, scores=None)
     # latest decode yields 'foo_stop', so criteria True
     assert res[0]
+
+
+@pt.testing.transformer_test_class
+def test_inspect():
+    return Backend.from_dsn('huggingface:HuggingFaceTB/SmolLM-135M')

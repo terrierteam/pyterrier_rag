@@ -1,6 +1,8 @@
 from typing import Union
+
 import pandas as pd
 import pyterrier as pt
+import pyterrier_alpha as pta
 
 from pyterrier_rag.backend import Backend
 from pyterrier_rag.prompt import PromptTransformer
@@ -75,6 +77,10 @@ class Reader(pt.Transformer):
                 self.backend = self.backend.text_generator()
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
+        pta.validate.columns(inp, includes=['qid', *self.prompt.input_fields])
+
+        if inp is None or inp.empty:
+            return pd.DataFrame(columns=[self.output_field, self.prompt.output_field, "qid"])
         prompts = self.prompt(inp)
         outputs = self.backend(prompts)
         answers = self.prompt.answer_extraction(outputs)
