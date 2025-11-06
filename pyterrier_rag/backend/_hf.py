@@ -5,7 +5,8 @@ from transformers import (
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
     StoppingCriteria,
-    StoppingCriteriaList
+    StoppingCriteriaList,
+    PreTrainedTokenizerBase,
 )
 import torch
 
@@ -113,7 +114,12 @@ class HuggingFaceBackend(Backend):
 
         stop_sequences_criteria = None
         if stop_sequences is not None:
-            stop_sequences_criteria = StopOnSequence(stop_sequences, self.tokenizer)
+            stop_sequences_criteria = StopWordCriteria(
+                tokenizer=self.tokenizer,
+                prompt_size=inputs["input_ids"].shape[-1],
+                stop_words=stop_sequences,
+                check_every=1,
+            )
             generation_args['stopping_criteria'] = StoppingCriteriaList([stop_sequences_criteria])
 
         # Generate outputs
@@ -133,12 +139,17 @@ class HuggingFaceBackend(Backend):
                 sliced_sequences.append(sequences[i, prompt_length:])
             sequences = sliced_sequences
 
-        # for uniformity with the OpenAI and VLLM backends, remove stop sequences from the end of the outputs, annoying as it is.
-        if stop_sequences_criteria is not None:
-            sequences = stop_sequences_criteria.remove_suffix(sequences)
-
         # Decode outputs
         texts = self.tokenizer.batch_decode(sequences, skip_special_tokens=True)
+
+        # for uniformity with the OpenAI and VLLM backends, remove stop sequences from the end of the outputs, annoying as it is.
+        if stop_sequences_criteria is not None:
+            for idx, text in enumerate(texts):
+                for seq in stop_sequences:
+                    text = text.rsplit(seq, maxsplit=1)[0]
+
+                texts[idx] = text
+
         return [
             BackendOutput(text=text)
             for text, length in zip(texts, prompt_lengths)

@@ -98,6 +98,15 @@ class SearchR1(AgenticRAG):
         docs_str = "\n".join(_format_doc(idx, doc) for idx, doc in enumerate(docs.itertuples(), start=1))
         return f"\n\n{self.start_results_tag}{docs_str}{self.end_results_tag}\n\n"
 
+    def extract_search_query(self, output: str) -> Optional[str]:
+        if not output:
+            return None
+
+        *head, query = output.rsplit(self.start_search_tag, maxsplit=1)
+        query = query.split(self.end_search_tag, maxsplit=1)[0]
+
+        return query.strip() if head else None
+
     def get_prompt(self, question: str) -> str:
         # Search-R1 was trained with this preprocessing
         question = question.strip()

@@ -105,7 +105,7 @@ class AgenticRAG(pt.Transformer):
                     continue
 
                 # 2) extract the search query, terminate if no query found
-                next_search = self.get_search_query(outputs[i])
+                next_search = self.extract_search_query(outputs[i])
                 if not next_search:
                     this_query_state['stop_reason'] = 'No answer, no search'
                     state_finished_queries.append(this_query_state)
@@ -175,7 +175,7 @@ class AgenticRAG(pt.Transformer):
         return results
 
     # get search query from the output, can be similar among different models
-    def get_search_query(self, output: str) -> Optional[str]:
+    def extract_search_query(self, output: str) -> Optional[str]:
         if output is None:
             return None
         start_tag = self.start_search_tag
