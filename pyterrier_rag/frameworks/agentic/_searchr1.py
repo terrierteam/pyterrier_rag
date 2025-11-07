@@ -103,9 +103,12 @@ class SearchR1(AgenticRAG):
             return None
 
         *head, query = output.rsplit(self.start_search_tag, maxsplit=1)
+        if not head:
+            return None
+            
         query = query.split(self.end_search_tag, maxsplit=1)[0]
 
-        return query.strip() if head else None
+        return query.strip()
 
     def get_prompt(self, question: str) -> str:
         # Search-R1 was trained with this preprocessing
