@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 import pyterrier as pt
 import pandas as pd
@@ -12,11 +10,35 @@ class SearchR1(AgenticRAG):
 
     DEFAULT_MODEL = "PeterJinGo/SearchR1-nq_hotpotqa_train-qwen2.5-7b-em-ppo"
 
+    def __init__(
+        self,
+        retriever: pt.Transformer,
+        backend: VLLMBackend | HuggingFaceBackend,
+        top_k: int = 3,
+        max_turn: int = 10,
+        **kwargs,
+    ) -> None:
+
+        super().__init__(
+            retriever,
+            backend,
+            prompt_template=self._get_prompt_template(backend),
+            top_k=top_k,
+            max_turn=max_turn,
+            start_search_tag="<search>",
+            end_search_tag="</search>",
+            start_results_tag="<information>",
+            end_results_tag="</information>",
+            start_answer_tag="<answer>",
+            end_answer_tag="</answer>",
+            **kwargs,
+        )
+
     @staticmethod
     def from_vllm(
         retriever: pt.Transformer,
         model: str = DEFAULT_MODEL,
-        backend_args: Optional[dict] = None,
+        backend_args: dict | None = None,
         **kwargs,
     ) -> "SearchR1":
         if not backend_args:
@@ -40,7 +62,7 @@ class SearchR1(AgenticRAG):
     def from_hf(
         retriever: pt.Transformer,
         model: str = DEFAULT_MODEL,
-        backend_args: Optional[dict] = None,
+        backend_args: dict | None = None,
         **kwargs,
     ) -> "SearchR1":
         if not backend_args:
@@ -64,28 +86,6 @@ class SearchR1(AgenticRAG):
 
         return SearchR1(retriever, backend, **kwargs)
 
-    def __init__(
-        self,
-        retriever,
-        backend,
-        top_k=3,
-        max_turn=10,
-        **kwargs,
-    ):
-
-        super().__init__(
-            retriever,
-            backend,
-            prompt_template=self._get_prompt_template(backend),
-            top_k=top_k,
-            max_turn=max_turn,
-            start_search_tag="<search>",
-            end_search_tag="</search>",
-            start_results_tag="<information>",
-            end_results_tag="</information>",
-            **kwargs,
-        )
-
     def wrap_search_results(self, docs: pd.DataFrame) -> str:
         if not isinstance(docs, pd.DataFrame) or docs.empty:
             return f"{self.start_results_tag}{self.end_results_tag}"
@@ -98,14 +98,14 @@ class SearchR1(AgenticRAG):
         docs_str = "\n".join(_format_doc(idx, doc) for idx, doc in enumerate(docs.itertuples(), start=1))
         return f"\n\n{self.start_results_tag}{docs_str}{self.end_results_tag}\n\n"
 
-    def extract_search_query(self, output: str) -> Optional[str]:
+    def extract_search_query(self, output: str) -> str | None:
         if not output:
             return None
 
         *head, query = output.rsplit(self.start_search_tag, maxsplit=1)
         if not head:
             return None
-            
+
         query = query.split(self.end_search_tag, maxsplit=1)[0]
 
         return query.strip()
