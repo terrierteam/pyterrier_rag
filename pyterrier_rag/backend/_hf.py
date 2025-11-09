@@ -135,8 +135,15 @@ class HuggingFaceBackend(Backend):
         if self._remove_prompt:
             # Only keep tokens generated beyond the prompt length
             sliced_sequences = []
-            for i, prompt_length in enumerate(prompt_lengths):
-                sliced_sequences.append(sequences[i, prompt_length:])
+
+            if self.tokenizer.padding_side == "left":
+                # we can simply do this for both left- and right-padding
+                prompt_len_with_padding = inputs["input_ids"].shape[1]
+                for seq in sequences:
+                    sliced_sequences.append(seq[prompt_len_with_padding:])
+            else:
+                for i, prompt_length in enumerate(prompt_lengths):
+                    sliced_sequences.append(sequences[i, prompt_length:])
             sequences = sliced_sequences
 
         # Decode outputs
@@ -144,6 +151,10 @@ class HuggingFaceBackend(Backend):
 
         # for uniformity with the OpenAI and VLLM backends, remove stop sequences from the end of the outputs, annoying as it is.
         if stop_sequences_criteria is not None:
+            if not self._remove_prompt:
+                # Note: the implementation should consider if we plan to support input type `list[list[dict]]` (e.g. chat)
+                raise NotImplementedError("removing stop sequences requires removing prompts from returned outputs")
+
             for idx, text in enumerate(texts):
                 for seq in stop_sequences:
                     text = text.rsplit(seq, maxsplit=1)[0]
