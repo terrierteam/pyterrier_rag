@@ -103,7 +103,7 @@ class R1Searcher(AgenticRAG):
         if not isinstance(docs, pd.DataFrame) or docs.empty:
             return f"\n\n{self.start_results_tag}\nNone{self.end_results_tag}\n\n"
 
-        docs_str = "".join(f"({idx}){doc.text}" for idx, doc in enumerate(docs.itertuples(), start=1))
+        docs_str = "".join(f"({idx}){doc.text}\n" for idx, doc in enumerate(docs.itertuples(), start=1))
         return f"\n\n{self.start_results_tag}\n{docs_str}{self.end_results_tag}\n\n"
 
     def _get_prompt_template(self, prompt_type: str):
