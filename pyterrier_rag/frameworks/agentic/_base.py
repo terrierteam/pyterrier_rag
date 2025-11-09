@@ -1,9 +1,10 @@
-from abc import abstractmethod
-import pyterrier as pt
-from ... import Backend
-import pandas as pd
 import re
 from typing import List, Dict, Any, Optional
+
+import pyterrier as pt
+import pandas as pd
+
+from ... import Backend
 
 class AgenticRAG(pt.Transformer):
 
@@ -11,23 +12,18 @@ class AgenticRAG(pt.Transformer):
         self,
         retriever: pt.Transformer,
         backend: Backend,
+        start_search_tag: str,
+        end_search_tag: str,
+        start_results_tag: str,
+        end_results_tag: str,
+        start_answer_tag: str,
+        end_answer_tag: str,
         prompt_template: str = "{question}",
         top_k: int = 5,
         max_turn: int = 10,
-        start_search_tag: str = None,
-        end_search_tag: str = None,
-        start_results_tag: str = None,
-        end_results_tag: str = None,
-        start_answer_tag: str = "<answer>",
-        end_answer_tag: str = "</answer>",
+        stop_sequences: list[str] | None = None,
         **kwargs,
     ):
-        """_summary_
-
-        Args:
-
-        """
-
         super().__init__(**kwargs)
         self.retriever = retriever
         self.backend = backend
@@ -43,12 +39,14 @@ class AgenticRAG(pt.Transformer):
         self.start_answer_tag = start_answer_tag
         self.end_answer_tag = end_answer_tag
 
+        self.stop_sequences = stop_sequences if stop_sequences else [self.end_search_tag, self.end_answer_tag]
+
     def generate(self, context: List[str]) -> List[str]:
         return [
             t.text
             for t in self.backend.generate(
                 context,
-                stop_sequences=[self.end_search_tag, self.end_answer_tag],
+                stop_sequences=self.stop_sequences,
             )
         ]
 
@@ -187,7 +185,7 @@ class AgenticRAG(pt.Transformer):
         start_idx += len(start_tag)
         end_idx = output.find(end_tag, start_idx)
         if end_idx == -1:
-            end_idx = len(output)-1
+            end_idx = len(output)
 
         query = output[start_idx:end_idx].strip()
         if not query:
