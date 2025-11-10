@@ -86,7 +86,7 @@ class SearchR1(AgenticRAG):
 
         return SearchR1(retriever, backend, **kwargs)
 
-    def wrap_search_results(self, docs: pd.DataFrame, **kwargs) -> str:
+    def format_docs(self, docs: pd.DataFrame) -> str:
         if not isinstance(docs, pd.DataFrame) or docs.empty:
             return f"{self.start_results_tag}{self.end_results_tag}"
 

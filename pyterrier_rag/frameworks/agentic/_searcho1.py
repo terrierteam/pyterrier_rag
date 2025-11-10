@@ -3,7 +3,6 @@ from typing import Literal
 
 import torch
 import pyterrier as pt
-import pyterrier_alpha as pta
 import pandas as pd
 
 from ._base import AgenticRAG
@@ -138,27 +137,36 @@ class SearchO1(AgenticRAG):
         backend._model.generation_config.pad_token_id = backend.tokenizer.pad_token_id
         return SearchO1(retriever, backend=backend, **kwargs)
 
-    def wrap_search_results(self, docs: pd.DataFrame, state: dict, **kwargs) -> str:
-        if not isinstance(docs, pd.DataFrame) or docs.empty:
-            return f"\n\n{self.start_results_tag}\n{self.end_results_tag}\n\n"
+    def batch_format_docs(
+        self,
+        qid2docs: dict[str, pd.DataFrame],
+        states: list[dict],
+        **kwargs,
+    ) -> dict[str, str]:
+        analysis_prompts = []
+        for state in states:
+            analysis_prompts.append(self._get_analysis_prompt(qid2docs[state["qid"]], state))
 
-        analysis = self.extract_answer(self._analyse(docs, state), mode="infogen")
-        text = f"\n\n{self.start_results_tag}\n{analysis}\n{self.end_results_tag}\n\n"
-        state["output"] += text
+        analysis_responses = [
+            self.extract_answer(resp.text, mode="infogen") for resp in self.backend.generate(analysis_prompts)
+        ]
 
-        return text
+        qid2docs_str = {}
+        for state, analysis in zip(states, analysis_responses):
+            docs_str = f"\n\n{self.start_results_tag}\n{analysis}\n{self.end_results_tag}\n\n"
+            qid2docs_str[state["qid"]] = docs_str
+            state["output"] += docs_str
 
-    def _analyse(self, docs: pd.DataFrame, state: dict) -> str:
-        """Reduce documents for one single query."""
+        return qid2docs_str
 
-        prompt = ANALYSIS_PROMPT.format(
+    def _get_analysis_prompt(self, docs: pd.DataFrame, state: dict) -> str:
+        """Get analysis prompt for a single query"""
+
+        return ANALYSIS_PROMPT.format(
             search_query=docs.iloc[0]["query"],
             prev_reasoning=state.get("output", ""),
             documents="\n\n".join(self._format_retrieval_docs(docs)),
         )
-
-        # TODO: support batch generation; adapt the main loop
-        return self.backend.generate([prompt])[0].text
 
     def _format_retrieval_docs(self, docs: pd.DataFrame) -> list[str]:
         """Formatting code adapted from upstream."""
@@ -239,19 +247,6 @@ class SearchO1(AgenticRAG):
                         extracted_text = inner_matches[-1]  # Take the last match
                     extracted_text = extracted_text.strip("()")
         return extracted_text
-
-
-def analyser(backend):
-    def _analyser(df_res):
-        pta.validate.results_frame(includes=["query", "docno", "text"])
-        prompt = ANALYSIS_PROMPT.format(
-            search_query=df_res.iloc[0]["query"],
-            prev_reasoning=df_res.iloc[0]["output"],
-            documents="\n\n".join(df_res["text"].tolist()),
-        )
-        return pd.DataFrame([df_res.iloc[0]["qid"], prompt], columns=["qid", "output"])
-
-    return pt.apply.by_query(_analyser) >> backend.text_generator()
 
 
 ANALYSIS_PROMPT = """**Task Instruction:**

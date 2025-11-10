@@ -99,7 +99,7 @@ class R1Searcher(AgenticRAG):
         backend._model.generation_config.pad_token_id = backend.tokenizer.pad_token_id
         return R1Searcher(retriever, backend=backend, **kwargs)
 
-    def wrap_search_results(self, docs: pd.DataFrame, **kwargs) -> str:
+    def format_docs(self, docs: pd.DataFrame) -> str:
         if not isinstance(docs, pd.DataFrame) or docs.empty:
             return f"\n\n{self.start_results_tag}\nNone{self.end_results_tag}\n\n"
 
