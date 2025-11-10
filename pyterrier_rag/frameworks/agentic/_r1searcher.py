@@ -26,8 +26,8 @@ class R1Searcher(AgenticRAG):
         self,
         retriever: pt.Transformer,
         backend: VLLMBackend | HuggingFaceBackend,
-        top_k=5,
-        max_turn=10,
+        top_k: int = 5,
+        max_turn: int = 10,
         prompt_type: Literal["v1", "v2", "v3"] = "v1",
         **kwargs,
     ) -> None:
@@ -54,7 +54,7 @@ class R1Searcher(AgenticRAG):
         model: str = DEFAULT_MODEL,
         backend_args: dict | None = None,
         **kwargs,
-    ):
+    ) -> "R1Searcher":
         if not backend_args:
             backend_args = {
                 "model_args": {
@@ -79,7 +79,7 @@ class R1Searcher(AgenticRAG):
         model: str = DEFAULT_MODEL,
         backend_args: dict | None = None,
         **kwargs,
-    ):
+    ) -> "R1Searcher":
         if not backend_args:
             backend_args = {
                 "model_args": {
@@ -94,12 +94,12 @@ class R1Searcher(AgenticRAG):
             }
 
         backend = HuggingFaceBackend(model, **backend_args)
-        backend.tokenizer.padding_side = "left"
+        backend.tokenizer.padding_side = "left"  # for decoder-only models
         # to suppress warning
         backend._model.generation_config.pad_token_id = backend.tokenizer.pad_token_id
         return R1Searcher(retriever, backend=backend, **kwargs)
 
-    def wrap_search_results(self, docs: pd.DataFrame) -> str:
+    def wrap_search_results(self, docs: pd.DataFrame, **kwargs) -> str:
         if not isinstance(docs, pd.DataFrame) or docs.empty:
             return f"\n\n{self.start_results_tag}\nNone{self.end_results_tag}\n\n"
 

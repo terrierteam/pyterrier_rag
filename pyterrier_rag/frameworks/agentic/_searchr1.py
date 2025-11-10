@@ -80,13 +80,13 @@ class SearchR1(AgenticRAG):
             }
 
         backend = HuggingFaceBackend(model, **backend_args)
-        backend.tokenizer.padding_side = "left"
+        backend.tokenizer.padding_side = "left"  # for decoder-only models
         # to suppress warning
         backend._model.generation_config.pad_token_id = backend.tokenizer.pad_token_id
 
         return SearchR1(retriever, backend, **kwargs)
 
-    def wrap_search_results(self, docs: pd.DataFrame) -> str:
+    def wrap_search_results(self, docs: pd.DataFrame, **kwargs) -> str:
         if not isinstance(docs, pd.DataFrame) or docs.empty:
             return f"{self.start_results_tag}{self.end_results_tag}"
 

@@ -138,7 +138,7 @@ class AgenticRAG(pt.Transformer):
                 batch_results["qid"] = batch_results["qid"].astype(str)
                 this_q_results = batch_results[batch_results.qid.str.startswith(q['qid'] + "-")]
                 if len(this_q_results):
-                    q["context"] += self.wrap_search_results(this_q_results)
+                    q["context"] += self.wrap_search_results(this_q_results, state=q)  
                     next_state_active_queries.append(q)
                 else:
                     q['stop_reason'] = 'No retrieval results'
@@ -203,7 +203,8 @@ class AgenticRAG(pt.Transformer):
         query = re.sub(r"\s+", " ", query) if query else ""
         return query if query else None
 
-    def wrap_search_results(self, docs: pd.DataFrame) -> str:
+    def wrap_search_results(self, docs: pd.DataFrame, **kwargs) -> str:
+        """Format documents retrieved for one single query."""
         if docs is None or len(docs) == 0:
             return f"{self.start_results_tag}{self.end_results_tag}"
 
