@@ -8,6 +8,10 @@ from ... import Backend
 
 
 class AgenticRAG(pt.Transformer):
+    """Base class for agentic models that use search as a tool.
+
+    There are implementations for Search-R1, R1-Searcher, and Search-O1.
+    """
 
     def __init__(
         self,
