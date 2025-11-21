@@ -449,18 +449,6 @@ class FiD(pt.Transformer):
         else:
             context = None
         return context
-    
-    def transform_outputs(self, inp_cols : List[str]) -> List[str]:
-        pt.validate.result_frame(inp_cols, extra_columns=[self.text_field])
-        return ["qid", "query", "qanswer"]
-    
-    def transform_inputs(self) -> List[str]:
-        return [
-            ["qid", "query", "docno", self.text_field],
-            ["qid", "query", "docno", self.text_field, "title"], 
-            ["qid", "query", "docno", self.text_field, "score"],
-            ["qid", "query", "docno", self.text_field, "title", "score"],            
-        ]
 
     def format_input_texts(self, question: str, context: Iterable[Union[str, Tuple[str]]]) -> List[str]:
 
