@@ -100,7 +100,6 @@ class OpenAIBackend(Backend):
             args['stop'] = stop_sequences
         try:
             completions = self.client.completions.create(prompt=prompt, **args)
-            print(completions)
         except Exception as e:
             sys.stderr.write(str(e) + '\n')
             if "This model's maximum context length is" in str(e):
@@ -141,7 +140,6 @@ class OpenAIBackend(Backend):
             args['stop'] = stop_sequences
         try:
             completions = self.client.chat.completions.create(messages=messages, **args)
-            print(completions)
         except Exception as e:
             print(str(e))
             if "This model's maximum context length is" in str(e):
