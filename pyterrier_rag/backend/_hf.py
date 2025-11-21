@@ -6,7 +6,6 @@ from transformers import (
     AutoTokenizer,
     StoppingCriteria,
     StoppingCriteriaList,
-    PreTrainedTokenizerBase,
 )
 import torch
 
@@ -196,48 +195,6 @@ class HuggingFaceBackend(Backend):
 class Seq2SeqLMBackend(HuggingFaceBackend):
     _model_class = AutoModelForSeq2SeqLM
     _remove_prompt = False
-
-class StopOnSequence(StoppingCriteria):
-    def __init__(self, target_sequences, tokenizer):
-        # Encode the string so we have the exact token-IDs pattern
-        self.target_ids = [tokenizer.encode(target_sequence, add_special_tokens=False) for target_sequence in target_sequences]
-        self.target_lengths = [len(target_id) for target_id in self.target_ids]
-        self._tokenizer = tokenizer
-
-    def __call__(self, input_ids, scores, **kwargs):
-        # Make sure the target IDs are on the same device
-        targets = [torch.as_tensor(target_id, device=input_ids.device) for target_id in self.target_ids]
-
-        if input_ids.shape[1] < min(self.target_lengths):
-            return False
-
-        # Compare the tail of input_ids with our target_ids
-        for i, target in enumerate(targets):
-            if torch.equal(input_ids[0, -self.target_lengths[i]:], target):
-                return True
-
-        return False
-    
-    def _remove_suffix_torch(self, output_ids : List[torch.Tensor]) -> List[torch.Tensor]:
-        rtr = []
-        for tokens in output_ids:
-            for stop_seq in self.target_ids:
-                stop_seq = torch.tensor(stop_seq, device=tokens.device, dtype=tokens.dtype)
-                if (tokens[-len(stop_seq):] == stop_seq).all():
-                    tokens = tokens[:-len(stop_seq)]
-            rtr.append(tokens)
-        return rtr
-    
-    def remove_suffix(self, output_ids : List[List[int]]) -> List[List[int]]:
-        if isinstance(output_ids[0], torch.Tensor):
-            return self._remove_suffix_torch(output_ids)
-        rtr = []
-        for tokens in output_ids:
-            for stop_seq in self.target_ids:
-                if tokens[-len(stop_seq):] == stop_seq:
-                    tokens = tokens[:-len(stop_seq)]
-            rtr.append(tokens)
-        return rtr
 
 
 class StopWordCriteria(StoppingCriteria):
