@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Optional
 
 import pyterrier as pt
 import pandas as pd
+import pyterrier_alpha as pta
 
 from ... import Backend
 
@@ -11,6 +12,12 @@ class AgenticRAG(pt.Transformer):
     """Base class for agentic models that use search as a tool.
 
     There are implementations for Search-R1, R1-Searcher, and Search-O1.
+
+    Contributors:
+     - Zhili Shen
+     - Yulin Qiao
+     - Craig Macdonald
+
     """
 
     def __init__(
@@ -59,6 +66,19 @@ class AgenticRAG(pt.Transformer):
         return self.prompt_template.format(question=question) if self.prompt_template else question
 
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+
+        pta.validate.query_frame(df, ["query"])
+        if len(df) == 0:
+            return pd.DataFrame([], columns=[
+                "qid",
+                "query",
+                "context", 
+                "search_history",
+                "search_iterations",
+                "qanswer",
+                "output",
+                "stop_reason"
+            ])
 
         state_active_queries: List[Dict[str, Any]] = []
         for _, row in df.iterrows():
