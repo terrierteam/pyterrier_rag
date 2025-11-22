@@ -11,7 +11,7 @@ class DummyBackend(Backend):
     def __init__(self, **kwargs):
         super().__init__("dummy-model", **kwargs)
 
-    def generate(self, inp, return_logprobs=False, max_new_tokens=None, num_responses=1) -> Iterable[BackendOutput]:
+    def generate(self, inp, return_logprobs=False, max_new_tokens=None, num_responses=1, stop_sequences=None) -> Iterable[BackendOutput]:
         outputs = []
         for prompt in inp:
             for _ in range(num_responses):

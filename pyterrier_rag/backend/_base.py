@@ -65,6 +65,7 @@ class Backend(pt.Transformer, ABC):
         *,
         return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
+        stop_sequences: Optional[List[str]] = None,
     ) -> List[BackendOutput]:
         """ Generate text from input prompts.
 
@@ -72,6 +73,7 @@ class Backend(pt.Transformer, ABC):
             inps (Union[List[str], List[List[dict]]]): Input prompts as strings or dictionaries. When strings, represent the prompts directly. When a list of dictionaries, represents a sequence of messages (if ``backend.supports_message_input==True``).
             return_logprobs (bool): Whether to return logprobs of generated tokens along with text. (Only available if ``backend.supports_logprobs==True``.)
             max_new_tokens (Optional[int]): Override for max tokens to generate.
+            stop_sequences (Optional[List[str]]): List of tokens at which to stop generation. If None, generation is unconstrained.
 
         Returns:
             List[BackendOutput]: An output for each ``inp``, each containing the generated text and optionally logprobs.
@@ -86,6 +88,7 @@ class Backend(pt.Transformer, ABC):
         output_field: str = 'qanswer',
         batch_size: int = 4,
         max_new_tokens: Optional[int] = None,
+        stop_sequences: Optional[List[str]] = None,
         num_responses: int = 1,
     ) -> pt.Transformer:
         """ Create a text generator transformer using this backend.
@@ -95,9 +98,10 @@ class Backend(pt.Transformer, ABC):
             output_field (str): Name of the field to store generated text.
             batch_size (int): Number of prompts to process in each batch.
             max_new_tokens (Optional[int]): Override for max tokens to generate. If None, uses the backend's max_new_tokens.
+            stop_sequences(Optional[List[str]]): List of tokens at which to stop generation. If None, generation is unconstrained.
             num_responses (int): Number of responses to generate for each prompt.
         """
-        return TextGenerator(self, input_field=input_field, output_field=output_field, max_new_tokens=max_new_tokens, num_responses=num_responses)
+        return TextGenerator(self, input_field=input_field, output_field=output_field, max_new_tokens=max_new_tokens, num_responses=num_responses, stop_sequences=stop_sequences)
 
     def logprobs_generator(self,
         *,
@@ -106,6 +110,7 @@ class Backend(pt.Transformer, ABC):
         logprobs_field: str = 'qanswer_logprobs',
         batch_size: int = 4,
         max_new_tokens: Optional[int] = None,
+        stop_sequences: Optional[List[str]] = None,
         num_responses: int = 1,
     ) -> pt.Transformer:
         """ Create a text generator transformer that also returns the logprobs of each token using this backend.
@@ -116,11 +121,12 @@ class Backend(pt.Transformer, ABC):
             logprobs_field (str): Name of the field to store logprobs.
             batch_size (int): Number of prompts to process in each batch.
             max_new_tokens (Optional[int]): Override for max tokens to generate. If None, uses the backend's max_new_tokens.
+            stop_sequences (Optional[List[str]]): List of tokens at which to stop generation. If None, generation is unconstrained.
             num_responses (int): Number of responses to generate for each prompt.
         """
         if not self.supports_logprobs:
             raise ValueError("This model cannot return logprobs")
-        return TextGenerator(self, input_field=input_field, output_field=output_field, logprobs_field=logprobs_field, max_new_tokens=max_new_tokens, num_responses=num_responses)
+        return TextGenerator(self, input_field=input_field, output_field=output_field, logprobs_field=logprobs_field, max_new_tokens=max_new_tokens, num_responses=num_responses, stop_sequences=stop_sequences)
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         pta.validate.columns(inp, includes=["qid", self.text_generator().input_field])
@@ -184,6 +190,7 @@ class TextGenerator(pt.Transformer):
                  logprobs_field: Optional[str] = None,
                  batch_size: int = 4,
                  max_new_tokens: Optional[int] = None,
+                 stop_sequences: Optional[List[str]] = None,
                  num_responses: int = 1,
                  ):
         """
@@ -195,6 +202,7 @@ class TextGenerator(pt.Transformer):
             batch_size (int): Number of prompts to process in each batch.
             max_new_tokens (Optional[int]): Override for max tokens to generate. If None, uses the backend's max_new_tokens.
             num_responses (int): Number of responses to generate for each prompt.
+            stop_sequences (Optional[List[str]]): List of tokens at which to stop generation. If None, generation is unconstrained.
         """
         if logprobs_field is not None and not backend.supports_logprobs:
             raise ValueError("Backend does not support logprobs")
@@ -207,6 +215,7 @@ class TextGenerator(pt.Transformer):
         self.batch_size = batch_size
         self.max_new_tokens = max_new_tokens
         self.num_responses = num_responses
+        self.stop_sequences = stop_sequences
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         pta.validate.columns(inp, includes=[self.input_field])
@@ -228,6 +237,7 @@ class TextGenerator(pt.Transformer):
                 return_logprobs=self.logprobs_field is not None,
                 num_responses=self.num_responses,
                 max_new_tokens=self.max_new_tokens,
+                stop_sequences=self.stop_sequences,
             )
             for i, rec in enumerate(chunk):
                 for j in range(self.num_responses):
