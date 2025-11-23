@@ -166,6 +166,8 @@ class OpenAIBackend(Backend):
         stop_sequences : Optional[List[str]] = None,
         num_responses: int = 1,
     ) -> List[BackendOutput]:
+        if not isinstance(inps, list):
+            raise TypeError("Expected list as input to generate(), found " + str(type(inps)))
         futures = []
         if self.api == 'completions':
             for inp in inps:
