@@ -90,6 +90,8 @@ class HuggingFaceBackend(Backend):
         stop_sequences : Optional[List[str]] = None,
         num_responses: int = 1,
     ) -> List[BackendOutput]:
+        if not isinstance(inps, list):
+            raise TypeError("Expected list as input to generate(), found " + str(type(inps)))
         if not isinstance(inps[0], str):
             raise ValueError(f'{self!r} only supports str inputs to generate')
         if return_logprobs:
