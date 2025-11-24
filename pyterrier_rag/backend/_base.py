@@ -122,6 +122,11 @@ class Backend(pt.Transformer, ABC):
             raise ValueError("This model cannot return logprobs")
         return TextGenerator(self, input_field=input_field, output_field=output_field, logprobs_field=logprobs_field, max_new_tokens=max_new_tokens, num_responses=num_responses)
 
+    @property
+    def transform_inputs(self):
+        """Define the input columns expected by this transformer for PyTerrier introspection."""
+        return [["qid", self.text_generator().input_field]]
+
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         pta.validate.columns(inp, includes=["qid", self.text_generator().input_field])
         return self.text_generator().transform(inp)

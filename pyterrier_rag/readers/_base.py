@@ -63,37 +63,60 @@ class Reader(pt.Transformer):
         self.answer_extraction = answer_extraction
         self.output_field = output_field
 
-    def string_prompt(self, docs, **query_columns) -> list[dict[str, str]]:
-        messages = []
-        if self.system_prompt is not None:
-            messages.append({'role': 'system', 'content': self.system_prompt})
+    def string_prompt(self, docs, **query_columns):
         prompt_text = self.prompt(docs=docs, **query_columns)
-        messages.append({'role': 'user', 'content': prompt_text})
-        return messages
+        if self.backend.supports_message_input:
+            messages = []
+            if self.system_prompt is not None:
+                messages.append({'role': 'system', 'content': self.system_prompt})
+            messages.append({'role': 'user', 'content': prompt_text})
+            return messages
+        else:
+            if self.system_prompt is not None:
+                prompt_text = self.system_prompt + "\n\n" + prompt_text
+            return prompt_text
 
     def callable_prompt(self, docs, **query_columns):
-        messages = []
-        if self.system_prompt is not None:
-            messages.append({'role': 'system', 'content': self.system_prompt})
         prompt_output = self.prompt(docs=docs, **query_columns)
-        if isinstance(prompt_output, str):
-            messages.append({'role': 'user', 'content': prompt_output})
+        if self.backend.supports_message_input:
+            messages = []
+            if self.system_prompt is not None:
+                messages.append({'role': 'system', 'content': self.system_prompt})
+            if isinstance(prompt_output, str):
+                messages.append({'role': 'user', 'content': prompt_output})
+            else:
+                messages.extend(prompt_output)
+            return messages
         else:
-            messages.extend(prompt_output)
-        return messages
+            if isinstance(prompt_output, str):
+                if self.system_prompt is not None:
+                    return self.system_prompt + "\n\n" + prompt_output
+                return prompt_output
+            else:
+                # For callable prompts that return messages, extract content
+                content = ""
+                for msg in prompt_output:
+                    if msg.get('role') == 'system':
+                        content += msg.get('content', '') + "\n\n"
+                    else:
+                        content += msg.get('content', '')
+                if self.system_prompt is not None:
+                    content = self.system_prompt + "\n\n" + content
+                return content
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
-        pta.validate.columns(inp, includes=['qid', 'query', 'docno', 'text'])
+        # Require at least qid and query
+        pta.validate.columns(inp, includes=['qid', 'query'])
 
         if inp is None or inp.empty:
-            return pd.DataFrame(columns=["qid", self.output_field, 'qprompt'])
+            return pd.DataFrame(columns=["qid", self.output_field, 'prompt'])
 
-        prompt_frame = pta.DataFrameBuilder(['qid', 'query', 'qprompt'])
+        prompt_frame = pta.DataFrameBuilder(['qid', 'query', 'prompt'])
         for qid, group in inp.groupby('qid'):
             prompt = self.make_prompt_from(docs=group.iterrows(), **group[pt.model.query_columns(inp)].iloc[0])
-            prompt_frame.extend({'qid': qid, 'query': group['query'].iloc[0], 'qprompt': prompt})
+            prompt_frame.extend({'qid': qid, 'query': group['query'].iloc[0], 'prompt': prompt})
 
         output = self.backend(prompt_frame.to_df())
-        output[self.output_field] = output[self.backend.output_fields].apply(self.answer_extraction)
+        output[self.output_field] = output['qanswer'].apply(self.answer_extraction)
 
         return output

@@ -22,9 +22,10 @@ def patch_dependencies(monkeypatch):
     yield
 
 # Helper to build DataFrames
-def make_qrels(texts, relevances, query_id='q1'):
+def make_qrels(texts, relevances, query_id='q1', question='What is this?'):
     return pd.DataFrame({
         'query_id': [query_id] * len(texts),
+        'query': [question] * len(texts),
         'relevance': relevances,
         'text': texts,
     })

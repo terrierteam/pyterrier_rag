@@ -78,24 +78,7 @@ class SimpleConvTemplate:
 # Test iteration threshold logic
 @pytest.fixture(autouse=True)
 def patch_transformers_and_reader(monkeypatch):
-    # Fake prompt and context transformers
-    class FakePromptTransformer(pt.Transformer):
-        expects_logprobs=False
-        def __init__(self, **kwargs):
-            self.kwargs = kwargs
-        def set_output_attribute(self, attr):
-            pass
-        def transform(self, inp):
-            return inp
-    class FakeConcatenator:
-        def __init__(self, **kwargs):
-            self.kwargs = kwargs
-        def __rshift__(self, other):
-            return other
-    # Patch transformers
-    monkeypatch.setattr('pyterrier_rag.prompt.PromptTransformer', FakePromptTransformer)
-    monkeypatch.setattr('pyterrier_rag.prompt.Concatenator', FakeConcatenator)
-    # Patch Reader
+    # Patch Reader to use our DummyReader for testing
     monkeypatch.setattr('pyterrier_rag.readers.Reader', DummyReader)
     yield
 
@@ -131,15 +114,18 @@ def test_make_default_configs():
 
 
 def test_init_with_provided_transformers():
-    from pyterrier_rag.prompt import PromptTransformer, Concatenator
+    from pyterrier_rag.prompt import jinja_formatter
     backend = FakeBackend()
     retriever = DummyRetriever()
-    fake_ctx = Concatenator(dummy='x')
-    fake_prompt = PromptTransformer(dummy='y')
+
+    # Custom prompt template
+    custom_prompt = jinja_formatter("Custom: {{ query }} Context: {{ qcontext }}")
+    custom_ctx = None  # context_aggregation is deprecated and not used
+
     ircot = IRCOT(retriever=retriever, backend=backend,
-                  prompt=fake_prompt, context_aggregation=fake_ctx)
-    assert ircot.context_aggregation is fake_ctx
-    assert ircot.prompt is fake_prompt
+                  prompt=custom_prompt, context_aggregation=custom_ctx)
+    assert ircot.context_aggregation is custom_ctx
+    assert ircot.prompt is custom_prompt
 
 
 def test_transform_with_exit_condition():

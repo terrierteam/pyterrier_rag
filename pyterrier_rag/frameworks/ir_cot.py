@@ -38,8 +38,8 @@ class IRCOT(pt.Transformer):
         backend (Backend): Language model backend for generating reasoning steps.
         input_field (str): Field name for input queries (default 'query').
         output_field (str): Field name for generated answers (default 'qanswer').
-        prompt (Optional[pt.Transformer]): Custom prompt transformer; uses default if None.
-        context_aggregation (Optional[pt.Transformer]): Processor to aggregate document texts; uses default if None.
+        prompt (Optional[Union[callable, str]]): Custom prompt template/callable; uses default if None.
+        context_aggregation (Optional[pt.Transformer]): Deprecated; kept for backwards compatibility.
         max_docs (int): Number of documents to retrieve per iteration (default 10).
         max_iterations (int): Maximum reasoning steps; -1 for unlimited (default -1).
         exit_condition (callable): Function that takes the current output DataFrame and returns True to stop.
@@ -62,6 +62,7 @@ class IRCOT(pt.Transformer):
         self.output_field = output_field
         self.exit_condition = exit_condition
         self.prompt = prompt
+        # Keep context_aggregation for backwards compatibility but it's not used
         self.context_aggregation = context_aggregation
 
         self.max_docs = max_docs
@@ -71,13 +72,23 @@ class IRCOT(pt.Transformer):
 
     def __post_init__(self):
         if self.prompt is None:
-            self.prompt = PromptTransformer(**self._make_default_prompt_config())
-        self.reader = Reader(backend=self.backend, prompt=self.prompt)
+            # Use default IRCOT prompt
+            self.prompt = ircot_prompt
+            system_msg = ircot_system_message
+        else:
+            system_msg = None
+
+        self.reader = Reader(
+            backend=self.backend,
+            prompt=self.prompt,
+            system_prompt=system_msg if self.prompt == ircot_prompt else None
+        )
 
     def _exceeded_max_iterations(self, iter):
         return self.max_iterations > 0 and iter >= self.max_iterations
 
     def _make_default_prompt_config(self):
+        """Return default prompt configuration for reference/testing."""
         return {
             "model_name_or_path": self.backend.model_id,
             "system_message": ircot_system_message,
@@ -87,6 +98,7 @@ class IRCOT(pt.Transformer):
         }
 
     def _make_default_context_config(self):
+        """Return default context configuration for reference/testing."""
         return {
             "in_fields": ["text"],
             "out_field": "qcontext",
@@ -95,6 +107,16 @@ class IRCOT(pt.Transformer):
             "max_elements": self.max_docs,
             "intermediate_format": ircot_example_format,
         }
+
+    def _format_docs_for_prompt(self, docs_df):
+        """Format documents for the IRCOT prompt template."""
+        formatted_docs = []
+        for _, doc in docs_df.iterrows():
+            if 'title' in doc.index and pd.notna(doc['title']):
+                formatted_docs.append(f"Wikipedia Title: {doc['title']}\n{doc['text']}")
+            else:
+                formatted_docs.append(str(doc['text']))
+        return "\n\n".join(formatted_docs)
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         pta.validate.columns(inp, includes=["qid", self.input_field])
@@ -112,24 +134,36 @@ class IRCOT(pt.Transformer):
 
             prev = []
             top_k_docs = self.retriever.search(query)
-            top_k_docs["prev"] = ""
             iter = 1
             stop = False
 
             while not stop:
-                context = self.context_aggregation(top_k_docs)
-                output = self.reader(context)
+                # Format documents for the prompt
+                qcontext = self._format_docs_for_prompt(top_k_docs)
+                prev_str = "\n\n".join(prev) if prev else ""
+
+                # Create a dataframe with the required columns for Reader
+                reader_input = pd.DataFrame({
+                    'qid': [qid],
+                    'query': [query],
+                    'qcontext': [qcontext],
+                    'prev': [prev_str],
+                    'docno': [top_k_docs.iloc[0]['docno']] if not top_k_docs.empty else [''],
+                    'text': [' '.join(top_k_docs['text'].tolist())]
+                })
+
+                output = self.reader(reader_input)
 
                 if self.exit_condition(output) or self._exceeded_max_iterations(iter):
                     stop = True
                     break
                 else:
                     prev.append(output[self.output_field].iloc[0])
-                    top_k_docs.append(self.retriever.search(output[self.output_field].iloc[0]))
+                    new_docs = self.retriever.search(output[self.output_field].iloc[0])
+                    top_k_docs = pd.concat([top_k_docs, new_docs], ignore_index=True)
                     top_k_docs.sort_values(by="score", ascending=False, inplace=True)
                     top_k_docs.drop_duplicates(subset=["docno"], inplace=True)
                     top_k_docs = top_k_docs.head(self.max_docs)
-                    top_k_docs["prev"] = "\n\n".join(prev)
                     iter += 1
 
             qanswer = output[self.output_field].iloc[0]

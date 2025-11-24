@@ -28,25 +28,24 @@ class DummyBackend(Backend):
         return outputs
 
 
-class DummyPromptTransformer:
-    def __init__(self, template):
-        self.template = template
-        self.input_fields = ['query']
-        self.output_field = 'prompt'
-        self.transform_calls = []
+def dummy_prompt_fn(docs, query, **kwargs):
+    """Simple prompt function that generates prompts from query and documents."""
+    # docs is an iterator of (index, row) tuples
+    doc_texts = []
+    for _, doc in docs:
+        if 'text' in doc.index:
+            doc_texts.append(str(doc['text']))
 
-    def transform(self, df):
-        self.transform_calls.append(df.copy())
-        # Just return the prompt field for simplicity
-        return pd.DataFrame({'prompt': df['query'].apply(lambda q: self.template.replace("{query}", q))})
-
-    def __call__(self, df):
-        return self.transform(df)
+    context = "\n".join(doc_texts) if doc_texts else ""
+    if context:
+        return f"Context: {context}\n\nQuestion: {query}\n\nAnswer:"
+    else:
+        return f"Question: {query}\n\nAnswer:"
 
 
 class TestReader:
     @pt.testing.transformer_test_class
     def test_reader():
-        x = Reader(backend=DummyBackend(), prompt=DummyPromptTransformer("Answer the question: {query}"))
+        x = Reader(backend=DummyBackend(), prompt=dummy_prompt_fn)
         x.transform(pd.DataFrame(columns=['qid', 'query']))
         return x
