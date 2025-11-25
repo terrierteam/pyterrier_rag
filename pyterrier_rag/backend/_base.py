@@ -240,6 +240,7 @@ class TextGenerator(pt.Transformer):
                 stop_sequences=self.stop_sequences,
             )
             if self.num_responses == 1:
+                assert len(chunk) == len(out), f"Response length did not match input chunk size: len(chunk)={len(chunk)} but len(out)={len(out)}"
                 for rec, o in zip(chunk, out):
                     result = {**rec, self.output_field: o.text}
                     if self.logprobs_field is not None:
