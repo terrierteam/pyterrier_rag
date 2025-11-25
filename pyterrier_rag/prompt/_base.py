@@ -106,7 +106,7 @@ class PromptTransformer(pt.Transformer):
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         pta.validate.columns(inp, includes=["qid"] + self.input_fields)
-        output_frame = pta.DataFrameBuilder([self.output_field, "qid", "query_0"])
+        output_frame = []
 
         if inp is None or inp.empty:
             return output_frame.to_df()
@@ -119,9 +119,9 @@ class PromptTransformer(pt.Transformer):
                 message = f"Expected {self.input_fields} but recieved {fields}"
                 raise ValueError(message)
             prompt = self.create_prompt(fields)
-            output_frame.extend({self.output_field: prompt, "qid": qid, "query_0": query})
+            output_frame.append({self.output_field: prompt, "qid": qid, "query_0": query})
 
-        return output_frame.to_df()
+        return pd.DataFrame(output_frame, columns=[self.output_field, "qid", "query_0"])
 
 
 __all__ = ["PromptTransformer"]
