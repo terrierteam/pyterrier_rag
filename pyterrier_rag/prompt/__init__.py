@@ -6,6 +6,7 @@ from .default import CONCAT_DOCS, DefaultPrompt
 class PromptTransformer:
     """Deprecated: Use Reader with prompt templates instead."""
     def __init__(self, **kwargs):
+        raise DeprecationWarning("PromptTransformer is deprecated. Use Reader with prompt templates instead. See the documentation for more details.")
         self.kwargs = kwargs
 
 __all__ = ["jinja_formatter", "CONCAT_DOCS", "DefaultPrompt", "PromptTransformer"]
