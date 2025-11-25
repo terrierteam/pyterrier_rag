@@ -43,15 +43,15 @@ class DummyTemplate:
         return [{"rk": (r, c)} for r, c in self.messages]
 
 
-@pytest.fixture(autouse=True)
-def patch_get_conversation(monkeypatch):
-    """Patch get_conversation_template to always return a fresh DummyTemplate."""
-    monkeypatch.setattr(
-        fc_model,
-        "get_conversation_template",
-        lambda model_path: DummyTemplate()
-    )
-    yield
+# @pytest.fixture(autouse=True)
+# def patch_get_conversation(monkeypatch):
+#     """Patch get_conversation_template to always return a fresh DummyTemplate."""
+#     monkeypatch.setattr(
+#         fc_model,
+#         "get_conversation_template",
+#         lambda model_path: DummyTemplate()
+#     )
+#     yield
 
 
 def test_post_init_and_system_message():
@@ -65,6 +65,32 @@ def test_post_init_and_system_message():
     assert tf.conversation_template.system_message == "SYS"
     # default output attribute when api_type is None
     assert tf.output_attribute == "get_prompt"
+
+def test_system():
+    system_message2 = r"""You are an expert Q&A system that is trusted around the world.
+        Always answer the query using the provided context information,
+        and not prior knowledge.
+        rules to follow:
+        1. Not directly reference the given context in your answer
+        2. Avoid statements like 'Based on the context, ...' or
+        'The context information ...' or anything along those lines."""
+
+    prompt_text2 = """
+    Question: {{ query }}
+
+    Context information is: {{ qcontext }}
+
+    Answer:"""
+    from fastchat.model import get_conversation_template
+    template = get_conversation_template("meta-llama-3.1-sp")
+    prompt = PromptTransformer(
+        conversation_template=template,
+        system_message=system_message2,
+        instruction=prompt_text2,
+        api_type="openai"
+    )
+    res = prompt([{'qid' : 'q1', 'query' : 'What are chemical reactions?', "qcontext" : 'definition of life'}])
+    assert len(res) == 1
 
 
 def test_set_output_attribute():
