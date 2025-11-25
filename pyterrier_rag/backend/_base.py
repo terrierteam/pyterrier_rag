@@ -239,13 +239,20 @@ class TextGenerator(pt.Transformer):
                 max_new_tokens=self.max_new_tokens,
                 stop_sequences=self.stop_sequences,
             )
-            for i, rec in enumerate(chunk):
-                for j in range(self.num_responses):
-                    o = out[i * self.num_responses + j]
+            if self.num_responses == 1:
+                for rec, o in zip(chunk, out):
                     result = {**rec, self.output_field: o.text}
                     if self.logprobs_field is not None:
                         result[self.logprobs_field] = o.logprobs
                     output_frame.extend({k: v for k, v in result.items() if k in output_columns})
+            else:
+                for i, rec in enumerate(chunk):
+                    for j in range(self.num_responses):
+                        o = out[i * self.num_responses + j]
+                        result = {**rec, self.output_field: o.text}
+                        if self.logprobs_field is not None:
+                            result[self.logprobs_field] = o.logprobs
+                        output_frame.extend({k: v for k, v in result.items() if k in output_columns})
         return output_frame.to_df()
 
 
