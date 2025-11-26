@@ -227,8 +227,7 @@ class TextGenerator(pt.Transformer):
         output_columns = [*input_columns, self.output_field]
         if self.logprobs_field is not None:
             output_columns.append(self.logprobs_field)
-        output_frame = pta.DataFrameBuilder(output_columns)
-
+        output_frame = []
         if inp is None or inp.empty:
             return output_frame.to_df()
 
@@ -248,8 +247,8 @@ class TextGenerator(pt.Transformer):
                     result = {**rec, self.output_field: o.text}
                     if self.logprobs_field is not None:
                         result[self.logprobs_field] = o.logprobs
-                    output_frame.extend({k: v for k, v in result.items() if k in output_columns})
-        return output_frame.to_df()
+                    output_frame.append({k: v for k, v in result.items() if k in output_columns})
+        return pd.DataFrame(output_frame)
 
 
 __all__ = ["Backend", "BackendOutput", "TextGenerator"]

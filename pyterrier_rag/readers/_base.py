@@ -113,12 +113,11 @@ class Reader(pt.Transformer):
         if inp is None or inp.empty:
             return pd.DataFrame(columns=["qid", self.output_field, 'prompt'])
 
-        prompt_frame = pta.DataFrameBuilder(['qid', 'query', 'prompt'])
+        prompt_frame = []
         for qid, group in inp.groupby('qid'):
             prompt = self.make_prompt_from(docs=group.iterrows(), **group[pt.model.query_columns(inp)].iloc[0])
-            prompt_frame.extend({'qid': qid, 'query': group['query'].iloc[0], 'prompt': prompt})
-
-        output = self.backend(prompt_frame.to_df())
+            prompt_frame.append({'qid': qid, 'query': group['query'].iloc[0], 'prompt': prompt})
+        output = self.backend(pd.DataFrame(prompt_frame))
         output[self.output_field] = output['qanswer'].apply(self.answer_extraction)
 
         return output
