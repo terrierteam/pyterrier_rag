@@ -90,6 +90,10 @@ class HuggingFaceBackend(Backend):
     def tokenizer(self) -> AutoTokenizer:
         return self._tokenizer
 
+    @tokenizer.setter
+    def tokenizer(self, value: AutoTokenizer) -> None:
+        self._tokenizer = value
+
     @torch.no_grad()
     def generate(
         self,
