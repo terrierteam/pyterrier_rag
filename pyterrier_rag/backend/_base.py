@@ -2,9 +2,12 @@ import re
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Union
 from dataclasses import dataclass
+from dataclasses import dataclass
 
 import pandas as pd
+import pandas as pd
 import pyterrier as pt
+import pyterrier_alpha as pta
 import pyterrier_alpha as pta
 from more_itertools import chunked
 
@@ -130,6 +133,8 @@ class Backend(pt.Transformer, ABC):
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         pta.validate.columns(inp, includes=["qid", self.text_generator().input_field])
+        if inp is None or inp.empty:
+            return pta.DataFrameBuilder(columns=inp.columns.tolist()+['output_field']).to_df()
         return self.text_generator().transform(inp)
 
     # factory methods
@@ -224,8 +229,7 @@ class TextGenerator(pt.Transformer):
         output_columns = [*input_columns, self.output_field]
         if self.logprobs_field is not None:
             output_columns.append(self.logprobs_field)
-        output_frame = pta.DataFrameBuilder(output_columns)
-
+        output_frame = []
         if inp is None or inp.empty:
             return output_frame.to_df()
 
@@ -245,8 +249,8 @@ class TextGenerator(pt.Transformer):
                     result = {**rec, self.output_field: o.text}
                     if self.logprobs_field is not None:
                         result[self.logprobs_field] = o.logprobs
-                    output_frame.extend({k: v for k, v in result.items() if k in output_columns})
-        return output_frame.to_df()
+                    output_frame.append({k: v for k, v in result.items() if k in output_columns})
+        return pd.DataFrame(output_frame)
 
 
 __all__ = ["Backend", "BackendOutput", "TextGenerator"]

@@ -1,16 +1,14 @@
 from typing import Union
 
+
 import pandas as pd
 import pyterrier as pt
 import pyterrier_alpha as pta
+import pyterrier_alpha as pta
 
 from pyterrier_rag.backend import Backend
-from pyterrier_rag.prompt import PromptTransformer
-
-
-GENERIC_PROMPT = (
-    "Use the context information to answer the Question: \n Context: {{ qcontext }} \n Question: {{ query }} \n Answer:"
-)
+from pyterrier_rag.prompt.default import DefaultPrompt
+from pyterrier_rag.prompt.jinja import jinja_formatter
 
 
 class Reader(pt.Transformer):
@@ -31,21 +29,19 @@ class Reader(pt.Transformer):
     Example using a local LLM::
 
         from pyterrier_rag.backend import Seq2SeqLMBackend
-        from pyterrier_rag.prompt import Concatenator
         from pyterrier_rag.readers import Reader
 
         flant5 = Reader(Seq2SeqLMBackend('google/flan-t5-base'))
-        bm25_flant5 = bm25_ret % 10 >> Concatenator() >> flant5
+        bm25_flant5 = bm25_ret % 10 >> flant5
         bm25_flant5.search("What is the capital of France?")
 
     Example using a remote LLM::
 
         from pyterrier_rag.backend import OpenAIBackend
-        from pyterrier_rag.prompt import Concatenator
         from pyterrier_rag.readers import Reader
 
-        llamma = Reader(OpenAIBackend("llama-3-8b-instruct", api_key="your_api_key", base_url="your_base_url"))
-        bm25_llamma = bm25_ret % 10 >> Concatenator() >> llamma
+        llamma = Reader(OpenAIBackend("llama-3-8b-instruct", api_key="your_api_key", base_url="your_base_url"). 
+        bm25_llamma = bm25_ret % 10 >> llamma
         bm25_llamma.search("What is the capital of Italy?")
 
 
@@ -53,37 +49,75 @@ class Reader(pt.Transformer):
     def __init__(
         self,
         backend: Union[Backend, str],
-        prompt: Union[PromptTransformer, str] = GENERIC_PROMPT,
+        prompt: Union[callable, str] = DefaultPrompt,
+        system_prompt: str = None,
+        answer_extraction: callable = lambda outputs: outputs,
         output_field: str = "qanswer",
     ):
-        self.prompt = prompt
         self.backend = backend
+        self.prompt = prompt if callable(prompt) else jinja_formatter(prompt)
+        self.make_prompt_from = (
+            self.callable_prompt
+            if callable(prompt)
+            else self.string_prompt
+        )
+        self.system_prompt = system_prompt
+        self.answer_extraction = answer_extraction
         self.output_field = output_field
-        self.__post_init__()
 
-    def __post_init__(self):
-        if isinstance(self.prompt, str):
-            self.prompt = PromptTransformer(
-                instruction=self.prompt,
-                model_name_or_path=self.backend.model_id,
-            )
-        if isinstance(self.prompt, PromptTransformer):
-            self.prompt.set_output_attribute(self.backend.supports_message_input)
-            if self.prompt.expects_logprobs and not self.backend.supports_logprobs:
-                raise ValueError("The LLM does not support logprobs")
-            elif self.prompt.expects_logprobs and self.backend.supports_logprobs:
-                self.backend = self.backend.logprobs_generator()
+    def string_prompt(self, docs, **query_columns):
+        prompt_text = self.prompt(docs=docs, **query_columns)
+        if self.backend.supports_message_input:
+            messages = []
+            if self.system_prompt is not None:
+                messages.append({'role': 'system', 'content': self.system_prompt})
+            messages.append({'role': 'user', 'content': prompt_text})
+            return messages
+        else:
+            if self.system_prompt is not None:
+                prompt_text = self.system_prompt + "\n\n" + prompt_text
+            return prompt_text
+
+    def callable_prompt(self, docs, **query_columns):
+        prompt_output = self.prompt(docs=docs, **query_columns)
+        if self.backend.supports_message_input:
+            messages = []
+            if self.system_prompt is not None:
+                messages.append({'role': 'system', 'content': self.system_prompt})
+            if isinstance(prompt_output, str):
+                messages.append({'role': 'user', 'content': prompt_output})
             else:
-                self.backend = self.backend.text_generator()
+                messages.extend(prompt_output)
+            return messages
+        else:
+            if isinstance(prompt_output, str):
+                if self.system_prompt is not None:
+                    return self.system_prompt + "\n\n" + prompt_output
+                return prompt_output
+            else:
+                # For callable prompts that return messages, extract content
+                content = ""
+                for msg in prompt_output:
+                    if msg.get('role') == 'system':
+                        content += msg.get('content', '') + "\n\n"
+                    else:
+                        content += msg.get('content', '')
+                if self.system_prompt is not None:
+                    content = self.system_prompt + "\n\n" + content
+                return content
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
-        pta.validate.columns(inp, includes=['qid', *self.prompt.input_fields])
+        # Require at least qid and query
+        pta.validate.columns(inp, includes=['qid', 'query'])
 
         if inp is None or inp.empty:
-            return pd.DataFrame(columns=[self.output_field, self.prompt.output_field, "qid"])
-        prompts = self.prompt(inp)
-        outputs = self.backend(prompts)
-        answers = self.prompt.answer_extraction(outputs)
+            return pd.DataFrame(columns=["qid", self.output_field, 'prompt'])
 
-        prompts[self.output_field] = answers[self.output_field]
-        return prompts
+        prompt_frame = []
+        for qid, group in inp.groupby('qid'):
+            prompt = self.make_prompt_from(docs=group.iterrows(), **group[pt.model.query_columns(inp)].iloc[0])
+            prompt_frame.append({'qid': qid, 'query': group['query'].iloc[0], 'prompt': prompt})
+        output = self.backend(pd.DataFrame(prompt_frame))
+        output[self.output_field] = output['qanswer'].apply(self.answer_extraction)
+
+        return output
