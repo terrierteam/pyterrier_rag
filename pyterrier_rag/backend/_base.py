@@ -133,6 +133,8 @@ class Backend(pt.Transformer, ABC):
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         pta.validate.columns(inp, includes=["qid", self.text_generator().input_field])
+        if inp is None or inp.empty:
+            return pta.DataFrameBuilder(columns=inp.columns.tolist()+['output_field']).to_df()
         return self.text_generator().transform(inp)
 
     # factory methods
