@@ -507,7 +507,9 @@ class FiD(pt.Transformer):
 
 class T5FiD(FiD):
     """
-    T5 FiD Reader for PyTerrier-RAG"
+    T5 FiD Reader for PyTerrier-RAG
+
+    .. cite.dblp:: conf/eacl/IzacardG21
     """
 
     def __init__(self, model_name_or_path: str, tokenizer_name_or_path: str = None, batch_size: int = 4, text_field: str = 'text', text_max_length: int = 256, num_context: Union[int, str] = "auto", max_new_tokens: int = 32, generation_config: GenerationConfig = None, verbose: bool = False, device: Union[str, torch.device] = None, **kwargs):
@@ -519,7 +521,9 @@ class T5FiD(FiD):
 
 class BARTFiD(FiD):
     """
-    BART FiD Reader for PyTerrier-RAG"
+    BART FiD Reader for PyTerrier-RAG
+
+    .. cite.dblp:: conf/eacl/IzacardG21
     """
 
     def __init__(self, model_name_or_path: str, tokenizer_name_or_path: str = None, batch_size: int = 4, text_field: str = 'text', text_max_length: int = 256, num_context: Union[int, str] = "auto", max_new_tokens: int = 32, generation_config: GenerationConfig = None, verbose: bool = False, device: Union[str, torch.device] = None, **kwargs):

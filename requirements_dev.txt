@@ -6,3 +6,4 @@ ruff
 bert_score
 evaluate # used by bertscore
 pytest-httpserver
+pyterrier @ git+https://github.com/terrier-org/pyterrier.git

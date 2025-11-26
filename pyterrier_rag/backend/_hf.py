@@ -5,6 +5,7 @@ from transformers import (
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
     StoppingCriteria,
+    StoppingCriteriaList,
 )
 import torch
 
@@ -14,6 +15,8 @@ from pyterrier_rag.backend._base import Backend, BackendOutput
 class HuggingFaceBackend(Backend):
     """
         Backend implementation using a HuggingFace Transformer model.
+        This backend assumes the class can be opened using AutoModelForCausalLM.
+        If your class needs AutoModelForSeq2SeqLM, then use Seq2SeqLMBackend.
 
         .. cite.dblp:: journals/corr/abs-1910-03771
 
@@ -53,15 +56,22 @@ class HuggingFaceBackend(Backend):
             device = torch.device(device)
         self.device = device
 
+        self._model = None
+        if self._model_class:
+            self._model = self._model_class.from_pretrained(model_id, **model_args).eval()
+            if model_args.get("device_map") is None:
+                self._model = self._model.to(self.device)
+
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id)
         self._model = (
             None
             if self._model_class is None
             else self._model_class.from_pretrained(model_id, **model_args).to(self.device).eval()
         )
         self._tokenizer = AutoTokenizer.from_pretrained(model_id)
-        if self.tokenizer.pad_token is None:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-            self._model.generation_config.pad_token_id = self.tokenizer.pad_token_id
+        if self._tokenizer.pad_token is None:
+            self._tokenizer.pad_token = self._tokenizer.eos_token
+            self._model.generation_config.pad_token_id = self._tokenizer.pad_token_id
 
         max_position_embeddings = getattr(self._model.config, "max_position_embeddings", None)
         self.max_input_length = max_input_length or max_position_embeddings
@@ -87,8 +97,11 @@ class HuggingFaceBackend(Backend):
         *,
         return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
+        stop_sequences : Optional[List[str]] = None,
         num_responses: int = 1,
     ) -> List[BackendOutput]:
+        if not isinstance(inps, list):
+            raise TypeError("Expected list as input to generate(), found " + str(type(inps)))
         if not isinstance(inps[0], str):
             raise ValueError(f'{self!r} only supports str inputs to generate')
         if return_logprobs:
@@ -120,6 +133,16 @@ class HuggingFaceBackend(Backend):
         if max_new_tokens:
             generation_args['max_new_tokens'] = max_new_tokens
 
+        stop_sequences_criteria = None
+        if stop_sequences is not None:
+            stop_sequences_criteria = StopWordCriteria(
+                tokenizer=self.tokenizer,
+                prompt_size=inputs["input_ids"].shape[-1],
+                stop_words=stop_sequences,
+                check_every=1,
+            )
+            generation_args['stopping_criteria'] = StoppingCriteriaList([stop_sequences_criteria])
+
         # Generate outputs
         outputs = self._model.generate(**inputs, return_dict_in_generate=True, output_scores=return_logprobs, **generation_args)
 
@@ -133,12 +156,32 @@ class HuggingFaceBackend(Backend):
         if self._remove_prompt:
             # Only keep tokens generated beyond the prompt length
             sliced_sequences = []
-            for i, prompt_length in enumerate(prompt_lengths):
-                sliced_sequences.append(sequences[i, prompt_length:])
+
+            if self.tokenizer.padding_side == "left":
+                # we can simply do this for both left- and right-padding
+                prompt_len_with_padding = inputs["input_ids"].shape[1]
+                for seq in sequences:
+                    sliced_sequences.append(seq[prompt_len_with_padding:])
+            else:
+                for i, prompt_length in enumerate(prompt_lengths):
+                    sliced_sequences.append(sequences[i, prompt_length:])
             sequences = sliced_sequences
 
         # Decode outputs
         texts = self.tokenizer.batch_decode(sequences, skip_special_tokens=True)
+
+        # for uniformity with the OpenAI and VLLM backends, remove stop sequences from the end of the outputs, annoying as it is.
+        if stop_sequences_criteria is not None:
+            if not self._remove_prompt:
+                # Note: the implementation should consider if we plan to support input type `list[list[dict]]` (e.g. chat)
+                raise NotImplementedError("removing stop sequences requires removing prompts from returned outputs")
+
+            for idx, text in enumerate(texts):
+                for seq in stop_sequences:
+                    text = text.rsplit(seq, maxsplit=1)[0]
+
+                texts[idx] = text
+
         return [
             BackendOutput(text=text)
             for text, length in zip(texts, prompt_lengths)

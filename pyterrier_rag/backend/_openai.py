@@ -80,6 +80,7 @@ class OpenAIBackend(Backend):
         self,
         prompt: str,
         max_new_tokens: Optional[int] = None,
+        stop_sequences : Optional[List[str]] = None,
         return_logprobs: bool = False,
         num_responses: int = 1,
     ) -> List[BackendOutput]:
@@ -95,6 +96,8 @@ class OpenAIBackend(Backend):
             args['max_tokens'] = max_new_tokens
         if return_logprobs:
             args['logprobs'] = self.logprobs_topk
+        if stop_sequences is not None:
+            args['stop'] = stop_sequences
         try:
             completions = self.client.completions.create(prompt=prompt, **args)
         except Exception as e:
@@ -120,6 +123,7 @@ class OpenAIBackend(Backend):
         max_new_tokens: Optional[int] = None,
         return_logprobs: bool = False,
         num_responses: int = 1,
+        stop_sequences : Optional[List[str]] = None,
     ) -> List[BackendOutput]:
         args = {
             'model': self.model_id,
@@ -132,6 +136,8 @@ class OpenAIBackend(Backend):
         if return_logprobs:
             args['logprobs'] = True
             args['top_logprobs'] = self.logprobs_topk
+        if stop_sequences is not None:
+            args['stop'] = stop_sequences
         try:
             completions = self.client.chat.completions.create(messages=messages, **args)
         except Exception as e:
@@ -157,8 +163,11 @@ class OpenAIBackend(Backend):
         *,
         return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
+        stop_sequences : Optional[List[str]] = None,
         num_responses: int = 1,
     ) -> List[BackendOutput]:
+        if not isinstance(inps, list):
+            raise TypeError("Expected list as input to generate(), found " + str(type(inps)))
         futures = []
         if self.api == 'completions':
             for inp in inps:
@@ -168,6 +177,7 @@ class OpenAIBackend(Backend):
                     max_new_tokens=max_new_tokens,
                     return_logprobs=return_logprobs,
                     num_responses=num_responses,
+                    stop_sequences=stop_sequences
                 ))
         elif self.api == 'chat/completions':
             for inp in inps:
@@ -180,6 +190,7 @@ class OpenAIBackend(Backend):
                     max_new_tokens=max_new_tokens,
                     return_logprobs=return_logprobs,
                     num_responses=num_responses,
+                    stop_sequences=stop_sequences
                 ))
         else:
             raise ValueError(f'api {self.api!r} not supported')
