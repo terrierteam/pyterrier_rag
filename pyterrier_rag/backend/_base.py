@@ -230,7 +230,7 @@ class TextGenerator(pt.Transformer):
             output_columns.append(self.logprobs_field)
         output_frame = []
         if inp is None or inp.empty:
-            return output_frame.to_df()
+            return pd.DataFrame([], columns=output_columns)
 
         for chunk in chunked(inp.to_dict(orient="records"), self.batch_size):
             chunk = list(chunk)
