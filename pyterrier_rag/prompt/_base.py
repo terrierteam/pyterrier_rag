@@ -109,7 +109,7 @@ class PromptTransformer(pt.Transformer):
         output_frame = []
 
         if inp is None or inp.empty:
-            return output_frame.to_df()
+            return pta.DataFrameBuilder([self.output_field, "qid", *self.input_fields]).to_df()
 
         for qid, group in inp.groupby("qid"):
             inp = group.to_dict(orient="records")

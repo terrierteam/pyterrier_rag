@@ -2,9 +2,12 @@ import re
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Union
 from dataclasses import dataclass
+from dataclasses import dataclass
 
 import pandas as pd
+import pandas as pd
 import pyterrier as pt
+import pyterrier_alpha as pta
 import pyterrier_alpha as pta
 from more_itertools import chunked
 
@@ -130,6 +133,10 @@ class Backend(pt.Transformer, ABC):
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         pta.validate.columns(inp, includes=["qid", self.text_generator().input_field])
+        if inp is None or inp.empty:
+            return pd.DataFrame(
+                columns=[*inp.columns.tolist(), self.text_generator().output_field]
+            )
         return self.text_generator().transform(inp)
 
     # factory methods
@@ -224,8 +231,7 @@ class TextGenerator(pt.Transformer):
         output_columns = [*input_columns, self.output_field]
         if self.logprobs_field is not None:
             output_columns.append(self.logprobs_field)
-        output_frame = pta.DataFrameBuilder(output_columns)
-
+        output_frame = []
         if inp is None or inp.empty:
             return output_frame.to_df()
 
@@ -239,22 +245,14 @@ class TextGenerator(pt.Transformer):
                 max_new_tokens=self.max_new_tokens,
                 stop_sequences=self.stop_sequences,
             )
-            if self.num_responses == 1:
-                assert len(chunk) == len(out), f"Response length did not match input chunk size: len(chunk)={len(chunk)} but len(out)={len(out)}"
-                for rec, o in zip(chunk, out):
+            for i, rec in enumerate(chunk):
+                for j in range(self.num_responses):
+                    o = out[i * self.num_responses + j]
                     result = {**rec, self.output_field: o.text}
                     if self.logprobs_field is not None:
                         result[self.logprobs_field] = o.logprobs
-                    output_frame.extend({k: v for k, v in result.items() if k in output_columns})
-            else:
-                for i, rec in enumerate(chunk):
-                    for j in range(self.num_responses):
-                        o = out[i * self.num_responses + j]
-                        result = {**rec, self.output_field: o.text}
-                        if self.logprobs_field is not None:
-                            result[self.logprobs_field] = o.logprobs
-                        output_frame.extend({k: v for k, v in result.items() if k in output_columns})
-        return output_frame.to_df()
+                    output_frame.append({k: v for k, v in result.items() if k in output_columns})
+        return pd.DataFrame(output_frame)
 
 
 __all__ = ["Backend", "BackendOutput", "TextGenerator"]
