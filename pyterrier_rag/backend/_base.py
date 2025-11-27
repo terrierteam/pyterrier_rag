@@ -2,7 +2,6 @@ import re
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Union
 from dataclasses import dataclass
-from dataclasses import dataclass
 
 import pandas as pd
 import pandas as pd
