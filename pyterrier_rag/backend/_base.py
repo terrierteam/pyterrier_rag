@@ -4,9 +4,7 @@ from typing import List, Dict, Optional, Union
 from dataclasses import dataclass
 
 import pandas as pd
-import pandas as pd
 import pyterrier as pt
-import pyterrier_alpha as pta
 import pyterrier_alpha as pta
 from more_itertools import chunked
 
