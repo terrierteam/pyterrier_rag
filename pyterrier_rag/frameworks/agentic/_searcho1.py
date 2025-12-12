@@ -143,6 +143,8 @@ class SearchO1(AgenticRAG):
         states: list[dict],
         **kwargs,
     ) -> dict[str, str]:
+        states = [state for state in states if state["qid"] in qid2docs]
+        
         analysis_prompts = []
         for state in states:
             analysis_prompts.append(self._get_analysis_prompt(qid2docs[state["qid"]], state))
