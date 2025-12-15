@@ -96,7 +96,6 @@ class SearchO1(AgenticRAG):
                 "model_args": {
                     "gpu_memory_utilization": 0.8,
                     "dtype": "bfloat16",
-                    "max_model_len": 16384,
                 },
                 "generation_args": {
                     "temperature": 0.7,
