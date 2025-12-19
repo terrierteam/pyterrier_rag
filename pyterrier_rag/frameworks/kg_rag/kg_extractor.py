@@ -4,7 +4,7 @@ from typing import Union, Optional, Tuple, List, Dict
 
 import pandas as pd
 import pyterrier as pt
-from ...backend import Backend 
+from ...backend import Backend, HuggingFaceBackend 
 from .prompts import generate_knowledge_triples_template, generate_knowledge_triples_chat_template
 
 
@@ -44,7 +44,7 @@ class KnowledgeGraphExtractor(pt.Transformer): #type: ignore
 
     @staticmethod
     def from_pretrained(model_id, device='cuda', max_input_length=2048, max_new_tokens=512, **kwargs) -> 'KnowledgeGraphExtractor':
-        backend = ptr.HuggingFaceBackend(
+        backend = HuggingFaceBackend(
                     model_id=model_id,      
                     device=device,
                     max_input_length=max_input_length,
@@ -141,7 +141,7 @@ class KnowledgeGraphExtractor(pt.Transformer): #type: ignore
                         if len(test_tokens) <= self.max_input_length:
                             final_exemplars = exemplars[:num]
                             break
-                    except:
+                    except Exception:
                         # if encoding fails, use estimated length
                         if len(test_prompt) <= self.max_input_length * 4:  # rough estimate
                             final_exemplars = exemplars[:num]

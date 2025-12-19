@@ -201,7 +201,7 @@ class ReasoningChainGenerator(pt.Transformer): # type: ignore
                     messages, tokenize=False, add_generation_prompt=True
                 )
                 return prompt
-        except:
+        except Exception:
             pass
         
         # Fallback to simple format
