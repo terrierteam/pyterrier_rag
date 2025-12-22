@@ -1,6 +1,6 @@
 """Top-level package for PyTerrier RAG."""
 
-__version__ = "0.2.3"
+__version__ = "0.2.4"
 
 from pyterrier_rag import _datasets
 from pyterrier_rag import measures
