@@ -39,7 +39,11 @@ def _chain_to_text_with_docs(chains, qid_df):
 class ReasoningChainGenerator(pt.Transformer): # type: ignore
     """
     PyTerrier Transformer for generating reasoning chains from knowledge graphs
-    Processes DataFrame input containing questions and knowledge graphs
+    Processes DataFrame input containing questions and knowledge graphs.
+
+    Originally proposed in TRACE. TRACE the Evidence: Constructing Knowledge-Grounded Reasoning Chains for Retrieval-Augmented Generation. Jinyuan Feng, Zaiqiao Meng and Craig Macdonald. In Proceedings of EMNLP 2024. https://arxiv.org/abs/2406.11460.
+
+    Contributors: Jinyuan Feng, Jie Zhan, Craig Macdonald
     """
 
     def __init__(self, 

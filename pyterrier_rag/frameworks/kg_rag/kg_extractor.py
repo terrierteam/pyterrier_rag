@@ -11,7 +11,12 @@ from .prompts import generate_knowledge_triples_template, generate_knowledge_tri
 class KnowledgeGraphExtractor(pt.Transformer): #type: ignore
     """
     knowledge graph extractor class, used to extract knowledge triples from documents
-    can be used in PyTerrier, supporting single document or batch document processing
+    can be used in PyTerrier, supporting single document or batch document processing.
+    Initially proposed in TRACE. 
+
+    TRACE the Evidence: Constructing Knowledge-Grounded Reasoning Chains for Retrieval-Augmented Generation. Jinyuan Feng, Zaiqiao Meng and Craig Macdonald. In Proceedings of EMNLP 2024. https://arxiv.org/abs/2406.11460.
+    
+    Contributors: Jinyuan Feng, Jie Zhan, Craig Macdonald
     """
     
     def __init__(self, 
