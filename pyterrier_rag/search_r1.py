@@ -186,4 +186,4 @@ class SearchR1(pt.Transformer):
                 search_text = curr_search_template.format(output_text=output_text, search_results=search_results)
                 prompt += search_text
                 cnt += 1
-        return output_frame.to_dataframe()
+        return output_frame.to_df()
