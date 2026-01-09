@@ -135,7 +135,8 @@ class SearchR1(pt.Transformer):
 
     def transform(self, inp : pd.DataFrame) -> pd.DataFrame:
         pta.validate.columns(inp, includes=["qid", "query"])
-        output_frame = pta.DataFrameBuilder(["qid", "query", "output", "qanswer", "iteration", "all_queries"])
+        columns = ["qid", "query", "output", "qanswer", "iteration", "all_queries"]
+        records = []
 
         for _, row in inp.iterrows():
             inp = row
@@ -171,7 +172,7 @@ class SearchR1(pt.Transformer):
                     generated_tokens = outputs[0][input_ids.shape[1]:]
                     output_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
                     answer = get_answer(output_text)
-                    output_frame.extend({'qid' : qid, 'query' : question, 'qanswer' : answer, 'output': prompt + "\n" + output_text, 'iteration' : cnt, 'all_queries' : all_queries})
+                    records.append({'qid' : qid, 'query' : question, 'qanswer' : answer, 'output': prompt + "\n" + output_text, 'iteration' : cnt, 'all_queries' : all_queries})
                     break
                 generated_tokens = outputs[0][input_ids.shape[1]:]
                 output_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
@@ -186,4 +187,4 @@ class SearchR1(pt.Transformer):
                 search_text = curr_search_template.format(output_text=output_text, search_results=search_results)
                 prompt += search_text
                 cnt += 1
-        return output_frame.to_df()
+        return pd.DataFrame(records, columns=columns)
