@@ -171,7 +171,7 @@ class SearchR1(pt.Transformer):
                     generated_tokens = outputs[0][input_ids.shape[1]:]
                     output_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
                     answer = get_answer(output_text)
-                    output_frame.extend({'qid' : qid, 'query' : question, 'qanswer' : answer, 'output': prompt + "\n" + output_text, 'iteration' : cnt, 'all_queries' : all_queries})
+                    output_frame.extend({'qid' : qid, 'query' : question, 'qanswer' : answer, 'output': prompt + "\n" + output_text, 'iteration' : cnt, 'all_queries' : str(all_queries)})
                     break
                 generated_tokens = outputs[0][input_ids.shape[1]:]
                 output_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
