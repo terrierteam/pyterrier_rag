@@ -57,24 +57,6 @@ class DummyReader:
     def __call__(self, df):
         return self.transform(df)
 
-# Simple conversation template stub for PromptTransformer mocks
-class SimpleConvTemplate:
-    def __init__(self):
-        self.messages = []
-    def copy(self):
-        # Return a shallow copy
-        new = SimpleConvTemplate()
-        new.messages = list(self.messages)
-        return new
-    def set_system_message(self, system_message):
-        # Prepend system message
-        self.messages.insert(0, {'role': 'system', 'content': system_message})
-    def append_message(self, role, content):
-        self.messages.append({'role': role, 'content': content})
-    def get_prompt(self):
-        # Join all messages into a single prompt string
-        return "".join(f"{m['role']}: {m['content']}" for m in self.messages)
-
 # Test iteration threshold logic
 @pytest.fixture(autouse=True)
 def patch_transformers_and_reader(monkeypatch):
