@@ -111,6 +111,4 @@ ENV/
 # Misc
 .DS_Store
 
-
 examples/*/*_index
-.claude/settings.local.json
