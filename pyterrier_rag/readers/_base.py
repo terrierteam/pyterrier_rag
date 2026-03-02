@@ -14,34 +14,48 @@ class Reader(pt.Transformer):
     """
     Transformer that generates answers from context and queries using an LLM backend.
 
-    Formats context and query into prompts, sends them to the backend for answer generation.
+    For each ``qid`` group, Reader builds one prompt from the retrieved documents and
+    query columns, sends it to the backend, and writes the answer to ``output_field``.
+
+    Prompt contract in this refactored API:
+    - ``prompt`` can be a jinja ``str`` template or a callable.
+    - String prompts are rendered with ``jinja_formatter`` and receive
+      ``docs=<group.iterrows()>`` plus all query columns (for example ``query``).
+    - Callable prompts must accept ``docs`` and query columns via ``**kwargs`` and
+      return either a string prompt or a list of chat messages.
 
     Parameters:
         backend (Backend or str): A Backend instance or model identifier string.
-        prompt (PromptTransformer or str): Prompt template or raw instruction.
+        prompt (callable or str): Prompt function or jinja template.
+        system_prompt (str, optional): Prepended for text backends, or added as a
+            ``system`` message for chat backends.
+        answer_extraction (callable): Maps backend ``qanswer`` values to final output.
         output_field (str): Field name in the output DataFrame for answers.
 
-    Raises:
-        ValueError: If the prompt expects logprobs but the backend does not support logprobs.
-
-    Example using a local LLM::
+    Example with a jinja template::
 
         from pyterrier_rag.backend import Seq2SeqLMBackend
         from pyterrier_rag.readers import Reader
 
-        flant5 = Reader(Seq2SeqLMBackend('google/flan-t5-base'))
-        bm25_flant5 = bm25_ret % 10 >> flant5
-        bm25_flant5.search("What is the capital of France?")
+        reader = Reader(
+            backend=Seq2SeqLMBackend("google/flan-t5-base"),
+            prompt="Question: {{ query }}\nContext:{% for _, d in docs %}\n{{ d.text }}{% endfor %}\nAnswer:",
+        )
 
-    Example using a remote LLM::
+    Example with a callable prompt for chat backends::
 
         from pyterrier_rag.backend import OpenAIBackend
         from pyterrier_rag.readers import Reader
 
-        llamma = Reader(OpenAIBackend("llama-3-8b-instruct", api_key="your_api_key", base_url="your_base_url"). 
-        bm25_llamma = bm25_ret % 10 >> llamma
-        bm25_llamma.search("What is the capital of Italy?")
+        def chat_prompt(docs, query, **kwargs):
+            context = "\n".join(d.text for _, d in docs)
+            return [{"role": "user", "content": f"Question: {query}\nContext: {context}\nAnswer:"}]
 
+        reader = Reader(
+            backend=OpenAIBackend("gpt-4o-mini", api_key="..."),
+            prompt=chat_prompt,
+            system_prompt="Answer using only the provided context.",
+        )
 
     """
     def __init__(
