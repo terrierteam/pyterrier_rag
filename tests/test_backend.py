@@ -1,6 +1,7 @@
 import itertools
 import pytest
 import torch
+import pandas as pd
 from typing import Iterable
 from pyterrier_rag.backend import Backend, BackendOutput, TextGenerator
 import pyterrier_rag.backend._base as backend_base
@@ -31,6 +32,18 @@ def test_text_generator_returns_textgenerator():
     tb = b.text_generator()
     assert isinstance(tb, TextGenerator)
     assert tb.backend is b
+    assert tb.batch_size == 4
+
+
+def test_text_generator_uses_backend_batch_size_by_default():
+    class BatchBackend(DummyBackend):
+        def __init__(self):
+            super().__init__()
+            self.batch_size = 7
+
+    b = BatchBackend()
+    tb = b.text_generator()
+    assert tb.batch_size == 7
 
 
 def test_logprobs_generator_without_support(monkeypatch):
@@ -50,6 +63,48 @@ def test_logprobs_generator_with_support(monkeypatch):
     assert isinstance(lb, TextGenerator)
     assert lb.backend is b
     assert lb.logprobs_field == 'qanswer_logprobs'
+    assert lb.batch_size == 4
+
+
+def test_logprobs_generator_uses_backend_batch_size_by_default():
+    class BatchBackend(DummyBackend):
+        def __init__(self):
+            super().__init__()
+            self.batch_size = 6
+
+    b = BatchBackend()
+    lb = b.logprobs_generator()
+    assert lb.batch_size == 6
+
+
+def test_backend_transform_uses_backend_batch_size_default():
+    class BatchRecordingBackend(DummyBackend):
+        def __init__(self):
+            super().__init__()
+            self.batch_size = 2
+            self.chunk_sizes = []
+
+        def generate(self, inp, return_logprobs=False, max_new_tokens=None, num_responses=1, stop_sequences=None):
+            self.chunk_sizes.append(len(inp))
+            return super().generate(
+                inp,
+                return_logprobs=return_logprobs,
+                max_new_tokens=max_new_tokens,
+                num_responses=num_responses,
+                stop_sequences=stop_sequences,
+            )
+
+    b = BatchRecordingBackend()
+    inp = pd.DataFrame([
+        {"qid": "q1", "prompt": "p1"},
+        {"qid": "q2", "prompt": "p2"},
+        {"qid": "q3", "prompt": "p3"},
+        {"qid": "q4", "prompt": "p4"},
+        {"qid": "q5", "prompt": "p5"},
+    ])
+    out = b.transform(inp)
+    assert len(out) == 5
+    assert b.chunk_sizes == [2, 2, 1]
 
 
 def test_textgenerator_transform_iter_success(monkeypatch):
