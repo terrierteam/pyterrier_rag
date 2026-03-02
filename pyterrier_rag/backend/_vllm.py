@@ -67,7 +67,11 @@ class VLLMBackend(Backend):
         if not isinstance(inps, list):
             raise TypeError("Expected list as input to generate(), found " + str(type(inps)))
         if not isinstance(inps[0], str):
-            raise ValueError(f'{self!r} only supports str inputs to generate')
+            inps = self.tokenizer.apply_chat_template(
+                inps,
+                tokenize=False,
+                add_generation_prompt=True
+            )
         if num_responses != 1:
             raise ValueError(f'{self!r} does not support num_responses > 1')
         generation_args = {}
