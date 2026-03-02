@@ -162,10 +162,6 @@ class Backend(pt.Transformer, ABC):
 
         Parameters:
             dsn (str): The DSN string to parse.
-            max_input_length (int): Maximum token length for each input prompt.
-            max_new_tokens (int): Maximum number of tokens to generate.
-            batch_size (int): Number of prompts to process in each batch.
-            verbose (bool): Flag to enable detailed logging.
 
         Returns:
             Backend: An instance of the appropriate Backend subclass based on the provider.
@@ -190,10 +186,6 @@ class Backend(pt.Transformer, ABC):
         params_str = match.group("params")
         params = {
             'model_id': match.group("model_id"),
-            'max_input_length': max_input_length,
-            'max_new_tokens': max_new_tokens,
-            'batch_size': batch_size,
-            'verbose': verbose,
         }
         if params_str:
             for param in shlex.split(params_str):
