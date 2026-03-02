@@ -51,6 +51,7 @@ class HuggingFaceBackend(Backend):
         super().__init__(
             model_id=model_id,
             max_new_tokens=max_new_tokens,
+            batch_size=batch_size,
             verbose=verbose,
         )
         self.batch_size = batch_size
