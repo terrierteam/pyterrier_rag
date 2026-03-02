@@ -14,8 +14,7 @@ class Reader(pt.Transformer):
     """
     Transformer that generates answers from context and queries using an LLM backend.
 
-    Combines a PromptTransformer with a Backend to produce text or logprobs,
-    then applies answer extraction to return final responses.
+    Formats context and query into prompts, sends them to the backend for answer generation.
 
     Parameters:
         backend (Backend or str): A Backend instance or model identifier string.
