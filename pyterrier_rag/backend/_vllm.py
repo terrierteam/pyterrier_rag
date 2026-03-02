@@ -31,6 +31,7 @@ class VLLMBackend(Backend):
         generation_args: dict = None,
         max_input_length: int = 512,
         max_new_tokens: int = 32,
+        batch_size: int = 4,
         logprobs_topk: int = 20,
         verbose: bool = False,
     ):
@@ -40,6 +41,7 @@ class VLLMBackend(Backend):
             max_new_tokens=max_new_tokens,
             verbose=verbose,
         )
+        self.batch_size = batch_size
         if not is_vllm_availible():
             raise ImportError("Please install vllm to use VLLMBackend")
         from vllm import LLM, SamplingParams
@@ -117,6 +119,7 @@ class VLLMBackend(Backend):
             model_id=params['model_id'],
             max_input_length=int(params.get('max_input_length', 512)),
             max_new_tokens=int(params.get('max_new_tokens', 32)),
+            batch_size=int(params.get('batch_size', 4)),
             logprobs_topk=int(params.get('logprobs_topk', 20)),
             verbose=bool(params.get('verbose', False)),
         )

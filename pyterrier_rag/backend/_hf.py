@@ -31,7 +31,9 @@ class HuggingFaceBackend(Backend):
     supports_logprobs = False # TODO: add support for logprobs
     _model_class = AutoModelForCausalLM
     _remove_prompt = True
-    supports_message_input = False
+    @property
+    def supports_message_input(self):
+        return getattr(self.tokenizer, "chat_template", None) is not None
 
     def __init__(
         self,
@@ -49,9 +51,9 @@ class HuggingFaceBackend(Backend):
         super().__init__(
             model_id=model_id,
             max_new_tokens=max_new_tokens,
-            batch_size=batch_size,
             verbose=verbose,
         )
+        self.batch_size = batch_size
 
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -104,7 +106,7 @@ class HuggingFaceBackend(Backend):
         *,
         return_logprobs: bool = False,
         max_new_tokens: Optional[int] = None,
-        stop_sequences : Optional[List[str]] = None,
+        stop_sequences: Optional[List[str]] = None,
         num_responses: int = 1,
     ) -> List[BackendOutput]:
         if not isinstance(inps, list):

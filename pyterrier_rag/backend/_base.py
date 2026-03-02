@@ -1,4 +1,5 @@
 import re
+import shlex
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Union
 from dataclasses import dataclass
@@ -48,14 +49,12 @@ class Backend(pt.Transformer, ABC):
         *,
         max_input_length: int = 512,
         max_new_tokens: int = 32,
-        batch_size: int = 4,
         verbose: bool = False,
     ):
         super().__init__()
         self.model_id = model_id
         self.max_input_length = max_input_length
         self.max_new_tokens = max_new_tokens
-        self.batch_size = batch_size
         self.verbose = verbose
 
     # Abstract methods
@@ -136,17 +135,14 @@ class Backend(pt.Transformer, ABC):
             return pd.DataFrame(
                 columns=[*inp.columns.tolist(), self.text_generator().output_field]
             )
-        return self.text_generator(batch_size=self.batch_size).transform(inp)
+        batch_size = getattr(self, "batch_size", 4)
+        return self.text_generator(batch_size=batch_size).transform(inp)
 
     # factory methods
 
     @staticmethod
     def from_dsn(
         dsn: str,
-        max_input_length: int = 512,
-        max_new_tokens: int = 32,
-        batch_size: int = 4,
-        verbose: bool = False,
         ) -> 'Backend':
         """ Create a Backend instance from a DSN (Data Source Name) string.
 
@@ -159,10 +155,6 @@ class Backend(pt.Transformer, ABC):
 
         Parameters:
             dsn (str): The DSN string to parse.
-            max_input_length (int): Maximum token length for each input prompt.
-            max_new_tokens (int): Maximum number of tokens to generate.
-            batch_size (int): Number of prompts to process in each batch.
-            verbose (bool): Flag to enable detailed logging.
 
         Returns:
             Backend: An instance of the appropriate Backend subclass based on the provider.
@@ -187,14 +179,14 @@ class Backend(pt.Transformer, ABC):
         params_str = match.group("params")
         params = {
             'model_id': match.group("model_id"),
-            'max_input_length': max_input_length,
-            'max_new_tokens': max_new_tokens,
-            'batch_size': batch_size,
-            'verbose': verbose,
         }
         if params_str:
-            for param in params_str.split():
-                key, value = param.split("=")
+            for param in shlex.split(params_str):
+                if "=" not in param:
+                    raise ValueError(f"Invalid DSN parameter {param!r}; expected key=value")
+                key, value = param.split("=", 1)
+                if not key:
+                    raise ValueError(f"Invalid DSN parameter {param!r}; key cannot be empty")
                 params[key] = value
         return backend_cls.from_params(params)
 
