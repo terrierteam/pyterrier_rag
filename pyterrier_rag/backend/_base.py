@@ -48,14 +48,12 @@ class Backend(pt.Transformer, ABC):
         *,
         max_input_length: int = 512,
         max_new_tokens: int = 32,
-        batch_size: int = 4,
         verbose: bool = False,
     ):
         super().__init__()
         self.model_id = model_id
         self.max_input_length = max_input_length
         self.max_new_tokens = max_new_tokens
-        self.batch_size = batch_size
         self.verbose = verbose
 
     # Abstract methods
@@ -103,7 +101,7 @@ class Backend(pt.Transformer, ABC):
             stop_sequences(Optional[List[str]]): List of tokens at which to stop generation. If None, generation is unconstrained.
             num_responses (int): Number of responses to generate for each prompt.
         """
-        return TextGenerator(self, input_field=input_field, output_field=output_field, batch_size=batch_size, max_new_tokens=max_new_tokens, num_responses=num_responses, stop_sequences=stop_sequences)
+        return TextGenerator(self, input_field=input_field, output_field=output_field, max_new_tokens=max_new_tokens, num_responses=num_responses, stop_sequences=stop_sequences)
 
     def logprobs_generator(self,
         *,
@@ -128,7 +126,7 @@ class Backend(pt.Transformer, ABC):
         """
         if not self.supports_logprobs:
             raise ValueError("This model cannot return logprobs")
-        return TextGenerator(self, input_field=input_field, output_field=output_field, batch_size=batch_size, logprobs_field=logprobs_field, max_new_tokens=max_new_tokens, num_responses=num_responses, stop_sequences=stop_sequences)
+        return TextGenerator(self, input_field=input_field, output_field=output_field, logprobs_field=logprobs_field, max_new_tokens=max_new_tokens, num_responses=num_responses, stop_sequences=stop_sequences)
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         pta.validate.columns(inp, includes=["qid", self.text_generator().input_field])
@@ -136,18 +134,12 @@ class Backend(pt.Transformer, ABC):
             return pd.DataFrame(
                 columns=[*inp.columns.tolist(), self.text_generator().output_field]
             )
-        return self.text_generator(batch_size=self.batch_size).transform(inp)
+        return self.text_generator().transform(inp)
 
     # factory methods
 
     @staticmethod
-    def from_dsn(
-        dsn: str,
-        max_input_length: int = 512,
-        max_new_tokens: int = 32,
-        batch_size: int = 4,
-        verbose: bool = False,
-        ) -> 'Backend':
+    def from_dsn(dsn: str) -> 'Backend':
         """ Create a Backend instance from a DSN (Data Source Name) string.
 
         The DSN format is: ``<provider>:<model_id> [key1=value1 key2=value2 ...]``.
@@ -159,10 +151,6 @@ class Backend(pt.Transformer, ABC):
 
         Parameters:
             dsn (str): The DSN string to parse.
-            max_input_length (int): Maximum token length for each input prompt.
-            max_new_tokens (int): Maximum number of tokens to generate.
-            batch_size (int): Number of prompts to process in each batch.
-            verbose (bool): Flag to enable detailed logging.
 
         Returns:
             Backend: An instance of the appropriate Backend subclass based on the provider.
@@ -187,10 +175,6 @@ class Backend(pt.Transformer, ABC):
         params_str = match.group("params")
         params = {
             'model_id': match.group("model_id"),
-            'max_input_length': max_input_length,
-            'max_new_tokens': max_new_tokens,
-            'batch_size': batch_size,
-            'verbose': verbose,
         }
         if params_str:
             for param in params_str.split():
@@ -246,7 +230,7 @@ class TextGenerator(pt.Transformer):
             output_columns.append(self.logprobs_field)
         output_frame = []
         if inp is None or inp.empty:
-            return pd.DataFrame(columns=output_columns)
+            return pd.DataFrame([], columns=output_columns)
 
         for chunk in chunked(inp.to_dict(orient="records"), self.batch_size):
             chunk = list(chunk)
