@@ -4,7 +4,6 @@ from typing import Union
 import pandas as pd
 import pyterrier as pt
 import pyterrier_alpha as pta
-import pyterrier_alpha as pta
 
 from pyterrier_rag.backend import Backend
 from pyterrier_rag.prompt.default import DefaultPrompt
