@@ -1,6 +1,6 @@
 """Top-level package for PyTerrier RAG."""
 
-__version__ = "0.2.3"
+__version__ = "0.3.0"
 
 from pyterrier_rag import _datasets
 from pyterrier_rag import measures
@@ -11,6 +11,7 @@ from pyterrier_rag.search_o1 import SearchO1
 from pyterrier_rag.search_r1 import SearchR1
 from pyterrier_rag.r1_searcher import R1Searcher
 from pyterrier_rag._util import ReasoningExtractor
+from pyterrier_rag.frameworks import KnowledgeGraphExtractor, ReasoningChainGenerator 
 
 from pyterrier_rag.backend import (
     Backend,
@@ -38,4 +39,6 @@ __all__ = [
     "Seq2SeqLMBackend",
     "VLLMBackend",
     "default_backend",
+    "KnowledgeGraphExtractor",
+    "ReasoningChainGenerator",
 ]

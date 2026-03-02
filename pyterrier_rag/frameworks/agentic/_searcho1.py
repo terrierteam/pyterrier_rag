@@ -96,7 +96,6 @@ class SearchO1(AgenticRAG):
                 "model_args": {
                     "gpu_memory_utilization": 0.8,
                     "dtype": "bfloat16",
-                    "max_model_len": 16384,
                 },
                 "generation_args": {
                     "temperature": 0.7,
@@ -143,6 +142,8 @@ class SearchO1(AgenticRAG):
         states: list[dict],
         **kwargs,
     ) -> dict[str, str]:
+        states = [state for state in states if state["qid"] in qid2docs]
+        
         analysis_prompts = []
         for state in states:
             analysis_prompts.append(self._get_analysis_prompt(qid2docs[state["qid"]], state))

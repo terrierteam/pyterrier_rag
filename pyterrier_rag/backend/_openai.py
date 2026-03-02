@@ -180,6 +180,8 @@ class OpenAIBackend(Backend):
                     stop_sequences=stop_sequences
                 ))
         elif self.api == 'chat/completions':
+            if isinstance(inps[0], dict):
+                inps = [inps]
             for inp in inps:
                 if isinstance(inp, str):
                     # treat plain str inputs as simple messages

@@ -119,5 +119,8 @@ _Constructing and Evaluating Declarative RAG Pipelines in PyTerrier. Craig Macdo
  - Craig Macdonald, University of Glasgow
  - Jinyuan Fang, University of Glasgow
  - Andrew Parry, University of Glasgow
+ - Zhili Shen, University of Glasgow
+ - Yulin Qiao, University of Glasgow
+ - Jie Zhan, University of Glasgow
  - Zaiqiao Meng, University of Glasgow
  - Sean MacAvaney, University of Glasgow

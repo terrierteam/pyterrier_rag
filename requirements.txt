@@ -11,3 +11,4 @@ openai>=1.70.0
 fschat
 psutil
 rouge_score
+pyterrier_dr
