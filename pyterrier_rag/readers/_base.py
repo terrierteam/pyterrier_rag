@@ -17,7 +17,6 @@ class Reader(pt.Transformer):
     For each ``qid`` group, Reader builds one prompt from the retrieved documents and
     query columns, sends it to the backend, and writes the answer to ``output_field``.
 
-    Prompt contract in this refactored API:
     - ``prompt`` can be a jinja ``str`` template or a callable.
     - String prompts are rendered with ``jinja_formatter`` and receive
       ``docs=<group.iterrows()>`` plus all query columns (for example ``query``).
