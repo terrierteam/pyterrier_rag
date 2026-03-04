@@ -3,18 +3,15 @@ from warnings import warn
 
 import pandas as pd
 import pyterrier as pt
-import ir_datasets as irds
 from pyterrier.datasets import Dataset, RemoteDataset
 
 # TODO requires transformers to be installed
 
 class RAGDataset(Dataset):
-        
     def get_answers(self, variant: Optional[str] = None) -> pd.DataFrame:
         pass
 
 class RemoteRAGDataset(RemoteDataset, RAGDataset):
-        
     def get_answers(self, variant : Optional[str] = None):
         filename, type = self._get_one_file("answers", variant)
         if type == "direct":
@@ -25,15 +22,12 @@ class FlashRAGDataset(RAGDataset):
     def __init__(self, flashsplits : Dict[str,str]):
         self.splits = flashsplits
         # TODO: we should cache the df?
-
-    def get_corpus(self):
-        raise NotImplementedError(f'{self!r} does not support get_corpus, try get_corpus_iter instead')
     
     def get_corpus_iter(self) -> pt.model.IterDict:
-        if 'None/' in self.splits['name']:
-            name = name[len('None/'):]
+        if self.splits['corpus_name'] == 'None':
+            name = self.splits['name']
             raise NotImplementedError(f'{self!r} for {name} does not support get_corpus_iter')
-        return pt.get_dataset(self.splits['name']).get_corpus_iter()
+        return pt.get_dataset(self.splits['corpus_name']).get_corpus_iter()
 
     def get_topics(self, variant : Optional[str] = None) -> pd.DataFrame:
         if variant is None:
@@ -52,19 +46,19 @@ class FlashRAGDataset(RAGDataset):
 DATASET_MAP = {}
 
 DATASET_MAP['nq'] = FlashRAGDataset(
-    {'name': 'irds:beir/nq', 'train': 'nq/train.jsonl', 'dev': 'nq/dev.jsonl', 'test': 'nq/test.jsonl'})
+    {'name': 'NQ', 'corpus_name': 'irds:beir/nq', 'train': 'nq/train.jsonl', 'dev': 'nq/dev.jsonl', 'test': 'nq/test.jsonl'})
 DATASET_MAP['hotpotqa'] = FlashRAGDataset(
-    {'name': 'irds:beir/hotpotqa', 'train': 'hotpotqa/train.jsonl', 'dev': 'hotpotqa/dev.jsonl'})
+    {'name': 'HotPotQA', 'corpus_name': 'irds:beir/hotpotqa', 'train': 'hotpotqa/train.jsonl', 'dev': 'hotpotqa/dev.jsonl'})
 DATASET_MAP['triviaqa'] = FlashRAGDataset(
-    {'name': 'irds:dpr-w100/trivia-qa/dev', 'train': 'triviaqa/train.jsonl', 'dev': 'triviaqa/dev.jsonl', 'test': 'triviaqa/test.jsonl'})
+    {'name': 'TriviaQA', 'corpus_name': 'irds:dpr-w100/trivia-qa/dev', 'train': 'triviaqa/train.jsonl', 'dev': 'triviaqa/dev.jsonl', 'test': 'triviaqa/test.jsonl'})
 DATASET_MAP['musique'] = FlashRAGDataset(
-    {'name': 'None/musique', 'train': 'musique/train.jsonl', 'dev': 'musique/dev.jsonl'})
+    {'name': 'Musique', 'corpus_name': 'None', 'train': 'musique/train.jsonl', 'dev': 'musique/dev.jsonl'})
 pt.datasets.DATASET_MAP['rag:web_questions'] = FlashRAGDataset(
-    {'name': 'None/web_questions', 'train': 'web_questions/train.jsonl', 'test': 'web_questions/test.jsonl'})
+    {'name': 'Web Questions', 'corpus_name': 'None', 'train': 'web_questions/train.jsonl', 'test': 'web_questions/test.jsonl'})
 pt.datasets.DATASET_MAP['rag:wow'] = FlashRAGDataset(
-    {'name': 'None/wow', 'train': 'wow/train.jsonl', 'dev': 'wow/dev.jsonl'})
+    {'name': 'WoW', 'corpus_name': 'None', 'train': 'wow/train.jsonl', 'dev': 'wow/dev.jsonl'})
 pt.datasets.DATASET_MAP['rag:popqa'] = FlashRAGDataset(
-    {'name': 'None/popqa', 'test': 'popqa/test.jsonl'})
+    {'name': 'PopQA', 'corpus_name': 'None', 'test': 'popqa/test.jsonl'})
 
 
 def _hotspot_files(dataset: Dataset, components: str, variant: str, **kwargs):
