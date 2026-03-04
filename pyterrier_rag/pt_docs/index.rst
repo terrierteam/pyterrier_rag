@@ -15,6 +15,7 @@ As well as access to all of the retrievers (sparse, learned sparse, and dense) a
     :maxdepth: 1
 
     datamodel
+    how-to
     measures
     backends
     prompts

@@ -1,10 +1,3 @@
-from jinja2 import Template
+from .legacy import prompt
 
-
-def prompt(template: str):
-    obj = Template(template)
-
-    def render(**kwargs):
-        return obj.render(**kwargs)
-
-    return render
+__all__ = ["prompt"]
