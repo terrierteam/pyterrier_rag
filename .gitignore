@@ -111,10 +111,4 @@ ENV/
 # Misc
 .DS_Store
 
-<<<<<<< HEAD
-
 examples/*/*_index
-.claude/settings.local.json
-=======
-examples/*/*_index
->>>>>>> 2f21729ca56ec5c6e58ddbd212e679d46cb18804
