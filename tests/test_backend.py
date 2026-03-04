@@ -32,7 +32,7 @@ def test_text_generator_returns_textgenerator():
     tb = b.text_generator()
     assert isinstance(tb, TextGenerator)
     assert tb.backend is b
-    assert tb.batch_size == 4
+    assert tb.batch_size is None
 
 
 def test_text_generator_does_not_use_backend_batch_size_by_default():
@@ -43,7 +43,7 @@ def test_text_generator_does_not_use_backend_batch_size_by_default():
 
     b = BatchBackend()
     tb = b.text_generator()
-    assert tb.batch_size == 4
+    assert tb.batch_size is None
 
 
 def test_logprobs_generator_without_support(monkeypatch):
@@ -63,7 +63,7 @@ def test_logprobs_generator_with_support(monkeypatch):
     assert isinstance(lb, TextGenerator)
     assert lb.backend is b
     assert lb.logprobs_field == 'qanswer_logprobs'
-    assert lb.batch_size == 4
+    assert lb.batch_size is None
 
 
 def test_logprobs_generator_does_not_use_backend_batch_size_by_default():
@@ -74,10 +74,10 @@ def test_logprobs_generator_does_not_use_backend_batch_size_by_default():
 
     b = BatchBackend()
     lb = b.logprobs_generator()
-    assert lb.batch_size == 4
+    assert lb.batch_size is None
 
 
-def test_backend_transform_uses_default_batch_size():
+def test_backend_transform_no_implicit_batch_size():
     class BatchRecordingBackend(DummyBackend):
         def __init__(self):
             super().__init__()
@@ -104,7 +104,36 @@ def test_backend_transform_uses_default_batch_size():
     ])
     out = b.transform(inp)
     assert len(out) == 5
-    assert b.chunk_sizes == [4, 1]
+    assert b.chunk_sizes == [5]
+
+
+def test_backend_transform_explicit_batch_size():
+    class BatchRecordingBackend(DummyBackend):
+        def __init__(self):
+            super().__init__()
+            self.chunk_sizes = []
+
+        def generate(self, inp, return_logprobs=False, max_new_tokens=None, num_responses=1, stop_sequences=None):
+            self.chunk_sizes.append(len(inp))
+            return super().generate(
+                inp,
+                return_logprobs=return_logprobs,
+                max_new_tokens=max_new_tokens,
+                num_responses=num_responses,
+                stop_sequences=stop_sequences,
+            )
+
+    b = BatchRecordingBackend()
+    inp = pd.DataFrame([
+        {"qid": "q1", "prompt": "p1"},
+        {"qid": "q2", "prompt": "p2"},
+        {"qid": "q3", "prompt": "p3"},
+        {"qid": "q4", "prompt": "p4"},
+        {"qid": "q5", "prompt": "p5"},
+    ])
+    out = b.text_generator(batch_size=2).transform(inp)
+    assert len(out) == 5
+    assert b.chunk_sizes == [2, 2, 1]
 
 
 def test_textgenerator_transform_iter_success(monkeypatch):
