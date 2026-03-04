@@ -64,7 +64,7 @@ class HuggingFaceBackend(Backend):
             if model_args.get("device_map") is None:
                 self._model = self._model.to(self.device)
 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id)
+        self._tokenizer = AutoTokenizer.from_pretrained(model_id)
         self._model = (
             None
             if self._model_class is None
