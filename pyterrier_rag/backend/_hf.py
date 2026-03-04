@@ -28,12 +28,9 @@ class HuggingFaceBackend(Backend):
             max_new_tokens (int): Maximum number of tokens to generate per input.
             verbose (bool): Flag to enable verbose logging.
     """
-    supports_logprobs = False # TODO: add support for logprobs
+    supports_logprobs = False  # TODO: add support for logprobs
     _model_class = AutoModelForCausalLM
     _remove_prompt = True
-    @property
-    def supports_message_input(self):
-        return getattr(self.tokenizer, "chat_template", None) is not None
 
     def __init__(
         self,
@@ -51,7 +48,6 @@ class HuggingFaceBackend(Backend):
         super().__init__(
             model_id=model_id,
             max_new_tokens=max_new_tokens,
-            batch_size=batch_size,
             verbose=verbose,
         )
         self.batch_size = batch_size
@@ -91,14 +87,14 @@ class HuggingFaceBackend(Backend):
                 "num_beams": 1,
             }
         self._generation_args = generation_args
+    
+    @property
+    def supports_message_input(self):
+        return getattr(self.tokenizer, "chat_template", None) is not None
 
     @property
     def tokenizer(self) -> AutoTokenizer:
         return self._tokenizer
-
-    @tokenizer.setter
-    def tokenizer(self, value: AutoTokenizer) -> None:
-        self._tokenizer = value
 
     @torch.no_grad()
     def generate(
