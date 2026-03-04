@@ -31,6 +31,7 @@ class VLLMBackend(Backend):
         generation_args: dict = None,
         max_input_length: int = 512,
         max_new_tokens: int = 32,
+        batch_size: int = 4,
         logprobs_topk: int = 20,
         verbose: bool = False,
     ):
@@ -40,6 +41,7 @@ class VLLMBackend(Backend):
             max_new_tokens=max_new_tokens,
             verbose=verbose,
         )
+        self.batch_size = batch_size
         if not is_vllm_availible():
             raise ImportError("Please install vllm to use VLLMBackend")
         from vllm import LLM, SamplingParams
@@ -55,6 +57,50 @@ class VLLMBackend(Backend):
         self.generation_args = generation_args
         self.to_params = SamplingParams
 
+    def text_generator(
+        self,
+        *,
+        input_field: str = "prompt",
+        output_field: str = "qanswer",
+        batch_size: Optional[int] = None,
+        max_new_tokens: Optional[int] = None,
+        stop_sequences: Optional[List[str]] = None,
+        num_responses: int = 1,
+    ):
+        if batch_size is None:
+            batch_size = self.batch_size
+        return super().text_generator(
+            input_field=input_field,
+            output_field=output_field,
+            batch_size=batch_size,
+            max_new_tokens=max_new_tokens,
+            stop_sequences=stop_sequences,
+            num_responses=num_responses,
+        )
+
+    def logprobs_generator(
+        self,
+        *,
+        input_field: str = "prompt",
+        output_field: str = "qanswer",
+        logprobs_field: str = "qanswer_logprobs",
+        batch_size: Optional[int] = None,
+        max_new_tokens: Optional[int] = None,
+        stop_sequences: Optional[List[str]] = None,
+        num_responses: int = 1,
+    ):
+        if batch_size is None:
+            batch_size = self.batch_size
+        return super().logprobs_generator(
+            input_field=input_field,
+            output_field=output_field,
+            logprobs_field=logprobs_field,
+            batch_size=batch_size,
+            max_new_tokens=max_new_tokens,
+            stop_sequences=stop_sequences,
+            num_responses=num_responses,
+        )
+
     def generate(
         self,
         inps: Union[List[str], List[List[dict]]],
@@ -67,7 +113,11 @@ class VLLMBackend(Backend):
         if not isinstance(inps, list):
             raise TypeError("Expected list as input to generate(), found " + str(type(inps)))
         if not isinstance(inps[0], str):
-            raise ValueError(f'{self!r} only supports str inputs to generate')
+            inps = self.tokenizer.apply_chat_template(
+                inps,
+                tokenize=False,
+                add_generation_prompt=True
+            )
         if num_responses != 1:
             raise ValueError(f'{self!r} does not support num_responses > 1')
         generation_args = {}
@@ -113,6 +163,7 @@ class VLLMBackend(Backend):
             model_id=params['model_id'],
             max_input_length=int(params.get('max_input_length', 512)),
             max_new_tokens=int(params.get('max_new_tokens', 32)),
+            batch_size=int(params.get('batch_size', 4)),
             logprobs_topk=int(params.get('logprobs_topk', 20)),
             verbose=bool(params.get('verbose', False)),
         )
