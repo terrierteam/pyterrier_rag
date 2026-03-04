@@ -96,6 +96,50 @@ class HuggingFaceBackend(Backend):
     def tokenizer(self) -> AutoTokenizer:
         return self._tokenizer
 
+    def text_generator(
+        self,
+        *,
+        input_field: str = "prompt",
+        output_field: str = "qanswer",
+        batch_size: Optional[int] = None,
+        max_new_tokens: Optional[int] = None,
+        stop_sequences: Optional[List[str]] = None,
+        num_responses: int = 1,
+    ):
+        if batch_size is None:
+            batch_size = self.batch_size
+        return super().text_generator(
+            input_field=input_field,
+            output_field=output_field,
+            batch_size=batch_size,
+            max_new_tokens=max_new_tokens,
+            stop_sequences=stop_sequences,
+            num_responses=num_responses,
+        )
+
+    def logprobs_generator(
+        self,
+        *,
+        input_field: str = "prompt",
+        output_field: str = "qanswer",
+        logprobs_field: str = "qanswer_logprobs",
+        batch_size: Optional[int] = None,
+        max_new_tokens: Optional[int] = None,
+        stop_sequences: Optional[List[str]] = None,
+        num_responses: int = 1,
+    ):
+        if batch_size is None:
+            batch_size = self.batch_size
+        return super().logprobs_generator(
+            input_field=input_field,
+            output_field=output_field,
+            logprobs_field=logprobs_field,
+            batch_size=batch_size,
+            max_new_tokens=max_new_tokens,
+            stop_sequences=stop_sequences,
+            num_responses=num_responses,
+        )
+
     @torch.no_grad()
     def generate(
         self,

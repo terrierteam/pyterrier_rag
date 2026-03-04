@@ -35,7 +35,7 @@ def test_text_generator_returns_textgenerator():
     assert tb.batch_size == 4
 
 
-def test_text_generator_uses_backend_batch_size_by_default():
+def test_text_generator_does_not_use_backend_batch_size_by_default():
     class BatchBackend(DummyBackend):
         def __init__(self):
             super().__init__()
@@ -43,7 +43,7 @@ def test_text_generator_uses_backend_batch_size_by_default():
 
     b = BatchBackend()
     tb = b.text_generator()
-    assert tb.batch_size == 7
+    assert tb.batch_size == 4
 
 
 def test_logprobs_generator_without_support(monkeypatch):
@@ -66,7 +66,7 @@ def test_logprobs_generator_with_support(monkeypatch):
     assert lb.batch_size == 4
 
 
-def test_logprobs_generator_uses_backend_batch_size_by_default():
+def test_logprobs_generator_does_not_use_backend_batch_size_by_default():
     class BatchBackend(DummyBackend):
         def __init__(self):
             super().__init__()
@@ -74,10 +74,10 @@ def test_logprobs_generator_uses_backend_batch_size_by_default():
 
     b = BatchBackend()
     lb = b.logprobs_generator()
-    assert lb.batch_size == 6
+    assert lb.batch_size == 4
 
 
-def test_backend_transform_uses_backend_batch_size_default():
+def test_backend_transform_uses_default_batch_size():
     class BatchRecordingBackend(DummyBackend):
         def __init__(self):
             super().__init__()
@@ -104,7 +104,7 @@ def test_backend_transform_uses_backend_batch_size_default():
     ])
     out = b.transform(inp)
     assert len(out) == 5
-    assert b.chunk_sizes == [2, 2, 1]
+    assert b.chunk_sizes == [4, 1]
 
 
 def test_textgenerator_transform_iter_success(monkeypatch):
