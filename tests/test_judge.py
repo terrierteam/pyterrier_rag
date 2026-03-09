@@ -3,7 +3,7 @@ import pytest
 
 from pyterrier_rag.frameworks.llm_as_judge import llmjudge_fn
 
-# Fixtures to mock backend and prompt transformer
+# Fixtures to mock backend dependencies
 class FakeBackend:
     model_id: str = 'gpt-4o-mini'
     def __init__(self):
@@ -18,13 +18,13 @@ class FakeBackend:
 def patch_dependencies(monkeypatch):
     # Monkeypatch get_backend to return our fake backend
     monkeypatch.setattr('pyterrier_rag.frameworks.llm_as_judge.get_backend', lambda backend_type, model_name: FakeBackend())
-    # Monkeypatch PromptTransformer to our fake
     yield
 
 # Helper to build DataFrames
-def make_qrels(texts, relevances, query_id='q1'):
+def make_qrels(texts, relevances, query_id='q1', question='What is this?'):
     return pd.DataFrame({
         'query_id': [query_id] * len(texts),
+        'query': [question] * len(texts),
         'relevance': relevances,
         'text': texts,
     })
@@ -75,7 +75,7 @@ def test_invalid_aggregation():
     with pytest.raises(ValueError):
         llmjudge_fn(qrels, res, backend_type='openai', model_id='gpt-4o-mini', agg='unknown')
 
-# Test that generate is called with prompts matching the fake PromptTransformer
+# Test that generate is called with the expected prompt count
 def test_prompt_and_generate_calls():
     qrels = make_qrels(['ref1', 'ref2'], [3, 4])
     res = make_res('pred')

@@ -2,19 +2,19 @@ import ir_measures
 import pyterrier_alpha as pta
 
 from pyterrier_rag.backend import get_backend
-from pyterrier_rag.prompt import PromptTransformer, prompt
+from pyterrier_rag.prompt import jinja_formatter
 
 PairwiseLLMJudgeSystemMessage = 'Please act as an impartial judge and evaluate the quality of the responses provided by two AI assistants to the user question displayed below. You should choose the assistant that follows the user\'s instructions and answers the user\'s question better. Your evaluation should consider factors such as the helpfulness, relevance, accuracy, depth, creativity, and level of detail of their responses. Begin your evaluation by comparing the two responses and provide a short explanation. Avoid any position biases and ensure that the order in which the responses were presented does not influence your decision. Do not allow the length of the responses to influence your evaluation. Do not favor certain names of the assistants. Be as objective as possible. After providing your explanation, output your final verdict by strictly following this format: "[[A]]" if assistant A is better, "[[B]]" if assistant B is better, and "[[C]]" for a tie.'
-PairwiseLLMJudgePrompt = prompt("""
+PairwiseLLMJudgePrompt = jinja_formatter("""
     [User Question]
-    {question}
+    {{ question }}
 
     [The Start of Assistant A's Answer]
-    {prediction}
+    {{ prediction }}
     [The End of Assistant A's Answer]
 
     [The Start of Assistant B's Answer]
-    {gold}
+    {{ gold }}
     [The End of Assistant B's Answer]"
     """)
 
@@ -22,15 +22,15 @@ PairwiseLLMJudgePrompt = prompt("""
 PointwiseLLMJudgeSystemMessage = "You are a helpful assistant."
 
 
-PointwiseLLMJudgePrompt = prompt("""
+PointwiseLLMJudgePrompt = jinja_formatter("""
     [Instruction]
     Please act as an impartial judge and evaluate the quality of the response provided by an AI assistant to the user question displayed below. Your evaluation should consider factors such as the helpfulness, relevance, accuracy, depth, creativity, and level of detail of the response. Begin your evaluation by providing a short explanation. Be as objective as possible. After providing your explanation, you must rate the response on a scale of 1 to 10 by strictly following this format: \"[[rating]]\", for example: \"Rating: [[5]]\".
 
     [Question]
-    {{question}}
+    {{ question }}
 
     [The Start of Assistant's Answer]
-    {{prediction}}
+    {{ prediction }}
     [The End of Assistant's Answer]
     """)
 
@@ -72,27 +72,25 @@ def llmjudge_fn(qrels, res, backend_type: str, model_id: str, rel=3, agg="max") 
     global prompt_obj
     if backend_obj is None:
         backend_obj = get_backend(backend_type, model_id)
-        prompt_obj = PromptTransformer(
-            PointwiseLLMJudgePrompt,
-            backend_obj.model_id,
-            system_message=PointwiseLLMJudgeSystemMessage,
-        )
+        prompt_obj = PointwiseLLMJudgePrompt
 
     predictions = res["qanswer"].to_list()
     assert len(predictions) == 1, "Unexpected number of predictions"
     references = qrels["text"].to_list()
+    questions = qrels["query"].to_list()
     # duplicate the prediction for the nbr of ground truths
     predictions = predictions * len(references)
 
     # create the prompt
     prompts = [
-        prompt_obj.create_prompt(
-            {
+        prompt_obj(
+            **{
+                "question": q,
                 "prediction": p,
-                "reference": r,
+                "gold": r,
             }
         )
-        for p, r in zip(predictions, references)
+        for q, p, r in zip(questions, predictions, references)
     ]
 
     outputs = backend_obj.generate(prompts)

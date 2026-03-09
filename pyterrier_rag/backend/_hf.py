@@ -31,6 +31,7 @@ class HuggingFaceBackend(Backend):
     supports_logprobs = False # TODO: add support for logprobs
     _model_class = AutoModelForCausalLM
     _remove_prompt = True
+    supports_message_input = False
 
     def __init__(
         self,
@@ -40,6 +41,7 @@ class HuggingFaceBackend(Backend):
         generation_args: dict = None,
         max_input_length: int = None,
         max_new_tokens: int = 32,
+        batch_size: int = 4,
         logprobs_topk: int = 20,
         verbose: bool = False,
         device: Union[str, torch.device] = None,
@@ -47,6 +49,7 @@ class HuggingFaceBackend(Backend):
         super().__init__(
             model_id=model_id,
             max_new_tokens=max_new_tokens,
+            batch_size=batch_size,
             verbose=verbose,
         )
 
@@ -63,9 +66,15 @@ class HuggingFaceBackend(Backend):
                 self._model = self._model.to(self.device)
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_id)
-        if self.tokenizer.pad_token is None:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-            self._model.generation_config.pad_token_id = self.tokenizer.pad_token_id
+        self._model = (
+            None
+            if self._model_class is None
+            else self._model_class.from_pretrained(model_id, **model_args).to(self.device).eval()
+        )
+        self._tokenizer = AutoTokenizer.from_pretrained(model_id)
+        if self._tokenizer.pad_token is None:
+            self._tokenizer.pad_token = self._tokenizer.eos_token
+            self._model.generation_config.pad_token_id = self._tokenizer.pad_token_id
 
         max_position_embeddings = getattr(self._model.config, "max_position_embeddings", None)
         self.max_input_length = max_input_length or max_position_embeddings
@@ -80,6 +89,14 @@ class HuggingFaceBackend(Backend):
             }
         self._generation_args = generation_args
 
+    @property
+    def tokenizer(self) -> AutoTokenizer:
+        return self._tokenizer
+
+    @tokenizer.setter
+    def tokenizer(self, value: AutoTokenizer) -> None:
+        self._tokenizer = value
+
     @torch.no_grad()
     def generate(
         self,
@@ -92,20 +109,28 @@ class HuggingFaceBackend(Backend):
     ) -> List[BackendOutput]:
         if not isinstance(inps, list):
             raise TypeError("Expected list as input to generate(), found " + str(type(inps)))
-        if not isinstance(inps[0], str):
-            raise ValueError(f'{self!r} only supports str inputs to generate')
         if return_logprobs:
             raise ValueError(f'{self!r} does not support logprobs generation')
         if num_responses != 1:
             raise ValueError(f'{self!r} does not support num_responses > 1')
         # Tokenize inputs
-        inputs = self.tokenizer(
-            inps,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            max_length=self.max_input_length,
-        )
+
+        if type(inps[0]) is not str:
+            inputs = self.tokenizer.apply_chat_template(
+                inps,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=self.max_input_length,
+            )
+        else:
+            inputs = self.tokenizer(
+                inps,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=self.max_input_length,
+            )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         generation_args = {}
@@ -137,14 +162,9 @@ class HuggingFaceBackend(Backend):
             # Only keep tokens generated beyond the prompt length
             sliced_sequences = []
 
-            if self.tokenizer.padding_side == "left":
-                # we can simply do this for both left- and right-padding
-                prompt_len_with_padding = inputs["input_ids"].shape[1]
-                for seq in sequences:
-                    sliced_sequences.append(seq[prompt_len_with_padding:])
-            else:
-                for i, prompt_length in enumerate(prompt_lengths):
-                    sliced_sequences.append(sequences[i, prompt_length:])
+            prompt_len_with_padding = inputs["input_ids"].shape[1]
+            for seq in sequences:
+                sliced_sequences.append(seq[prompt_len_with_padding:])
             sequences = sliced_sequences
 
         # Decode outputs
@@ -186,6 +206,7 @@ class HuggingFaceBackend(Backend):
             model_id=params['model_id'],
             max_input_length=int(params.get('max_input_length', 512)),
             max_new_tokens=int(params.get('max_new_tokens', 32)),
+            batch_size=int(params.get('batch_size', 4)),
             logprobs_topk=int(params.get('logprobs_topk', 20)),
             verbose=params.get('verbose', False) in ['True', 'true', '1'],
         )
