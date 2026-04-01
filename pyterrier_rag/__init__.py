@@ -11,6 +11,7 @@ from pyterrier_rag.search_r1 import SearchR1
 from pyterrier_rag.r1_searcher import R1Searcher
 from pyterrier_rag._util import ReasoningExtractor
 from pyterrier_rag.frameworks import KnowledgeGraphExtractor, ReasoningChainGenerator 
+from pyterrier_rag.xprovence import XProvence
 
 from pyterrier_rag.backend import (
     Backend,
@@ -39,4 +40,5 @@ __all__ = [
     "default_backend",
     "KnowledgeGraphExtractor",
     "ReasoningChainGenerator",
+    "XProvence"
 ]
