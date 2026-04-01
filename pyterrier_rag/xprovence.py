@@ -23,13 +23,15 @@ class XProvence(pt.Transformer):
     def __init__(self, 
                  checkpoint="naver/xprovence-reranker-bgem3-v2", 
                  batch_size=32,
-                 use_scores=True
+                 use_scores=True,
+                 remove_empty=True
                  ):
         _check_imports()
         from transformers import AutoModel
         self.model = AutoModel.from_pretrained(checkpoint, trust_remote_code=True, device_map="auto")
         self.batch_size = batch_size
         self.use_scores = use_scores
+        self.remove_empty = remove_empty
 
     @pta.transform.by_query()
     def transform(self, inp):
@@ -54,9 +56,17 @@ class XProvence(pt.Transformer):
             batch_size = self.batch_size)
         # todo: what is top_k and threshold
 
-        inp["text"] = results[0]["compressed_text"]
+        inp["text"] = results["compressed_text"][0]
 
+        # use XPrevence as a reranker?
         if self.use_scores:
-            inp["score"] = [results[0]["score"]]
+            inp["score"] = [results["score"][0]]
+            if not self.remove_empty:
+                pt.model.add_ranks(inp, single_query=True)
+
+        # remove any documents that were thought not to have useful text
+        if self.remove_empty:
+            inp = inp[inp["text"] != ""]
             pt.model.add_ranks(inp, single_query=True)
+
         return inp
