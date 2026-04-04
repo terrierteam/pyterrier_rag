@@ -19,6 +19,7 @@ As well as access to all of the retrievers (sparse, learned sparse, and dense) a
     backends
     prompts
     readers
+    provence
 
 Example Notebooks
 ---------------------------------

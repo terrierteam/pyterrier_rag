@@ -59,6 +59,23 @@ Try these frameworks out now with our example notebooks:
  - [examples/search-o1.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/search-o1.ipynb)
  - [examples/r1searcher.ipynb](https://github.com/terrierteam/pyterrier_rag/blob/main/examples/r1searcher.ipynb)
 
+## Provence Family
+
+`pyterrier_rag` also exposes Provence-style context pruning transformers for retrieval-augmented generation:
+
+```python
+from pyterrier_rag import Provence
+
+provence = Provence("naver/provence-reranker-debertav3-v1")
+xprovence = Provence("naver/xprovence-reranker-bgem3-v2")
+
+# Convenience factories are also available:
+default_provence = Provence.provence()
+multilingual_xprovence = Provence.xprovence_v2()
+```
+
+These transformers preserve the original passage in `text_0`, replace `text` with the pruned passage, and can optionally keep a reranking `score` while dropping empty passages.
+
 
 ## Datasets
 
