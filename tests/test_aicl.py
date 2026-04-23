@@ -43,11 +43,11 @@ def test_output_has_fewer_or_equal_rows():
     assert len(result) <= len(df)
 
 
-def test_unfitted_returns_original():
+def test_unfitted_raises_error():
     df, _ = make_dummy_data()
     aicl = AICLContextSelector(k_max=3)
-    result = aicl.transform(df)
-    assert len(result) == len(df)
+    with pytest.raises(Exception):
+        aicl.transform(df)
 
 
 def test_predict_k_returns_dict():

@@ -2,8 +2,11 @@
 AICL - Adaptive In-Context Learning
 Implements variable context size for RAG pipelines.
 
-Based on: "One Size Doesn't Fit All: Predicting the Number of Examples 
-for In-Context Learning", Chandra et al., ECIR 2025.
+Based on: Chandra, M., Ganguly, D., Ounis, I. (2025).
+One Size Doesn't Fit All: Predicting the Number of Examples
+for In-Context Learning. ECIR 2025.
+
+.. cite.dblp:: conf/ecir/ChandraGO25
 
 Usage:
     from pyterrier_rag.aicl import AICLContextSelector
@@ -16,19 +19,15 @@ Usage:
 
 import numpy as np
 import pandas as pd
-
-try:
-    import pyterrier as pt
-    BASE_CLASS = pt.Transformer
-except ImportError:
-    BASE_CLASS = object
+import pyterrier as pt
+import pyterrier_alpha as pta
 
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
 
-class AICLContextSelector(BASE_CLASS):
+class AICLContextSelector(pt.Transformer):
     """
     Adaptive In-Context Learning (AICL) context size selector.
 
@@ -39,6 +38,8 @@ class AICLContextSelector(BASE_CLASS):
     whether using k documents leads to a correct answer. At inference,
     the classifier predicts which k values will work, and the highest
     predicted k is selected.
+
+    .. cite.dblp:: conf/ecir/ChandraGO25
 
     Parameters
     ----------
@@ -66,8 +67,8 @@ class AICLContextSelector(BASE_CLASS):
         Parameters
         ----------
         retrieved_df : pd.DataFrame
-            DataFrame with columns: qid, query, score (retrieved docs, grouped by qid).
-            Each qid should have up to k_max rows.
+            DataFrame with columns: qid, query, score, docno.
+            Each qid should have up to k_max rows, sorted by score descending.
         labels : np.ndarray or list of lists
             Shape (n_queries, k_max). labels[i][j] = 1 if using j+1 docs
             gives a correct answer for query i, else 0.
@@ -75,11 +76,16 @@ class AICLContextSelector(BASE_CLASS):
         Returns
         -------
         self
+
+        Example
+        -------
+        >>> aicl = AICLContextSelector(k_max=3)
+        >>> aicl.fit(train_retrieved_df, train_labels)
+        >>> pipeline = bm25 % 20 >> aicl >> reader
         """
         features = self._extract_features_all(retrieved_df)
         labels_array = np.array(labels)
 
-        # Pad or trim labels to k_max columns
         if labels_array.shape[1] < self.k_max:
             pad = np.zeros((labels_array.shape[0], self.k_max - labels_array.shape[1]))
             labels_array = np.hstack([labels_array, pad])
@@ -91,6 +97,7 @@ class AICLContextSelector(BASE_CLASS):
         self.fitted = True
         return self
 
+    @pta.transform.by_query()
     def transform(self, retrieved):
         """
         Filter retrieved documents to the predicted optimal k per query.
@@ -99,29 +106,30 @@ class AICLContextSelector(BASE_CLASS):
         ----------
         retrieved : pd.DataFrame
             Standard PyTerrier retrieved docs DataFrame.
+            Must contain columns: qid, docno, score.
 
         Returns
         -------
         pd.DataFrame
-            Same format, but each query group trimmed to predicted k rows.
+            Same format, but trimmed to predicted k rows for each query.
         """
+        if len(retrieved) == 0:
+            return retrieved
+
         if not self.fitted:
-            # Not trained yet — pass through unchanged
-            return retrieved
+            raise RuntimeError(
+                "AICLContextSelector must be fitted before calling transform(). "
+                "Call .fit(retrieved_df, labels) first."
+            )
 
-        result_parts = []
-        for qid, group in retrieved.groupby('qid', sort=False):
-            group_sorted = group.sort_values('score', ascending=False)
-            k_pred = self._predict_k_for_query(group_sorted)
-            result_parts.append(group_sorted.head(k_pred))
+        group_sorted = retrieved.sort_values('score', ascending=False)
+        k_pred = self._predict_k_for_query(group_sorted)
 
-        if not result_parts:
-            return retrieved
-
-        return pd.concat(result_parts).reset_index(drop=True)
+        if 'rank' in group_sorted.columns:
+            return group_sorted[group_sorted['rank'] < k_pred]
+        return group_sorted.head(k_pred)
 
     def _extract_features_all(self, retrieved_df):
-        """Extract feature vectors for all queries in a DataFrame."""
         features = []
         for qid, group in retrieved_df.groupby('qid', sort=False):
             group_sorted = group.sort_values('score', ascending=False)
@@ -129,22 +137,8 @@ class AICLContextSelector(BASE_CLASS):
         return np.array(features)
 
     def _query_features(self, group):
-        """
-        Extract numeric features from a group of retrieved docs for one query.
-
-        Features:
-        - mean retrieval score
-        - std of retrieval scores
-        - max score
-        - min score
-        - score range (max - min)
-        - score drop from rank 1 to rank 2 (if available)
-        - number of retrieved docs
-        - query length in words
-        """
         scores = group['score'].values[:self.k_max]
 
-        # Pad scores if fewer than k_max docs
         if len(scores) < self.k_max:
             scores = np.pad(scores, (0, self.k_max - len(scores)), constant_values=0)
 
@@ -165,26 +159,23 @@ class AICLContextSelector(BASE_CLASS):
             float(query_len),
         ]
 
-        # Also include top-k scores as features
         return base_features + list(scores[:self.k_max])
 
     def _predict_k_for_query(self, group):
-        """Predict optimal k for a single query group."""
         features = self._query_features(group)
         features_scaled = self.scaler.transform([features])
         preds = self.classifier.predict(features_scaled)[0]
 
-        # Find the highest k that is predicted to give correct answer
         valid_ks = [k + 1 for k, p in enumerate(preds) if int(p) == 1]
 
         if valid_ks:
-            return min(max(valid_ks), len(group))  # don't exceed available docs
+            return min(max(valid_ks), len(group))
         else:
             return min(self.fallback_k, len(group))
 
     def predict_k(self, retrieved_df):
         """
-        Public method: return predicted k for each query.
+        Return predicted k for each query.
 
         Parameters
         ----------
@@ -195,7 +186,10 @@ class AICLContextSelector(BASE_CLASS):
         dict mapping qid -> predicted k
         """
         if not self.fitted:
-            raise RuntimeError("Call .fit() before .predict_k()")
+            raise RuntimeError(
+                "AICLContextSelector must be fitted before calling predict_k(). "
+                "Call .fit(retrieved_df, labels) first."
+            )
 
         predictions = {}
         for qid, group in retrieved_df.groupby('qid', sort=False):
@@ -206,10 +200,12 @@ class AICLContextSelector(BASE_CLASS):
     @staticmethod
     def build_labels_from_results(retrieved_df, answers_df, answer_col='answers', k_max=20):
         """
-        Utility: automatically build training labels by testing each k value.
+        Utility: build training labels by testing textual inclusion for each k.
 
-        For each query, tests k=1..k_max and checks if the top-k docs
-        contain words from the gold answer.
+        For each query and each value of k (1..k_max), checks whether any
+        gold answer string appears as a substring in the concatenated text
+        of the top-k retrieved documents (textual inclusion check).
+        Labels are 1 if the answer is found in top-k docs, else 0.
 
         Parameters
         ----------
@@ -244,7 +240,6 @@ class AICLContextSelector(BASE_CLASS):
                 top_k_text = ' '.join(
                     group_sorted.head(k)['text'].fillna('').str.lower().tolist()
                 )
-                # Check if any gold answer appears in top-k docs
                 found = any(ans in top_k_text for ans in gold_answers)
                 labels_for_query.append(1 if found else 0)
 
