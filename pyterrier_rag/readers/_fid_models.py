@@ -477,11 +477,7 @@ class FiD(pt.Transformer):
             truncation=True,
             return_tensors="pt",
         )
-        # Newer tokenizers are directly callable; keep a legacy fallback.
-        try:
-            tokenizer_outputs = self.tokenizer(texts, **encode_kwargs)
-        except TypeError:
-            tokenizer_outputs = self.tokenizer.batch_encode_plus(texts, **encode_kwargs)
+        tokenizer_outputs = self.tokenizer(texts, **encode_kwargs)
         input_ids = tokenizer_outputs["input_ids"][None, :, :] # for only one query
         attention_mask = tokenizer_outputs["attention_mask"][None, :, :]
 
