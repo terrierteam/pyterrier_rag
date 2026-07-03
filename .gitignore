@@ -88,7 +88,6 @@ celerybeat-schedule
 
 # virtualenv
 .venv
-uv.lock
 venv/
 ENV/
 
