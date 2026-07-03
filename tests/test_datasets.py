@@ -4,7 +4,7 @@ from pyterrier_rag._datasets import FlashRAGDataset
 
 
 def test_flashrag_get_corpus_iter_raises_for_missing_corpus():
-    dataset = FlashRAGDataset({"name": "Musique", "corpus_name": "None"})
+    dataset = FlashRAGDataset({"name": "Musique", "corpus_name": None})
 
     with pytest.raises(NotImplementedError, match="Musique does not support get_corpus_iter"):
         dataset.get_corpus_iter()
