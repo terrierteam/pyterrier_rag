@@ -471,14 +471,17 @@ class FiD(pt.Transformer):
         return input_texts
 
     def tokenizer_encode(self, texts: List[str]) -> Dict[str, torch.Tensor]:
-
-        tokenizer_outputs = self.tokenizer.batch_encode_plus(
-            texts,
-            max_length = self.text_max_length,
-            padding = "max_length",
-            truncation = True,
-            return_tensors = 'pt'
+        encode_kwargs = dict(
+            max_length=self.text_max_length,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt",
         )
+        # Newer tokenizers are directly callable; keep a legacy fallback.
+        try:
+            tokenizer_outputs = self.tokenizer(texts, **encode_kwargs)
+        except TypeError:
+            tokenizer_outputs = self.tokenizer.batch_encode_plus(texts, **encode_kwargs)
         input_ids = tokenizer_outputs["input_ids"][None, :, :] # for only one query
         attention_mask = tokenizer_outputs["attention_mask"][None, :, :]
 
