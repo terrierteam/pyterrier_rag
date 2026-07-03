@@ -1,5 +1,4 @@
 import unittest
-from pyterrier_rag.prompt import Concatenator
 class TestPyterrier_rag(unittest.TestCase):
 
     def test_T5(self):
@@ -17,8 +16,7 @@ class TestPyterrier_rag(unittest.TestCase):
         from pyterrier_rag.backend import Seq2SeqLMBackend
         model = Seq2SeqLMBackend('google/flan-t5-base')
         reader = Reader(model)
-        qcontext_transformer = Concatenator()
-        self._test_fid(reader, qcontext=qcontext_transformer)
+        self._test_fid(reader)
 
     def _test_fid(self, model, qcontext=None):
         data = [

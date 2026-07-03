@@ -36,6 +36,10 @@ jobs:
          pip install --upgrade -r requirements.txt -r requirements_dev.txt
          pip install -e .
 
+     - name: Legacy Deprecation Contract
+       run: |
+         pytest -q tests/test_legacy_prompt_api.py
+
      - name: Unit Test
        run: |
          pytest --durations=20 -p no:faulthandler --json-report --json-report-file ${{ env.runtag }}.results.json --cov pyterrier_rag --cov-report json:${{ env.runtag }}.coverage.json tests/
