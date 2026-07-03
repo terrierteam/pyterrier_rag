@@ -88,8 +88,15 @@ def _rouge(measure : Literal['precision', 'recall', 'fmeaure'], type : Literal['
             raise ValueError("Unkown measure %s" % type)
 
     def _measure(qrels, res):
-        assert len(qrels) == 1
-        assert len(res) == 1        
+        if len(qrels) != 1:
+            raise ValueError(
+                f"ROUGE expects exactly 1 qrels row per query_id, got {len(qrels)}. "
+                "This likely means there are multiple gold answers for the query."
+            )
+        if len(res) != 1:
+            raise ValueError(
+                f"ROUGE expects exactly 1 generated answer per query_id, got {len(res)}."
+            )       
         res = scorer.score(
             res.iloc[0]['qanswer'], 
             qrels['gold_answer'].iloc[0][0] # [0] for the first answer in the array of gold_answer
