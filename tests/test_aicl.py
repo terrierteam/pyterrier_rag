@@ -2,7 +2,6 @@
 Tests for AICL adaptive context selector.
 """
 import pandas as pd
-import numpy as np
 import pytest
 from pyterrier_rag.aicl import AICLContextSelector
 

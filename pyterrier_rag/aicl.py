@@ -18,7 +18,6 @@ Usage:
 """
 
 import numpy as np
-import pandas as pd
 import pyterrier as pt
 import pyterrier_alpha as pta
 
