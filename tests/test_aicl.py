@@ -13,7 +13,8 @@ def make_dummy_data():
         'score': [0.9, 0.7, 0.5,  0.8, 0.6, 0.3,  0.7, 0.5, 0.2],
         'text':  ['python is language','used for coding','easy to learn',
                   'einstein physicist','born in germany','e=mc2',
-                  'java is language','runs on jvm','object oriented']
+                  'java is language','runs on jvm','object oriented'],
+        'docno' : ['d1', 'd2', 'd3', 'd1', 'd2', 'd3', 'd1', 'd2', 'd3']
     })
     labels = [[0,1,1], [1,0,0], [0,0,1]]
     return df, labels
