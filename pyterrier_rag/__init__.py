@@ -40,4 +40,5 @@ __all__ = [
     "default_backend",
     "KnowledgeGraphExtractor",
     "ReasoningChainGenerator",
+    "AICLContextSelector"
 ]
