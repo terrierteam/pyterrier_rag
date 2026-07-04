@@ -105,13 +105,14 @@ class AICLContextSelector(pt.Transformer):
         ----------
         retrieved : pd.DataFrame
             Standard PyTerrier retrieved docs DataFrame.
-            Must contain columns: qid, docno, score.
+            Must contain columns: qid, docno, score
 
         Returns
         -------
         pd.DataFrame
             Same format, but trimmed to predicted k rows for each query.
         """
+        pt.validate.result_frame(retrieved, extra_columns=['score'])
         if len(retrieved) == 0:
             return retrieved
 
