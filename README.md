@@ -76,7 +76,7 @@ We also provide pre-built indices for some standard RAG corpora. For instance, a
 
 ```python
 sparse_index = pt.Artifact.from_hf('pyterrier/ragwiki-terrier')
-bm25 = pt.rewrite.tokenise() >> sparse_index.bm25(include_fields=['docno', 'text', 'title']) >> pt.rewrite.reset()
+bm25 = sparse_index.bm25(include_fields=['docno', 'text', 'title'])
 ```
 
 Dense indices are also provided, e.g. E5 on Wikipedia:
