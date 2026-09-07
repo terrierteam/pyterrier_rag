@@ -43,7 +43,131 @@ class FlashRAGDataset(RAGDataset):
             .rename(columns={'id' : 'qid', 'golden_answers' : 'gold_answer'}) \
             .explode('gold_answer') # explode deals with multiple answers
 
+class TopiOCQADataset(RAGDataset):
+    """TopiOCQA conversational question answering dataset."""
+
+    SPLITS = {
+        'train': 'topiocqa_train.jsonl',
+        'dev': 'topiocqa_valid.jsonl',
+        'valid': 'topiocqa_valid.jsonl',
+        'validation': 'topiocqa_valid.jsonl',
+    }
+
+    BASE_PATH = "hf://datasets/McGill-NLP/TopiOCQA/data/"
+
+    def _read_split(self, variant : Optional[str] = None) -> pd.DataFrame:
+        if variant is None:
+            raise ValueError("Variant must be specified for TopiOCQA: train or dev")
+        if variant not in self.SPLITS:
+            raise ValueError(
+                "Unknown TopiOCQA variant %r. Expected one of %s"
+                % (variant, str(list(self.SPLITS.keys())))
+            )
+        return pd.read_json(
+            self.BASE_PATH + self.SPLITS[variant],
+            lines=True
+        )
+
+    @staticmethod
+    def _add_qid(df : pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+        df['qid'] = (
+            df['Conversation_no'].astype(str)
+            + '_'
+            + df['Turn_no'].astype(str)
+        )
+        return df
+
+    def get_topics(self, variant : Optional[str] = None) -> pd.DataFrame:
+        df = self._add_qid(self._read_split(variant))
+        return df[
+            [
+                'qid',
+                'Question',
+                'Context',
+                'Conversation_no',
+                'Turn_no'
+            ]
+        ].rename(
+            columns={
+                'Question': 'query',
+                'Context': 'history',
+                'Conversation_no': 'conversation_id',
+                'Turn_no': 'turn_id'
+            }
+        )
+
+        df = self._add_qid(self._read_split(variant))
+        rows = []
+
+        for row in df.itertuples():
+            answers = [row.Answer]
+            additional_answers = row.Additional_answers
+
+            if isinstance(additional_answers, dict):
+                if 'Answer' in additional_answers:
+                    extra = additional_answers['Answer']
+                    if isinstance(extra, list):
+                        answers.extend(extra)
+                    elif extra is not None:
+                        answers.append(extra)
+                else:
+                    for extra in additional_answers.values():
+                        if isinstance(extra, list):
+                            answers.extend(extra)
+                        elif extra is not None:
+                            answers.append(extra)
+
+            elif isinstance(additional_answers, list):
+               for extra in additional_answers:
+                  if isinstance(extra, dict):
+                     answer = extra.get('Answer')
+                     if answer is not None:
+                         answers.append(answer)
+                  elif extra is not None:
+                       answers.append(extra)
+
+            elif additional_answers is not None:
+                answers.append(additional_answers)
+
+            for answer in answers:
+                rows.append({
+                    'qid': row.qid,
+                    'gold_answer': answer
+                })
+
+        return pd.DataFrame(
+            rows,
+            columns=['qid', 'gold_answer']
+        )
+
+    def get_qrels(self, variant : Optional[str] = None) -> pd.DataFrame:
+        df = self._add_qid(self._read_split(variant))
+        rows = []
+
+        for row in df.itertuples():
+            gold_passage = row.Gold_passage
+
+            if isinstance(gold_passage, dict):
+                docno = gold_passage.get('id')
+            else:
+                docno = None
+
+            if docno is not None:
+                rows.append({
+                    'qid': row.qid,
+                    'docno': str(docno),
+                    'label': 1
+                })
+
+        return pd.DataFrame(
+            rows,
+            columns=['qid', 'docno', 'label']
+        )
+
 DATASET_MAP = {}
+
+DATASET_MAP['topiocqa'] = TopiOCQADataset()
 
 DATASET_MAP['nq'] = FlashRAGDataset(
     {'name': 'NQ', 'corpus_name': 'irds:beir/nq', 'train': 'nq/train.jsonl', 'dev': 'nq/dev.jsonl', 'test': 'nq/test.jsonl'})

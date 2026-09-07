@@ -71,6 +71,7 @@ Queries and gold answers of common datasets can be accessed through the PyTerrie
  - WebQuestions: `"rag:web_questions"`
  - WoW: `"rag:wow"`
  - PopQA: `"rag:popqa"`
+ - TopiOCQA: `"rag:topiocqa"`
 
 We also provide pre-built indices for some standard RAG corpora. For instance, a BM25 retriever for the Wikipedia corpus for NQ can be obtained from an pre-existing index autoamticallty downloaded from HuggingFace:
 
