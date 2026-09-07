@@ -97,6 +97,7 @@ class TopiOCQADataset(RAGDataset):
             }
         )
 
+    def get_answers(self, variant : Optional[str] = None) -> pd.DataFrame:
         df = self._add_qid(self._read_split(variant))
         rows = []
 
