@@ -118,15 +118,20 @@ ROUGELR = _rouge('recall', 'rougeL')
 ROUGELF = _rouge('fmeasure', 'rougeL')
 
 _bertscore_model = None
-def _bertscore(qrels, res, rel = 3, submeasure='f1', agg='max'):
+def _bertscore(qrels, res, rel=3, submeasure='f1', agg='max', reference_source='documents'):
 
-    pta.validate.columns(qrels, includes=['query_id', 'relevance', 'text'])
     pta.validate.columns(res, includes=['query_id', 'qanswer'])
-    
     assert len(res), "Empty res df provided"
-    assert len(qrels), "Empty qrels df provided"
-    qrels = qrels[qrels.relevance >= rel]
-    assert len(qrels), "No qrels found with minimum label of %d" % rel
+    if reference_source == 'answers':
+        pta.validate.columns(qrels, includes=['query_id', 'gold_answer'])
+        references = qrels['gold_answer'].explode().dropna().to_list()
+        if not references or not all(isinstance(answer, str) for answer in references):
+            raise ValueError("BERTScore requires at least one text gold answer per query and expects text references")
+    else:
+        pta.validate.columns(qrels, includes=['query_id', 'relevance', 'text'])
+        assert len(qrels), "Empty qrels df provided"
+        references = qrels.loc[qrels.relevance >= rel, 'text'].to_list()
+        assert references, "No qrels found with minimum label of %d" % rel
 
     global _bertscore_model
     if _bertscore_model is None:
@@ -135,7 +140,6 @@ def _bertscore(qrels, res, rel = 3, submeasure='f1', agg='max'):
     
     predictions = res['qanswer'].to_list()
     assert len(predictions) == 1, "Unexpected number of predictions"
-    references = qrels['text'].to_list()
     # duplicate the prediction for the nbr of ground truths 
     predictions = predictions * len(references)
 
@@ -148,19 +152,31 @@ def _bertscore(qrels, res, rel = 3, submeasure='f1', agg='max'):
         }
     return r[submeasure][agg]
 
-def BERTScore(rel=3, submeasure : str = 'f1', agg : str = 'max'):
+def BERTScore(
+    rel=3, submeasure: str = 'f1', agg: str = 'max', *,
+    reference_source: Literal['documents', 'answers'] = 'documents',
+):
     '''
-    Implements BERTScore, a semantic measure of equivalence. This is defined to take a qrels dataframe with an additional text attribute,
-    and compare with the generated qanswers. NB: This is a function that returns a measure - it needs to be called.
+    Compare generated qanswers with relevant document text or with gold answers using BERTScore.
+    Gold-answer evaluations are reported under the name BERTScoreAnswers.
 
     Arguments:
      - rel(int): Minimum label value for relevant qrels. Defaults to 3, which is the highest label in MSMARCO.
      - submeasure(str): One of 'precision', 'recall' and 'f1'. Defaults to 'f1'.
-     - agg(str): How to combine (aggregate) when there are multiple relevant documents. Valid options are 'max' or 'avg'. Defaults to 'max'.
+     - agg(str): Combine scores across references with 'max' (default) or 'avg'.
+     - reference_source(str): Use 'documents' with graded qrels and a text column, or 'answers' with a
+       gold_answer column containing strings or lists of strings.
 
     Returns:
      An IR measures measure object that can be used in pt.Evaluate or pt.Experiment
     '''
-    return ir_measures.define_byquery( 
-        lambda qrels, res: _bertscore(qrels, res, rel=rel, agg=agg), name='BERTScore', 
-        support_cutoff=False, run_inputs=['qanswer'], qrel_inputs=['relevance', 'text'])
+    if reference_source not in ('documents', 'answers'):
+        raise ValueError("BERTScore reference_source must be 'documents' or 'answers'")
+    if reference_source == 'answers':
+        name, reference_columns = 'BERTScoreAnswers', ['gold_answer']
+    else:
+        name, reference_columns = 'BERTScore', ['relevance', 'text']
+    return ir_measures.define_byquery(
+        lambda qrels, res: _bertscore(qrels, res, rel=rel, submeasure=submeasure, agg=agg,
+                                      reference_source=reference_source),
+        name=name, support_cutoff=False, run_inputs=['qanswer'], qrel_inputs=reference_columns)
