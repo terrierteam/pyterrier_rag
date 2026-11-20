@@ -11,6 +11,7 @@ For comparison with gold-truth answers:
  - Exact match percentage: ``pyterrier_rag.measures.EM``
  - F1: ``pyterrier_rag.measures.F1``
  - ROUGE: ``pyterrier_rag.measures.ROUGE1P``, ``pyterrier_rag.measures.ROUGE1R``, ``pyterrier_rag.measures.ROUGE1F`` etc, as implemented by the `rouge-score <https://pypi.org/project/rouge-score/>`_ library.
+ - BERTScore: ``pyterrier_rag.measures.BERTScore(reference_source='answers')`` accepts ``dataset.get_answers()`` and reports ``BERTScoreAnswers``.
 
 
 Example::
