@@ -72,6 +72,8 @@ Queries and gold answers of common datasets can be accessed through the PyTerrie
  - WoW: `"rag:wow"`
  - PopQA: `"rag:popqa"`
 
+Pass the split (such as `'dev'`) to `get_topics()` or `get_answers()`. The available splits vary by dataset. For Natural Questions, `rag:nq` supplies the questions and answers. Use `pt.get_dataset('rag:nq_wiki').get_corpus_iter()` to read the separate FlashRAG Wikipedia corpus.
+
 We also provide pre-built indices for some standard RAG corpora. For instance, a BM25 retriever for the Wikipedia corpus for NQ can be obtained from an pre-existing index autoamticallty downloaded from HuggingFace:
 
 ```python
