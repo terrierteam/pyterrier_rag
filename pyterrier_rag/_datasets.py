@@ -29,16 +29,19 @@ class FlashRAGDataset(RAGDataset):
             raise NotImplementedError(f'{self!r} for {name} does not support get_corpus_iter')
         return pt.get_dataset(self.splits['corpus_name']).get_corpus_iter()
 
-    def get_topics(self, variant : Optional[str] = None) -> pd.DataFrame:
+    def _read_split(self, variant: Optional[str]) -> pd.DataFrame:
         if variant is None:
-            raise ValueError("Variant must be specified for %s: %s" % (self.name, str(self.splits.keys())))
-        df = pd.read_json("hf://datasets/RUC-NLPIR/FlashRAG_datasets/" + self.splits[variant], lines=True)
+            name = self.splits['name']
+            variants = ', '.join(split for split in self.splits if split not in {'name', 'corpus_name'})
+            raise ValueError(f'Variant must be specified for {name}: {variants}')
+        return pd.read_json("hf://datasets/RUC-NLPIR/FlashRAG_datasets/" + self.splits[variant], lines=True)
+
+    def get_topics(self, variant : Optional[str] = None) -> pd.DataFrame:
+        df = self._read_split(variant)
         return df[['id', 'question']].rename(columns={'id' : 'qid', 'question' : 'query'})
 
     def get_answers(self, variant : Optional[str] = None) -> pd.DataFrame:
-        if variant is None:
-            raise ValueError("Variant must be specified for %s: %s" % (self.name, str(self.splits.keys())))
-        df = pd.read_json("hf://datasets/RUC-NLPIR/FlashRAG_datasets/" + self.splits[variant], lines=True)
+        df = self._read_split(variant)
         return df[['id', 'golden_answers']] \
             .rename(columns={'id' : 'qid', 'golden_answers' : 'gold_answer'}) \
             .explode('gold_answer') # explode deals with multiple answers
